@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,14 +10,13 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"pm-cli/pkg/auth"
+	"pm-cli/pkg/api"
 )
 
 var (
 	dateArg string
 )
 
-// listCmd calls the authenticated endpoint to list the day's points
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List time entries for a given date",
@@ -25,22 +25,17 @@ var listCmd = &cobra.Command{
 			dateArg = time.Now().Format("2006-01-02")
 		}
 
-        headers, err := auth.GetAuthHeaders()
+		client := api.New()
+		ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
+		defer cancel()
+
+		url := fmt.Sprintf("%s/time_card_control/current/work_days/%s", api.BaseURL, dateArg)
+		req, err := client.NewAuthenticatedRequest(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			return err
 		}
 
-		url := fmt.Sprintf("https://api.pontomais.com.br/api/time_card_control/current/work_days/%s", dateArg)
-		req, err := http.NewRequest(http.MethodGet, url, nil)
-		if err != nil {
-			return err
-		}
-		for k, v := range headers {
-			req.Header.Set(k, v)
-		}
-
-		client := &http.Client{Timeout: 30 * time.Second}
-		resp, err := client.Do(req)
+		resp, err := client.HTTP.Do(req)
 		if err != nil {
 			return err
 		}
@@ -52,12 +47,10 @@ var listCmd = &cobra.Command{
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			// Print server response to help debugging
 			fmt.Fprintf(os.Stderr, "HTTP %d\n%s\n", resp.StatusCode, string(body))
 			return fmt.Errorf("request failed with status %d", resp.StatusCode)
 		}
 
-		// pretty print JSON if possible; otherwise print raw
 		var pretty any
 		if json.Unmarshal(body, &pretty) == nil {
 			enc := json.NewEncoder(os.Stdout)
