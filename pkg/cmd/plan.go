@@ -69,7 +69,7 @@ var planCmd = &cobra.Command{
 		in2Str := sug.In2.Format("15:04")
 
 		if live {
-			m := ui.NewPlanModel(date, target, in1Str, out1Str, in2Str, "")
+			m := ui.NewPlanModel(date, target, stamps, in1Str, out1Str, in2Str)
 			p := tea.NewProgram(m)
 			if _, err := p.Run(); err != nil {
 				return err
@@ -81,7 +81,7 @@ var planCmd = &cobra.Command{
 		out2Str := computeOut2(in1Str, out1Str, in2Str, target, date)
 		form := huh.NewForm(
 			huh.NewGroup(
-				huh.NewNote().Title("Registros existentes").Description(formatStamps(stamps)),
+				huh.NewNote().Title("Registros originais").Description(formatStamps(stamps)),
 				huh.NewInput().Title("Entrada 1").Value(&in1Str),
 				huh.NewInput().Title("Saída 1").Value(&out1Str),
 				huh.NewInput().Title("Entrada 2").Value(&in2Str),
@@ -105,32 +105,17 @@ func computeOut2(in1, out1, in2 string, target time.Duration, date time.Time) st
 	in1T, out1T, in2T := p(in1), p(out1), p(in2)
 	first := out1T.Sub(in1T)
 	need := target - first
-	if need < 0 {
-		need = 0
-	}
-	if in2T.IsZero() {
-		return "--:--"
-	}
+	if need < 0 { need = 0 }
+	if in2T.IsZero() { return "--:--" }
 	return in2T.Add(need).Format("15:04")
 }
 
-func dur(d time.Duration) string {
-	if d < 0 { d = 0 }
-	h := int(d.Hours())
-	m := int(d.Minutes()) % 60
-	s := int(d.Seconds()) % 60
-	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
-}
+func dur(d time.Duration) string { if d < 0 { d = 0 } ; h := int(d.Hours()) ; m := int(d.Minutes()) % 60 ; s := int(d.Seconds()) % 60 ; return fmt.Sprintf("%02d:%02d:%02d", h, m, s) }
 
 func formatStamps(stamps []time.Time) string {
-	if len(stamps) == 0 {
-		return "(nenhum)"
-	}
+	if len(stamps) == 0 { return "(nenhum)" }
 	s := ""
-	for i, t := range stamps {
-		if i > 0 { s += ", " }
-		s += t.Format("15:04")
-	}
+	for i, t := range stamps { if i > 0 { s += ", " } ; s += t.Format("15:04") }
 	return s
 }
 

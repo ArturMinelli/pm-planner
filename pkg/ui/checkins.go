@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -18,12 +19,13 @@ type PlanModel struct {
 	total  time.Duration
 	extra  time.Duration
 	out2Str string
+	originals []time.Time
 	arget time.Duration
 	date  time.Time
 	focus int
 }
 
-func NewPlanModel(date time.Time, target time.Duration, in1, out1, in2, _ string) PlanModel {
+func NewPlanModel(date time.Time, target time.Duration, originals []time.Time, in1, out1, in2 string) PlanModel {
 	mk := func(val string) textinput.Model {
 		t := textinput.New()
 		t.Prompt = ""
@@ -39,6 +41,7 @@ func NewPlanModel(date time.Time, target time.Duration, in1, out1, in2, _ string
 		in1:   mk(in1),
 		out1:  mk(out1),
 		in2:   mk(in2),
+		originals: originals,
 		arget: target,
 		date:  date,
 		focus: 0,
@@ -63,9 +66,7 @@ func (m *PlanModel) recalc() {
 
 	m.first = durBetween(in1, out1)
 	need := m.arget - m.first
-	if need < 0 {
-		need = 0
-	}
+	if need < 0 { need = 0 }
 	if !in2.IsZero() {
 		out2 := in2.Add(need)
 		m.second = durBetween(in2, out2)
@@ -76,58 +77,85 @@ func (m *PlanModel) recalc() {
 	}
 	m.total = m.first + m.second
 	extra := m.total - m.arget
-	if extra < 0 {
-		extra = 0
-	}
+	if extra < 0 { extra = 0 }
 	m.extra = extra
 }
 
 func durBetween(a, b time.Time) time.Duration {
-	if a.IsZero() || b.IsZero() || b.Before(a) {
-		return 0
-	}
+	if a.IsZero() || b.IsZero() || b.Before(a) { return 0 }
 	return b.Sub(a)
 }
 
 func (m PlanModel) Init() tea.Cmd { return textinput.Blink }
 
 func (m PlanModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
+	switch k := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
+		switch k.String() {
+		case "up":
+			m.adjustFocused(15 * time.Minute); m.recalc(); return m, nil
+		case "down":
+			m.adjustFocused(-15 * time.Minute); m.recalc(); return m, nil
 		case "tab":
-			m.focus = (m.focus + 1) % 3
-			m.syncFocus()
-			return m, nil
+			m.focus = (m.focus + 1) % 3; m.syncFocus(); m.recalc(); return m, nil
 		case "shift+tab":
-			m.focus = (m.focus + 2) % 3
-			m.syncFocus()
-			return m, nil
+			m.focus = (m.focus + 2) % 3; m.syncFocus(); m.recalc(); return m, nil
 		}
-		if msg.Type == tea.KeyCtrlC || msg.Type == tea.KeyEsc || msg.Type == tea.KeyEnter {
-			return m, tea.Quit
-		}
+		if k.Type == tea.KeyCtrlC || k.Type == tea.KeyEsc || k.Type == tea.KeyEnter { return m, tea.Quit }
 	}
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
-	m.in1, cmd = m.in1.Update(msg)
-	cmds = append(cmds, cmd)
-	m.out1, cmd = m.out1.Update(msg)
-	cmds = append(cmds, cmd)
-	m.in2, cmd = m.in2.Update(msg)
-	cmds = append(cmds, cmd)
-	m.recalc()
+	m.in1, cmd = m.in1.Update(msg); cmds = append(cmds, cmd)
+	m.out1, cmd = m.out1.Update(msg); cmds = append(cmds, cmd)
+	m.in2, cmd = m.in2.Update(msg); cmds = append(cmds, cmd)
+	m.normalizeInputs(); m.recalc()
 	return m, tea.Batch(cmds...)
 }
 
-func (m *PlanModel) syncFocus() {
-	m.in1.Blur(); m.out1.Blur(); m.in2.Blur()
-	switch m.focus { case 0: m.in1.Focus(); case 1: m.out1.Focus(); case 2: m.in2.Focus() }
+func (m *PlanModel) normalizeInputs() {
+	n := func(t *textinput.Model) {
+		v := t.Value()
+		if len(v) == 0 { return }
+		if !containsColon(v) {
+			d := countDigits(v)
+			if d == 4 { t.SetValue(formatDigitsToHHMM(v)) }
+		}
+		if len(v) > 5 { t.SetValue(v[:5]) }
+	}
+	n(&m.in1); n(&m.out1); n(&m.in2)
 }
+
+func containsColon(s string) bool { for i := 0; i < len(s); i++ { if s[i] == ':' { return true } } ; return false }
+
+func countDigits(s string) int { c := 0; for i := 0; i < len(s); i++ { if s[i] >= '0' && s[i] <= '9' { c++ } } ; return c }
+
+func formatDigitsToHHMM(s string) string {
+	digits := make([]rune, 0, len(s))
+	for _, r := range s { if r >= '0' && r <= '9' { digits = append(digits, r) } }
+	if len(digits) >= 4 {
+		h, _ := strconv.Atoi(string(digits[:2]))
+		m, _ := strconv.Atoi(string(digits[2:4]))
+		return fmt.Sprintf("%02d:%02d", h%24, clampMinute(m))
+	}
+	return string(digits)
+}
+
+func clampMinute(m int) int { if m < 0 { return 0 } ; if m > 59 { return 59 } ; return m }
+
+func (m *PlanModel) adjustFocused(delta time.Duration) {
+	apply := func(t *textinput.Model) {
+		base := m.parse(t.Value()); if base.IsZero() { return }
+		t.SetValue(base.Add(delta).Format("15:04"))
+	}
+	switch m.focus { case 0: apply(&m.in1); case 1: apply(&m.out1); case 2: apply(&m.in2) }
+}
+
+func (m *PlanModel) syncFocus() { m.in1.Blur(); m.out1.Blur(); m.in2.Blur(); switch m.focus { case 0: m.in1.Focus(); case 1: m.out1.Focus(); case 2: m.in2.Focus() } }
 
 func (m PlanModel) View() string {
 	header := styles.Title.Render("Ponto Planner")
 	sub := styles.Subtitle.Render(m.date.Format("2006-01-02") + "  •  Meta " + fmtDur(m.arget))
+	orig := styles.Muted.Render(originalsLine(m.originals))
 
 	inputs := lipgloss.JoinVertical(lipgloss.Left,
 		row("Entrada 1", m.in1.View()),
@@ -146,17 +174,18 @@ func (m PlanModel) View() string {
 	resume = styles.Panel.Render(resume)
 
 	content := lipgloss.JoinHorizontal(lipgloss.Top, inputs, styles.Spacer, resume)
-	keys := styles.Keys.Render("Tab/Shift+Tab alternar • Enter/Esc sair")
-	return lipgloss.JoinVertical(lipgloss.Left, header, sub, styles.Gap, content, styles.Gap, keys)
+	keys := styles.Keys.Render("↑/↓ ±15min • Tab/Shift+Tab alternar • Enter/Esc sair")
+	return lipgloss.JoinVertical(lipgloss.Left, header, sub, orig, styles.Gap, content, styles.Gap, keys)
 }
 
-func fmtDur(d time.Duration) string {
-	if d < 0 { d = 0 }
-	h := int(d.Hours())
-	m := int(d.Minutes()) % 60
-	s := int(d.Seconds()) % 60
-	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
+func originalsLine(ts []time.Time) string {
+	if len(ts) == 0 { return "Registros originais: (nenhum)" }
+	s := "Registros originais: "
+	for i, t := range ts { if i > 0 { s += ", " } ; s += t.Format("15:04") }
+	return s
 }
+
+func fmtDur(d time.Duration) string { if d < 0 { d = 0 } ; h := int(d.Hours()) ; m := int(d.Minutes()) % 60 ; s := int(d.Seconds()) % 60 ; return fmt.Sprintf("%02d:%02d:%02d", h, m, s) }
 
 var colors = struct {
 	Title       lipgloss.Color
