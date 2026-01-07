@@ -11,7 +11,7 @@ go build -o pm
 
 ## Configuration
 
-Place a YAML config file at `$HOME/.pm/config.yaml`:
+Place a YAML config file at `$HOME/.config/pm/config.yaml`:
 
 ```yaml
 email: "you@example.com"
@@ -21,7 +21,7 @@ password: "your-password"
 ```
 
 The CLI will log in automatically using your email/password and cache the
-authentication headers in `$HOME/.pm/session.json` for reuse. If the API returns
+authentication headers in `$HOME/.config/pm/session.json` for reuse. If the API returns
 an `Expiry` header it will be respected; otherwise the TTL is used.
 
 ## Usage

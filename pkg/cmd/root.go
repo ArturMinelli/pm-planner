@@ -42,7 +42,7 @@ func initConfig() {
 	} else {
 		viper.SetConfigName("config")
 		if home, err := os.UserHomeDir(); err == nil {
-			viper.AddConfigPath(filepath.Join(home, ".pm"))
+			viper.AddConfigPath(filepath.Join(home, ".config", "pm"))
 		}
 	}
 

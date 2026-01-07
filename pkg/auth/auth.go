@@ -27,7 +27,7 @@ func cachePath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".pm", "session.json"), nil
+	return filepath.Join(home, ".config", "pm", "session.json"), nil
 }
 
 func readCachedSession() (*session, error) {
@@ -94,7 +94,7 @@ func GetAuthHeaders() (map[string]string, error) {
 	email := viper.GetString("email")
 	password := viper.GetString("password")
 	if email == "" || password == "" {
-		return nil, errors.New("missing credentials: set 'email' and 'password' in $HOME/.pm/config.yaml")
+		return nil, errors.New("missing credentials: set 'email' and 'password' in $HOME/.config/pm/config.yaml")
 	}
 
 	body := map[string]string{
