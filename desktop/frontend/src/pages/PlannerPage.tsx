@@ -135,36 +135,37 @@ export default function PlannerPage() {
         </p>
       </header>
 
-      <div className="card">
-        <div className="row wrap">
-          <label className="field">
-            <span>Data</span>
-            <PlannerDatePicker
-              value={date}
-              onChange={setDate}
+      <div className="stack">
+        <div className="card">
+          <div className="row wrap">
+            <label className="field">
+              <span>Data</span>
+              <PlannerDatePicker
+                value={date}
+                onChange={setDate}
+                disabled={busy}
+                autoFocus
+              />
+            </label>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => void load()}
               disabled={busy}
-              autoFocus
-            />
-          </label>
-          <button
-            type="button"
-            className="btn primary"
-            onClick={() => void load()}
-            disabled={busy}
-          >
-            {busy ? 'Carregando…' : 'Carregar dia'}
-          </button>
+            >
+              {busy ? 'Carregando…' : 'Carregar dia'}
+            </button>
+          </div>
         </div>
-      </div>
 
-      {err && (
-        <div className="banner error" role="alert">
-          {err}
-        </div>
-      )}
+        {err && (
+          <div className="banner error" role="alert">
+            {err}
+          </div>
+        )}
 
-      <div className="grid-2">
-        <div className="card stretch">
+        <div className="grid-2">
+          <div className="card stretch">
           <h2>Marcações sugeridas</h2>
           <p className="muted small originals-line">{originals}</p>
           <div className="time-grid">
@@ -236,6 +237,7 @@ export default function PlannerPage() {
               </div>
             </>
           )}
+        </div>
         </div>
       </div>
     </section>
