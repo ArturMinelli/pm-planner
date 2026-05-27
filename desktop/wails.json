@@ -1,0 +1,13 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "pm-desktop",
+  "outputfilename": "pm-desktop",
+  "frontendInstall": "npm install",
+  "frontendBuild": "npm run build",
+  "frontendDevWatcher": "npm run dev",
+  "frontendDevServerUrl": "http://localhost:5173",
+  "build:tags": "webkit2_41",
+  "author": {
+    "name": "pm-cli"
+  }
+}

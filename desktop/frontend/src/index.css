@@ -1,0 +1,477 @@
+:root {
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    Segoe UI,
+    Roboto,
+    Ubuntu,
+    sans-serif;
+  line-height: 1.45;
+  font-weight: 400;
+  letter-spacing: 0.015em;
+
+  color-scheme: light dark;
+
+  --bg-deep: #0d0f13;
+  --bg: #12141a;
+  --surface: #1a1d26;
+  --surface-edge: rgba(255, 255, 255, 0.06);
+  --text: #e6e9f0;
+  --muted: #9aa3b2;
+  --accent: #6ee7ff;
+  --accent-dim: rgba(110, 231, 255, 0.15);
+  --danger-bg: rgba(248, 113, 113, 0.12);
+  --danger: #fca5a5;
+  --ok-bg: rgba(52, 211, 153, 0.12);
+  --ok: #6ee7b7;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-deep: #f6f8fc;
+    --bg: #ffffff;
+    --surface: #f1f4fa;
+    --surface-edge: rgba(15, 20, 30, 0.08);
+    --text: #111827;
+    --muted: #5b677a;
+    --accent: #0d6efd;
+    --accent-dim: rgba(13, 110, 253, 0.1);
+    --danger-bg: rgba(239, 68, 68, 0.1);
+    --danger: #b91c1c;
+    --ok-bg: rgba(16, 185, 129, 0.1);
+    --ok: #047857;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg-deep);
+  color: var(--text);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+code.pill {
+  font-family:
+    ui-monospace, SFMono-Regular, SF Mono, Menlo, monospace;
+  font-size: 0.85em;
+  padding: 0.13em 0.45em;
+  border-radius: 6px;
+  background: var(--surface-edge);
+}
+
+.app-root {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-deep);
+}
+
+.sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  padding: 1.25rem 1rem;
+  border-right: 1px solid var(--surface-edge);
+  background: var(--surface);
+}
+
+.brand {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  margin-bottom: 1.75rem;
+}
+
+.brand-mark {
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  padding: 0.35rem 0.42rem;
+  border-radius: 8px;
+  background: linear-gradient(
+    145deg,
+    var(--accent),
+    rgba(168, 85, 247, 0.85)
+  );
+  color: #0a0e14;
+}
+
+.brand-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.brand-sub {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.nav-link {
+  text-decoration: none;
+  font-size: 0.92rem;
+  color: var(--muted);
+  padding: 0.42rem 0.52rem;
+  border-radius: 8px;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+
+.nav-link:hover {
+  color: var(--text);
+  background: var(--accent-dim);
+}
+
+.nav-link.active {
+  color: var(--text);
+  background: var(--accent-dim);
+  font-weight: 500;
+}
+
+.main {
+  flex: 1;
+  overflow: auto;
+  background: radial-gradient(
+    ellipse 900px 560px at 12% -10%,
+    var(--accent-dim),
+    transparent
+  ),
+    linear-gradient(to bottom right, transparent, rgba(147, 51, 234, 0.04));
+}
+
+.page {
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  max-width: 1040px;
+}
+
+.page.narrow {
+  max-width: 620px;
+}
+
+.page-header {
+  margin-bottom: 1.35rem;
+}
+
+.page-header h1 {
+  margin: 0 0 0.4rem;
+  font-size: 1.42rem;
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.muted.small,
+.small {
+  font-size: 0.88rem;
+}
+
+.originals-line {
+  margin-bottom: 1rem;
+  line-height: 1.38;
+}
+
+.card {
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--surface-edge);
+}
+
+@media (prefers-color-scheme: light) {
+  .card {
+    background: #fff;
+    box-shadow:
+      0 1px 2px rgba(15, 20, 30, 0.04),
+      0 6px 20px rgba(15, 20, 30, 0.05);
+  }
+}
+
+.card.stretch {
+  align-self: stretch;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.grid-2 {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.row.wrap {
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  flex: 1;
+}
+
+.field span {
+  font-weight: 500;
+}
+
+input {
+  padding: 0.55rem 0.62rem;
+  border-radius: 8px;
+  border: 1px solid var(--surface-edge);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  min-width: 0;
+}
+
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input[readonly] {
+  opacity: 0.9;
+}
+
+.hint {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--muted);
+}
+
+.btn {
+  font: inherit;
+  cursor: pointer;
+  padding: 0.55rem 1rem;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  transition:
+    opacity 0.13s ease,
+    transform 0.05s ease;
+}
+
+.btn:active {
+  transform: scale(0.99);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #041018;
+}
+
+@media (prefers-color-scheme: light) {
+  .btn.primary {
+    color: #fff;
+  }
+}
+
+.btn.ghost {
+  background: transparent;
+  border-color: var(--surface-edge);
+  color: var(--text);
+}
+
+.btn-row {
+  margin-top: 1.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.time-grid {
+  display: grid;
+  gap: 0.72rem;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.stat-list {
+  margin-top: 0.65rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--surface-edge);
+}
+
+.stat:last-child {
+  border-bottom: none;
+}
+
+.stat.accent .stat-value {
+  color: var(--accent);
+}
+
+.stat-label {
+  color: var(--muted);
+}
+
+.stat-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 550;
+}
+
+h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.banner {
+  margin: 0.75rem 0;
+  padding: 0.6rem 0.72rem;
+  border-radius: 9px;
+  font-size: 0.92rem;
+  border: 1px solid var(--surface-edge);
+}
+
+.banner.ok {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.banner.error {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.banner.muted {
+  color: var(--muted);
+  background: var(--surface-edge);
+}
+
+@media (prefers-color-scheme: light) {
+  .banner.muted {
+    background: #eef2fb;
+    border-color: #dbe3f7;
+  }
+}
+
+.planner-date-picker-field {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.planner-date-picker-trigger {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.62rem;
+  border-radius: 8px;
+  border: 1px solid var(--surface-edge);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.planner-date-picker-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.planner-date-picker-trigger:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.planner-datepicker-popover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 80;
+  padding: 0.66rem 0.72rem;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--surface-edge);
+  box-shadow:
+    0 4px 22px rgba(5, 10, 20, 0.35),
+    0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+@media (prefers-color-scheme: light) {
+  .planner-datepicker-popover {
+    box-shadow:
+      0 4px 22px rgba(15, 20, 30, 0.12),
+      0 0 1px rgba(15, 20, 30, 0.06);
+  }
+}
+
+.planner-datepicker-popover .rdp-root {
+  margin: 0;
+
+  --rdp-accent-color: var(--accent);
+  --rdp-accent-background-color: var(--accent-dim);
+  --rdp-range_start-color: var(--text);
+  --rdp-range_end-color: var(--text);
+  --rdp-range_middle-color: var(--text);
+}
+
+.planner-datepicker-popover .rdp-caption_label,
+.planner-datepicker-popover .rdp-weekday,
+.planner-datepicker-popover .rdp-day_button {
+  color: var(--text);
+}
+
+.planner-datepicker-popover .rdp-weekday {
+  opacity: 1;
+  color: var(--muted);
+}
+
+.planner-datepicker-popover .rdp-nav_button {
+  border-color: var(--surface-edge);
+  color: var(--text);
+}
+
+.planner-datepicker-popover .rdp-dropdown_root {
+  color: var(--text);
+}

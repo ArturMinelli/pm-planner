@@ -3,11 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"pm-cli/pkg/config"
 )
 
 var (
@@ -36,21 +34,7 @@ func init() {
 }
 
 func initConfig() {
-	viper.SetConfigType("yaml")
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
-	} else {
-		viper.SetConfigName("config")
-		if home, err := os.UserHomeDir(); err == nil {
-			viper.AddConfigPath(filepath.Join(home, ".config", "pm"))
-		}
-	}
-
-	viper.SetEnvPrefix("PM")
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
-	viper.AutomaticEnv()
-
-	_ = viper.ReadInConfig()
+	_ = config.Init(cfgFile)
 }
 
 

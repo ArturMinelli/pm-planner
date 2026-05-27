@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	"pm-cli/pkg/api"
-	"pm-cli/pkg/plan"
+	"pm-cli/pkg/app"
 	"pm-cli/pkg/ui"
 )
 
@@ -29,7 +29,7 @@ var planCmd = &cobra.Command{
 		ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
 		defer cancel()
 
-		wd, err := client.FetchWorkDay(ctx, planDate)
+		st, err := app.FetchPlannerPayload(ctx, client, planDate)
 		if err != nil {
 			return err
 		}
@@ -37,36 +37,19 @@ var planCmd = &cobra.Command{
 		loc := time.Now().Location()
 		date, _ := time.ParseInLocation("2006-01-02", planDate, loc)
 
-		stamps := make([]time.Time, 0, len(wd.TimeCards))
-		for _, c := range wd.TimeCards {
-			if t, err := api.ParseHHMMOnDate(c.Time, date); err == nil {
+		stamps := make([]time.Time, 0, len(st.OriginalTimes))
+		for _, s := range st.OriginalTimes {
+			if t, err := api.ParseHHMMOnDate(s, date); err == nil {
 				stamps = append(stamps, t)
 			}
 		}
 		sort.Slice(stamps, func(i, j int) bool { return stamps[i].Before(stamps[j]) })
 
-		periods := make([]plan.Period, 0, len(wd.ShiftDay.Periods))
-		for _, p := range wd.ShiftDay.Periods {
-			enter, err1 := api.ParseHHMMOnDate(p.EnterTime, date)
-			leave, err2 := api.ParseHHMMOnDate(p.LeaveTime, date)
-			if err1 == nil && err2 == nil {
-				periods = append(periods, plan.Period{Enter: enter, Leave: leave})
-			}
-		}
+		target := time.Duration(st.TargetSecs) * time.Second
 
-		target := 8*time.Hour + 30*time.Minute
-		if wd.ShiftTime > 0 {
-			target = time.Duration(wd.ShiftTime * float64(time.Second))
-		}
-
-		sug, err := plan.Suggest(date, stamps, periods, target)
-		if err != nil {
-			return err
-		}
-
-		in1Str := sug.In1.Format("15:04")
-		out1Str := sug.Out1.Format("15:04")
-		in2Str := sug.In2.Format("15:04")
+		in1Str := st.In1
+		out1Str := st.Out1
+		in2Str := st.In2
 
 		if live {
 			m := ui.NewPlanModel(date, target, stamps, in1Str, out1Str, in2Str)
@@ -77,8 +60,7 @@ var planCmd = &cobra.Command{
 			return nil
 		}
 
-		// non-live: last field is computed and displayed as a note
-		out2Str := computeOut2(in1Str, out1Str, in2Str, target, date)
+		out2Str := st.Out2
 		form := huh.NewForm(
 			huh.NewGroup(
 				huh.NewNote().Title("Registros originais").Description(formatStamps(stamps)),
@@ -92,7 +74,9 @@ var planCmd = &cobra.Command{
 			return err
 		}
 
-		out2Str = computeOut2(in1Str, out1Str, in2Str, target, date)
+		if sum, err := app.RecalculatePlanner(planDate, st.TargetSecs, in1Str, out1Str, in2Str); err == nil {
+			out2Str = sum.Out2
+		}
 
 		fmt.Println()
 		fmt.Printf("Entrada 1: %s\nSaída 1: %s\nEntrada 2: %s\nSaída 2: %s\n", in1Str, out1Str, in2Str, out2Str)
@@ -100,22 +84,17 @@ var planCmd = &cobra.Command{
 	},
 }
 
-func computeOut2(in1, out1, in2 string, target time.Duration, date time.Time) string {
-	p := func(s string) time.Time { t, _ := time.ParseInLocation("15:04", s, date.Location()); return time.Date(date.Year(), date.Month(), date.Day(), t.Hour(), t.Minute(), 0, 0, date.Location()) }
-	in1T, out1T, in2T := p(in1), p(out1), p(in2)
-	first := out1T.Sub(in1T)
-	need := target - first
-	if need < 0 { need = 0 }
-	if in2T.IsZero() { return "--:--" }
-	return in2T.Add(need).Format("15:04")
-}
-
-func dur(d time.Duration) string { if d < 0 { d = 0 } ; h := int(d.Hours()) ; m := int(d.Minutes()) % 60 ; s := int(d.Seconds()) % 60 ; return fmt.Sprintf("%02d:%02d:%02d", h, m, s) }
-
 func formatStamps(stamps []time.Time) string {
-	if len(stamps) == 0 { return "(nenhum)" }
+	if len(stamps) == 0 {
+		return "(nenhum)"
+	}
 	s := ""
-	for i, t := range stamps { if i > 0 { s += ", " } ; s += t.Format("15:04") }
+	for i, t := range stamps {
+		if i > 0 {
+			s += ", "
+		}
+		s += t.Format("15:04")
+	}
 	return s
 }
 

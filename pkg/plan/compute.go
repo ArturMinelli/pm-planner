@@ -37,17 +37,6 @@ func DurationBetween(a, b time.Time) time.Duration {
 	return b.Sub(a)
 }
 
-func WorkedDurationFrom(records []time.Time) time.Duration {
-	if len(records) < 2 {
-		return 0
-	}
-	total := time.Duration(0)
-	for i := 0; i+1 < len(records); i += 2 {
-		total += DurationBetween(records[i], records[i+1])
-	}
-	return total
-}
-
 func minBreakFromPeriods(periods []Period) time.Duration {
 	if len(periods) < 2 {
 		return time.Hour
@@ -74,14 +63,6 @@ func defaultIn2(out1 time.Time, periods []Period, minBreak time.Duration) time.T
 	return candidate
 }
 
-func remainingOut2(in2 time.Time, alreadyWorked time.Duration, target time.Duration, segment1 time.Duration) time.Time {
-	need := target - alreadyWorked - segment1
-	if need < 0 {
-		need = 0
-	}
-	return in2.Add(need)
-}
-
 func Suggest(date time.Time, stamps []time.Time, periods []Period, target time.Duration) (Suggestion, error) {
 	res := Suggestion{}
 	if len(stamps) == 0 {
@@ -92,32 +73,40 @@ func Suggest(date time.Time, stamps []time.Time, periods []Period, target time.D
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Before(sorted[j]) })
 
 	minBreak := minBreakFromPeriods(periods)
-	already := WorkedDurationFrom(sorted)
+	slotIx := assignStampsToPlannerSlots(sorted, date)
 
-	in1 := sorted[0]
-	var out1 time.Time
-	if len(sorted) >= 2 {
-		out1 = sorted[1]
+	ts := func(slot int) time.Time {
+		if ix := slotIx[slot]; ix >= 0 && ix < len(sorted) {
+			return sorted[ix]
+		}
+		return time.Time{}
+	}
+
+	in1 := ts(0)
+	out1 := ts(1)
+	in2 := ts(2)
+	out2 := ts(3)
+
+	if in1.IsZero() {
+		// No punch landed on the Entrada‑1 anchor: keep the planner default clock (morning anchor),
+		// e.g. 12:28 goes to Saída‑1 nearest 12:00 instead of absorbing the sole punch as entrada.
+		if t, err := parseClock(DefaultPlannerAnchorsHM[0], date); err == nil {
+			in1 = t
+		} else if len(sorted) > 0 {
+			in1 = sorted[0]
+		}
 	}
 	if out1.IsZero() {
 		out1 = defaultOut1(in1, periods, target)
 	}
-
-	in2 := time.Time{}
-	if len(sorted) >= 3 {
-		in2 = sorted[2]
-	}
 	if in2.IsZero() {
 		in2 = defaultIn2(out1, periods, minBreak)
 	}
-
-	seg1 := DurationBetween(in1, out1)
-	out2 := time.Time{}
-	if len(sorted) >= 4 {
-		out2 = sorted[3]
-	}
 	if out2.IsZero() {
-		out2 = remainingOut2(in2, already, target, seg1)
+		hhmm := ComputeOut2(in1.Format("15:04"), out1.Format("15:04"), in2.Format("15:04"), target, date)
+		if ot, err := parseClock(hhmm, date); err == nil {
+			out2 = ot
+		}
 	}
 
 	res.In1 = in1

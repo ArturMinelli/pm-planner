@@ -1,0 +1,7 @@
+# Build outputs
+/bin/
+
+# Local tooling
+*.swp
+.idea/
+.DS_Store

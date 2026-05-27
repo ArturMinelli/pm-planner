@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=PM Planner
+GenericName=Ponto Mais planner
+Comment=Planeje jornadas e configure credenciais Ponto Mais (YAML compartilhado com a CLI pm)
+Exec=pm-desktop
+TryExec=pm-desktop
+Icon=pm-desktop
+Categories=Office;Calendar;GTK;
+Keywords=PontoMais;Ponto;Planner;PM;Horario;Tempo;Relogio;Trabalho;FiveLabs;pmdesktop;pmcli;
+Terminal=false
+StartupNotify=true
