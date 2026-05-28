@@ -54,44 +54,61 @@ export default function SettingsPage() {
     setAnchors(enforceAnchorOrder(next))
   }
 
-  async function persist(): Promise<boolean> {
+  const saveAccount = async () => {
     setMsg(null)
     setErr(null)
     if (!backend.hasWailsRuntime()) {
       setErr(
         'Configurações são gravadas pelo app desktop. Use pm-desktop aqui.',
       )
-      return false
+      return
+    }
+    if (!email.trim()) {
+      setErr('Informe o e-mail.')
+      return
     }
     const cache_ttl_hours = ttl.trim() === '' ? undefined : Number(ttl)
     if (ttl.trim() !== '' && !Number.isFinite(cache_ttl_hours)) {
       setErr('TTL deve ser um número válido.')
-      return false
+      return
+    }
+    setBusy(true)
+    try {
+      await backend.mergeAndSave({
+        email,
+        password,
+        cache_ttl_hours,
+      })
+      setMsg('Conta salva em ~/.config/pm/config.yaml')
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const savePlanner = async () => {
+    setMsg(null)
+    setErr(null)
+    if (!backend.hasWailsRuntime()) {
+      setErr(
+        'Configurações são gravadas pelo app desktop. Use pm-desktop aqui.',
+      )
+      return
     }
     const anchorErr = validatePlannerAnchors(anchors)
     if (anchorErr) {
       setErr(anchorErr)
-      return false
+      return
     }
-    try {
-      await backend.saveConfig({
-        email,
-        password,
-        cache_ttl_hours,
-        planner: { ...anchors },
-      })
-      return true
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
-      return false
-    }
-  }
-
-  const save = async () => {
     setBusy(true)
     try {
-      const ok = await persist()
-      if (ok) setMsg('Salvo em ~/.config/pm/config.yaml')
+      await backend.mergeAndSave({
+        planner: { ...anchors },
+      })
+      setMsg('Horários do planner salvos em ~/.config/pm/config.yaml')
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
     }
@@ -100,17 +117,19 @@ export default function SettingsPage() {
   const test = async () => {
     setMsg(null)
     setErr(null)
+    if (!backend.hasWailsRuntime()) {
+      setErr('Autenticação só funciona dentro do desktop.')
+      return
+    }
+    if (!email.trim() || !password) {
+      setErr('Informe e-mail e senha para testar.')
+      return
+    }
     setBusy(true)
     try {
-      if (!backend.hasWailsRuntime()) {
-        setErr('Autenticação só funciona dentro do desktop.')
-        return
-      }
-      const ok = await persist()
-      if (!ok) return
-      const problem = await backend.pingAuth()
+      const problem = await backend.testAuth(email, password)
       if (problem) setErr(problem)
-      else setMsg('Credenciais / sessão ok.')
+      else setMsg('Credenciais válidas.')
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
     } finally {
@@ -181,6 +200,24 @@ export default function SettingsPage() {
             </small>
           </label>
         </div>
+        <div className="btn-row">
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => void saveAccount()}
+            disabled={busy}
+          >
+            Salvar conta
+          </button>
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => void test()}
+            disabled={busy || !backend.hasWailsRuntime()}
+          >
+            Testar login
+          </button>
+        </div>
       </div>
 
       <div className="card">
@@ -221,26 +258,15 @@ export default function SettingsPage() {
           >
             Restaurar padrões
           </button>
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => void savePlanner()}
+            disabled={busy}
+          >
+            Salvar horários
+          </button>
         </div>
-      </div>
-
-      <div className="btn-row">
-        <button
-          type="button"
-          className="btn primary"
-          onClick={() => void save()}
-          disabled={busy}
-        >
-          Salvar
-        </button>
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => void test()}
-          disabled={busy || !backend.hasWailsRuntime()}
-        >
-          Testar login
-        </button>
       </div>
     </section>
   )

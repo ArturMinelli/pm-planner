@@ -13,6 +13,9 @@ import (
 	"github.com/spf13/viper"
 )
 
+// signInURL is the login endpoint; tests may override it.
+var signInURL = "https://api.pontomais.com.br/api/auth/sign_in"
+
 type session struct {
 	AccessToken string    `json:"access_token"`
 	Token       string    `json:"token"`
@@ -75,34 +78,26 @@ func isSessionValid(s *session) bool {
 	return time.Since(s.CachedAt) < time.Duration(ttlHours)*time.Hour
 }
 
-// GetAuthHeaders ensures we have valid headers, logging in if needed.
-func GetAuthHeaders() (map[string]string, error) {
-	if s, err := readCachedSession(); err == nil && isSessionValid(s) {
-		return map[string]string{
-			"Access-Token": func() string {
-				if s.AccessToken != "" {
-					return s.AccessToken
-				}
-				return s.Token
-			}(),
-			"Token":  s.Token,
-			"Uid":    s.Uid,
-			"Client": s.Client,
-		}, nil
+func sessionToHeaders(s *session) map[string]string {
+	access := s.Token
+	if s.AccessToken != "" {
+		access = s.AccessToken
 	}
-
-	email := viper.GetString("email")
-	password := viper.GetString("password")
-	if email == "" || password == "" {
-		return nil, errors.New("missing credentials: set 'email' and 'password' in $HOME/.config/pm/config.yaml")
+	return map[string]string{
+		"Access-Token": access,
+		"Token":        s.Token,
+		"Uid":          s.Uid,
+		"Client":       s.Client,
 	}
+}
 
+func login(email, password string) (*session, error) {
 	body := map[string]string{
 		"login":    email,
 		"password": password,
 	}
 	b, _ := json.Marshal(body)
-	req, err := http.NewRequest(http.MethodPost, "https://api.pontomais.com.br/api/auth/sign_in", bytes.NewReader(b))
+	req, err := http.NewRequest(http.MethodPost, signInURL, bytes.NewReader(b))
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +112,6 @@ func GetAuthHeaders() (map[string]string, error) {
 		return nil, fmt.Errorf("login failed with status %d", resp.StatusCode)
 	}
 
-	// Parse JSON response body
 	type loginResponse struct {
 		Success  string `json:"success"`
 		Token    string `json:"token"`
@@ -135,22 +129,44 @@ func GetAuthHeaders() (map[string]string, error) {
 	}
 
 	s := &session{
-		AccessToken: lr.Token, // Some endpoints expect both Access-Token and Token with same value
+		AccessToken: lr.Token,
 		Token:       lr.Token,
 		Uid:         lr.Data.Login,
 		Client:      lr.ClientID,
 		CachedAt:    time.Now(),
-		// Expiry not provided by this response; fallback TTL logic applies
 	}
 	if s.Token == "" || s.Uid == "" || s.Client == "" {
 		return nil, errors.New("login succeeded but required fields missing in response")
 	}
-	_ = writeCachedSession(s)
+	return s, nil
+}
 
-	return map[string]string{
-		"Access-Token": s.AccessToken,
-		"Token":        s.Token,
-		"Uid":          s.Uid,
-		"Client":       s.Client,
-	}, nil
+// VerifyCredentials performs a fresh sign-in with the given credentials, ignoring any cached session.
+// On success it updates session.json; on failure the existing cache is left unchanged.
+func VerifyCredentials(email, password string) error {
+	s, err := login(email, password)
+	if err != nil {
+		return err
+	}
+	return writeCachedSession(s)
+}
+
+// GetAuthHeaders ensures we have valid headers, logging in if needed.
+func GetAuthHeaders() (map[string]string, error) {
+	if s, err := readCachedSession(); err == nil && isSessionValid(s) {
+		return sessionToHeaders(s), nil
+	}
+
+	email := viper.GetString("email")
+	password := viper.GetString("password")
+	if email == "" || password == "" {
+		return nil, errors.New("missing credentials: set 'email' and 'password' in $HOME/.config/pm/config.yaml")
+	}
+
+	s, err := login(email, password)
+	if err != nil {
+		return nil, err
+	}
+	_ = writeCachedSession(s)
+	return sessionToHeaders(s), nil
 }

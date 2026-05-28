@@ -7,7 +7,7 @@ export function GetConfig():Promise<config.File>;
 
 export function LoadPlanner(arg1:string):Promise<app.PlannerPayload>;
 
-export function PingAuth():Promise<string>;
+export function TestAuth(arg1:string,arg2:string):Promise<string>;
 
 export function RecalculatePlanner(arg1:string,arg2:number,arg3:string,arg4:string,arg5:string):Promise<app.PlannerSummary>;
 

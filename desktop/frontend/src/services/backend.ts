@@ -4,7 +4,7 @@ import { builtinPlannerAnchors } from '../util/plannerDefaults'
 interface GoPmApp {
   GetConfig(): Promise<PmConfig>
   SaveConfig(c: PmConfig): Promise<void>
-  PingAuth(): Promise<string>
+  TestAuth(email: string, password: string): Promise<string>
   LoadPlanner(date: string): Promise<PlannerPayload>
   RecalculatePlanner(
     date: string,
@@ -83,9 +83,18 @@ export async function saveConfig(c: PmConfig): Promise<void> {
   return requireRuntime().SaveConfig(payload)
 }
 
+/** Merges patch into the on-disk config, then saves. */
+export async function mergeAndSave(patch: Partial<PmConfig>): Promise<void> {
+  const current = await getConfig()
+  await saveConfig({ ...current, ...patch })
+}
+
 /** Empty string means success */
-export async function pingAuth(): Promise<string> {
-  return requireRuntime().PingAuth()
+export async function testAuth(
+  email: string,
+  password: string,
+): Promise<string> {
+  return requireRuntime().TestAuth(email, password)
 }
 
 export async function loadPlanner(date: string): Promise<PlannerPayload> {

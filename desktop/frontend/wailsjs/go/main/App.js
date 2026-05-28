@@ -10,8 +10,8 @@ export function LoadPlanner(arg1) {
   return window['go']['main']['App']['LoadPlanner'](arg1);
 }
 
-export function PingAuth() {
-  return window['go']['main']['App']['PingAuth']();
+export function TestAuth(arg1, arg2) {
+  return window['go']['main']['App']['TestAuth'](arg1, arg2);
 }
 
 export function RecalculatePlanner(arg1, arg2, arg3, arg4, arg5) {
