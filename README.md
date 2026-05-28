@@ -178,8 +178,23 @@ Interactive terminal planner (`pm plan`, Bubble Tea live mode) mirrors the deskt
 planner screen; shared logic lives in [`pkg/app/planner.go`](pkg/app/planner.go).
 
 When loading a day, [`plan.Suggest`](pkg/plan/compute.go) assigns each punch to the planner
-slots that minimize total deviation from default anchors (**order preserving**, no forced
-ordering by punch index): `08:00`, `12:00`, `13:30`, `18:00`. A lone lunch punch (for example
-12:28) maps nearest **12:00** (Saída 1); **Entrada 1 stays the default anchor** `08:00` when no
-stamp matches that anchor. Shorthand `0008` refers to **08:00**, not midnight. You can still
-edit the suggested times in the UI.
+slots that minimize total deviation from configurable anchors (**order preserving**, no forced
+ordering by punch index). Factory defaults: `08:00`, `12:00`, `13:30`, `18:00` (Entrada 1 →
+Saída 1 → Entrada 2 → Saída 2). A lone lunch punch (for example 12:28) maps nearest **12:00**
+(Saída 1); **Entrada 1 stays the morning anchor** when no stamp matches that slot. Shorthand
+`0008` refers to **08:00**, not midnight. You can still edit the suggested times in the UI.
+
+Configure anchors in `~/.config/pm/config.yaml` (desktop **Configurações → Horários padrão do
+planner**, or edit YAML directly):
+
+```yaml
+planner:
+  in1: "08:00"
+  out1: "12:00"
+  in2: "13:30"
+  out2: "18:00"
+```
+
+Times must be strictly increasing with at least 15 minutes between consecutive slots. Partial
+or invalid values fall back per slot to the built-in defaults when loading a day; saving from
+the settings UI validates the full set.

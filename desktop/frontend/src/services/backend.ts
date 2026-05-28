@@ -1,4 +1,5 @@
-import type { PmConfig, PlannerPayload, PlannerSummary } from '../types'
+import type { PmConfig, PlannerAnchorsConfig, PlannerPayload, PlannerSummary } from '../types'
+import { builtinPlannerAnchors } from '../util/plannerDefaults'
 
 interface GoPmApp {
   GetConfig(): Promise<PmConfig>
@@ -30,10 +31,33 @@ function requireRuntime(): GoPmApp {
 }
 
 /** Safe for browser/dev preview — returns mock mode flag */
+function normalizePlanner(
+  planner?: PlannerAnchorsConfig,
+): PlannerAnchorsConfig | undefined {
+  if (!planner) return undefined
+  const builtins = builtinPlannerAnchors()
+  return {
+    in1: planner.in1?.trim() || builtins.in1,
+    out1: planner.out1?.trim() || builtins.out1,
+    in2: planner.in2?.trim() || builtins.in2,
+    out2: planner.out2?.trim() || builtins.out2,
+  }
+}
+
 export async function getConfig(): Promise<PmConfig> {
-  if (!hasWailsRuntime())
-    return { email: '', password: '', cache_ttl_hours: undefined }
-  return requireRuntime().GetConfig()
+  if (!hasWailsRuntime()) {
+    return {
+      email: '',
+      password: '',
+      cache_ttl_hours: undefined,
+      planner: builtinPlannerAnchors(),
+    }
+  }
+  const c = await requireRuntime().GetConfig()
+  return {
+    ...c,
+    planner: normalizePlanner(c.planner) ?? builtinPlannerAnchors(),
+  }
 }
 
 export async function saveConfig(c: PmConfig): Promise<void> {
@@ -47,6 +71,14 @@ export async function saveConfig(c: PmConfig): Promise<void> {
     c.cache_ttl_hours > 0
   ) {
     payload.cache_ttl_hours = Math.trunc(c.cache_ttl_hours)
+  }
+  if (c.planner) {
+    payload.planner = {
+      in1: c.planner.in1,
+      out1: c.planner.out1,
+      in2: c.planner.in2,
+      out2: c.planner.out2,
+    }
   }
   return requireRuntime().SaveConfig(payload)
 }

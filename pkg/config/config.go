@@ -11,11 +11,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// PlannerAnchors holds user-configurable HH:MM defaults for the four planner slots.
+type PlannerAnchors struct {
+	In1  string `json:"in1" yaml:"in1,omitempty"`
+	Out1 string `json:"out1" yaml:"out1,omitempty"`
+	In2  string `json:"in2" yaml:"in2,omitempty"`
+	Out2 string `json:"out2" yaml:"out2,omitempty"`
+}
+
 // File mirrors ~/.config/pm/config.yaml keys used by pm-cli.
 type File struct {
-	Email         string `json:"email" yaml:"email"`
-	Password      string `json:"password" yaml:"password"`
-	CacheTTLHours int    `json:"cache_ttl_hours,omitempty" yaml:"cache_ttl_hours,omitempty"`
+	Email         string          `json:"email" yaml:"email"`
+	Password      string          `json:"password" yaml:"password"`
+	CacheTTLHours int             `json:"cache_ttl_hours,omitempty" yaml:"cache_ttl_hours,omitempty"`
+	Planner       *PlannerAnchors `json:"planner,omitempty" yaml:"planner,omitempty"`
 }
 
 // DefaultDir returns $HOME/.config/pm (created on Save).
@@ -91,6 +100,15 @@ func Read(cfgFileOverride string) (*File, error) {
 
 // Save writes YAML atomically with tight permissions when credentials are stored.
 func Save(cfgFileOverride string, f *File) error {
+	if f != nil && f.Planner != nil && f.Planner.anySet() {
+		anchors, err := mergePlannerAnchors(f, true)
+		if err != nil {
+			return err
+		}
+		if err := ValidatePlannerAnchors(anchors); err != nil {
+			return fmt.Errorf("planner: %w", err)
+		}
+	}
 	path, err := ResolvePath(cfgFileOverride)
 	if err != nil {
 		return err

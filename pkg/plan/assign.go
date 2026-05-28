@@ -2,10 +2,11 @@ package plan
 
 import "time"
 
-// DefaultPlannerAnchorsHM are typical clock targets (HH:MM) for assigning raw punches to
-// Entrada1 → Saída1 → Entrada2 → Saída2 order. Informal shorthand "0800"/"1200"/… maps here;
-// legacy "0008" is intentionally **08:00**, not midnight 00:08.
-var DefaultPlannerAnchorsHM = [...]string{"08:00", "12:00", "13:30", "18:00"}
+// BuiltinAnchors are default clock targets (HH:MM) for Entrada1 → Saída1 → Entrada2 → Saída2.
+// Legacy shorthand "0008" means **08:00**, not midnight 00:08.
+func BuiltinAnchors() [4]string {
+	return [4]string{"08:00", "12:00", "13:30", "18:00"}
+}
 
 func absDur(d time.Duration) time.Duration {
 	if d < 0 {
@@ -45,7 +46,7 @@ func anchorCombinations(k int) [][]int {
 // assignStampsToPlannerSlots selects up to four increasing stamp indices and maps each to one
 // of four planner anchors (order-preserving), minimizing summed |stamp−anchor|.
 // Returned slice has length 4: each slot is the stamp index in sorted chronological stamps, or -1 if none.
-func assignStampsToPlannerSlots(sorted []time.Time, date time.Time) [4]int {
+func assignStampsToPlannerSlots(sorted []time.Time, date time.Time, anchorsHM [4]string) [4]int {
 	fail := func() [4]int {
 		var r [4]int
 		for i := range r {
@@ -56,7 +57,7 @@ func assignStampsToPlannerSlots(sorted []time.Time, date time.Time) [4]int {
 
 	n := len(sorted)
 	var anchors [4]time.Time
-	for i, hhmm := range DefaultPlannerAnchorsHM {
+	for i, hhmm := range anchorsHM {
 		at, err := parseClock(hhmm, date)
 		if err != nil {
 			return fail()

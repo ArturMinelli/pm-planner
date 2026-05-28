@@ -1,10 +1,28 @@
 import { useEffect, useState } from 'react'
+import PlannerTimeInput from '../components/PlannerTimeInput'
 import * as backend from '../services/backend'
+import { builtinPlannerAnchors } from '../util/plannerDefaults'
+import {
+  adjustPlannerAnchor,
+  enforceAnchorOrder,
+  type PlannerAnchorTimes,
+  validatePlannerAnchors,
+} from '../util/plannerTimes'
+
+type AnchorField = keyof PlannerAnchorTimes
+
+const ANCHOR_FIELDS: { field: AnchorField; label: string }[] = [
+  { field: 'in1', label: 'Entrada 1' },
+  { field: 'out1', label: 'Saída 1' },
+  { field: 'in2', label: 'Entrada 2' },
+  { field: 'out2', label: 'Saída 2' },
+]
 
 export default function SettingsPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [ttl, setTTL] = useState<string>('')
+  const [anchors, setAnchors] = useState<PlannerAnchorTimes>(builtinPlannerAnchors)
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -18,11 +36,23 @@ export default function SettingsPage() {
         if (c.cache_ttl_hours && c.cache_ttl_hours > 0) {
           setTTL(String(c.cache_ttl_hours))
         }
+        if (c.planner) {
+          setAnchors({
+            in1: c.planner.in1 ?? builtinPlannerAnchors().in1,
+            out1: c.planner.out1 ?? builtinPlannerAnchors().out1,
+            in2: c.planner.in2 ?? builtinPlannerAnchors().in2,
+            out2: c.planner.out2 ?? builtinPlannerAnchors().out2,
+          })
+        }
       } catch (e) {
         setErr(e instanceof Error ? e.message : String(e))
       }
     })()
   }, [])
+
+  const applyAnchors = (next: PlannerAnchorTimes) => {
+    setAnchors(enforceAnchorOrder(next))
+  }
 
   async function persist(): Promise<boolean> {
     setMsg(null)
@@ -38,11 +68,17 @@ export default function SettingsPage() {
       setErr('TTL deve ser um número válido.')
       return false
     }
+    const anchorErr = validatePlannerAnchors(anchors)
+    if (anchorErr) {
+      setErr(anchorErr)
+      return false
+    }
     try {
       await backend.saveConfig({
         email,
         password,
         cache_ttl_hours,
+        planner: { ...anchors },
       })
       return true
     } catch (e) {
@@ -87,6 +123,8 @@ export default function SettingsPage() {
       ''
     : 'Modo navegador: edição apenas local; gravar/API exige o shell Wails.'
 
+  const builtins = builtinPlannerAnchors()
+
   return (
     <section className="page narrow">
       <header className="page-header">
@@ -110,6 +148,7 @@ export default function SettingsPage() {
       )}
 
       <div className="card">
+        <h2 className="card-title">Conta e sessão</h2>
         <div className="stack">
           <label className="field">
             <span>E-mail (login)</span>
@@ -142,24 +181,66 @@ export default function SettingsPage() {
             </small>
           </label>
         </div>
+      </div>
+
+      <div className="card">
+        <h2 className="card-title">Horários padrão do planner</h2>
+        <p className="muted card-intro">
+          Âncoras usadas para atribuir batidas aos quatro campos e para preencher
+          Entrada 1 quando não há registro correspondente. A CLI (
+          <code className="pill">pm plan</code>) usa os mesmos valores.
+        </p>
+        <div className="stack planner-anchor-grid">
+          {ANCHOR_FIELDS.map(({ field, label }) => (
+            <label key={field} className="field">
+              <span>{label}</span>
+              <PlannerTimeInput
+                value={anchors[field]}
+                onChange={(value) =>
+                  applyAnchors({ ...anchors, [field]: value })
+                }
+                onStep={(delta) =>
+                  applyAnchors(adjustPlannerAnchor(anchors, field, delta))
+                }
+                onBlurNormalize={() => applyAnchors(anchors)}
+              />
+            </label>
+          ))}
+        </div>
+        <small className="hint">
+          Padrão de fábrica: {builtins.in1}, {builtins.out1}, {builtins.in2},{' '}
+          {builtins.out2}. Intervalo mínimo de 15 minutos entre horários
+          consecutivos.
+        </small>
         <div className="btn-row">
           <button
             type="button"
-            className="btn primary"
-            onClick={() => void save()}
+            className="btn ghost"
+            onClick={() => applyAnchors(builtinPlannerAnchors())}
             disabled={busy}
           >
-            Salvar
-          </button>
-          <button
-            type="button"
-            className="btn ghost"
-            onClick={() => void test()}
-            disabled={busy || !backend.hasWailsRuntime()}
-          >
-            Testar login
+            Restaurar padrões
           </button>
         </div>
+      </div>
+
+      <div className="btn-row">
+        <button
+          type="button"
+          className="btn primary"
+          onClick={() => void save()}
+          disabled={busy}
+        >
+          Salvar
+        </button>
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() => void test()}
+          disabled={busy || !backend.hasWailsRuntime()}
+        >
+          Testar login
+        </button>
       </div>
     </section>
   )

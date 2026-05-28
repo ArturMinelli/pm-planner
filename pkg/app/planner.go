@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"pm-cli/pkg/api"
+	"pm-cli/pkg/config"
 	"pm-cli/pkg/plan"
 )
 
@@ -72,7 +73,14 @@ func FetchPlannerPayload(ctx context.Context, client *api.Client, dateStr string
 		target = time.Duration(wd.ShiftTime * float64(time.Second))
 	}
 
-	sug, err := plan.Suggest(date, stamps, periods, target)
+	anchors := plan.BuiltinAnchors()
+	if cfg, err := config.Read(""); err == nil {
+		if resolved, err := config.ResolvePlannerAnchors(cfg); err == nil {
+			anchors = resolved
+		}
+	}
+
+	sug, err := plan.Suggest(date, stamps, periods, target, anchors)
 	if err != nil {
 		return nil, err
 	}

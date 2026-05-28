@@ -63,7 +63,7 @@ func defaultIn2(out1 time.Time, periods []Period, minBreak time.Duration) time.T
 	return candidate
 }
 
-func Suggest(date time.Time, stamps []time.Time, periods []Period, target time.Duration) (Suggestion, error) {
+func Suggest(date time.Time, stamps []time.Time, periods []Period, target time.Duration, anchorsHM [4]string) (Suggestion, error) {
 	res := Suggestion{}
 	if len(stamps) == 0 {
 		return res, fmt.Errorf("no existing records")
@@ -73,7 +73,7 @@ func Suggest(date time.Time, stamps []time.Time, periods []Period, target time.D
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Before(sorted[j]) })
 
 	minBreak := minBreakFromPeriods(periods)
-	slotIx := assignStampsToPlannerSlots(sorted, date)
+	slotIx := assignStampsToPlannerSlots(sorted, date, anchorsHM)
 
 	ts := func(slot int) time.Time {
 		if ix := slotIx[slot]; ix >= 0 && ix < len(sorted) {
@@ -90,7 +90,7 @@ func Suggest(date time.Time, stamps []time.Time, periods []Period, target time.D
 	if in1.IsZero() {
 		// No punch landed on the Entrada‑1 anchor: keep the planner default clock (morning anchor),
 		// e.g. 12:28 goes to Saída‑1 nearest 12:00 instead of absorbing the sole punch as entrada.
-		if t, err := parseClock(DefaultPlannerAnchorsHM[0], date); err == nil {
+		if t, err := parseClock(anchorsHM[0], date); err == nil {
 			in1 = t
 		} else if len(sorted) > 0 {
 			in1 = sorted[0]
