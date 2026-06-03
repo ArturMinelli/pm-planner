@@ -1,5 +1,14 @@
 # Build outputs
 /bin/
+/main
+/pm
+/pm.exe
+/pm-desktop
+/pm-desktop.exe
+/desktop/frontend/dist/
+/desktop/frontend/dist-ssr/
+/desktop/frontend/wailsjs/
+/desktop/build/
 
 # Local tooling
 *.swp

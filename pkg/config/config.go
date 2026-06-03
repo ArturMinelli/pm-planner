@@ -11,6 +11,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const appConfigDirName = "pm"
+
 // PlannerAnchors holds user-configurable HH:MM defaults for the four planner slots.
 type PlannerAnchors struct {
 	In1  string `json:"in1" yaml:"in1,omitempty"`
@@ -27,16 +29,17 @@ type File struct {
 	Planner       *PlannerAnchors `json:"planner,omitempty" yaml:"planner,omitempty"`
 }
 
-// DefaultDir returns $HOME/.config/pm (created on Save).
+// DefaultDir returns the platform-native config directory for PM.
+// On Linux this remains $XDG_CONFIG_HOME/pm, or $HOME/.config/pm by default.
 func DefaultDir() (string, error) {
-	home, err := os.UserHomeDir()
+	base, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".config", "pm"), nil
+	return filepath.Join(base, appConfigDirName), nil
 }
 
-// DefaultPath returns $HOME/.config/pm/config.yaml.
+// DefaultPath returns the platform-native config.yaml path.
 func DefaultPath() (string, error) {
 	dir, err := DefaultDir()
 	if err != nil {

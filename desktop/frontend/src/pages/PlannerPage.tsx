@@ -10,6 +10,16 @@ import {
 } from '../util/plannerTimes'
 import PlannerDatePicker from '../components/PlannerDatePicker'
 import PlannerTimeInput from '../components/PlannerTimeInput'
+import {
+  Banner,
+  Button,
+  Card,
+  Field,
+  Page,
+  PageHeader,
+  Stack,
+  StatRow,
+} from '../components/ui'
 
 export default function PlannerPage() {
   const [date, setDate] = useState(localDateYYYYMMDD)
@@ -24,6 +34,7 @@ export default function PlannerPage() {
 
   const targetSecs = loaded?.targetSecs ?? 0
   const timesDisabled = busy || !loaded
+  const hasRuntime = backend.hasWailsRuntime()
 
   const applyTimes = useCallback((next: PlannerTimes) => {
     setIn1(next.in1)
@@ -75,7 +86,7 @@ export default function PlannerPage() {
     setSummary(null)
     try {
       if (!backend.hasWailsRuntime()) {
-        setErr('Abra esta interface pelo app desktop (pm-desktop).')
+        setErr('Abra esta interface pelo app desktop pm-desktop para carregar dados.')
         return
       }
       const payload = await backend.loadPlanner(date)
@@ -126,120 +137,122 @@ export default function PlannerPage() {
   }, [summary, loaded])
 
   return (
-    <section className="page">
-      <header className="page-header">
-        <h1>Planejar jornada</h1>
-        <p className="muted">
-          Carrega o mesmo dia útil da API que o comando{' '}
-          <code className="pill">pm plan</code>.
-        </p>
-      </header>
+    <Page>
+      <PageHeader
+        title="Planejar Jornada"
+        description={
+          <>
+            Carrega o mesmo dia útil da API que o comando{' '}
+            <code className="pill" translate="no">
+              pm plan
+            </code>
+            .
+          </>
+        }
+      />
 
-      <div className="stack">
-        <div className="card">
+      <Stack>
+        {!hasRuntime ? (
+          <Banner>
+            Modo navegador: use o app desktop para carregar dados reais da API.
+          </Banner>
+        ) : null}
+
+        <Card>
           <div className="row wrap">
-            <label className="field">
-              <span>Data</span>
+            <Field id="planner-date" label="Data">
               <PlannerDatePicker
+                id="planner-date"
                 value={date}
                 onChange={setDate}
                 disabled={busy}
                 autoFocus
               />
-            </label>
-            <button
-              type="button"
-              className="btn primary"
+            </Field>
+            <Button
+              variant="primary"
               onClick={() => void load()}
               disabled={busy}
+              aria-busy={busy}
             >
-              {busy ? 'Carregando…' : 'Carregar dia'}
-            </button>
+              {busy ? 'Carregando…' : 'Carregar Dia'}
+            </Button>
           </div>
-        </div>
+        </Card>
 
-        {err && (
-          <div className="banner error" role="alert">
-            {err}
-          </div>
-        )}
+        {err ? <Banner tone="error">{err}</Banner> : null}
 
         <div className="grid-2">
-          <div className="card stretch">
-          <h2>Marcações sugeridas</h2>
-          <p className="muted small originals-line">{originals}</p>
-          <div className="time-grid">
-            <label className="field">
-              <span>Entrada 1</span>
+          <Card title="Marcações Sugeridas" stretch>
+            <p className="muted small originals-line">{originals}</p>
+            <div className="time-grid">
+              <Field id="planner-in1" label="Entrada 1">
               <PlannerTimeInput
+                id="planner-in1"
+                name="planner-in1"
                 value={in1}
                 onChange={setIn1}
                 onStep={(delta) => stepTime('in1', delta)}
                 onBlurNormalize={() => blurTime('in1', in1)}
                 disabled={timesDisabled}
               />
-            </label>
-            <label className="field">
-              <span>Saída 1</span>
+              </Field>
+              <Field id="planner-out1" label="Saída 1">
               <PlannerTimeInput
+                id="planner-out1"
+                name="planner-out1"
                 value={out1}
                 onChange={setOut1}
                 onStep={(delta) => stepTime('out1', delta)}
                 onBlurNormalize={() => blurTime('out1', out1)}
                 disabled={timesDisabled}
               />
-            </label>
-            <label className="field">
-              <span>Entrada 2</span>
+              </Field>
+              <Field id="planner-in2" label="Entrada 2">
               <PlannerTimeInput
+                id="planner-in2"
+                name="planner-in2"
                 value={in2}
                 onChange={setIn2}
                 onStep={(delta) => stepTime('in2', delta)}
                 onBlurNormalize={() => blurTime('in2', in2)}
                 disabled={timesDisabled}
               />
-            </label>
-            <label className="field">
-              <span>Saída 2 (calc.)</span>
-              <input readOnly tabIndex={-1} value={preview?.out2 ?? '—'} />
-            </label>
-          </div>
-        </div>
-        <div className="card stretch">
-          <h2>Resumo</h2>
+              </Field>
+              <Field id="planner-out2" label="Saída 2 Calculada">
+                <input
+                  id="planner-out2"
+                  name="planner-out2"
+                  readOnly
+                  tabIndex={-1}
+                  value={preview?.out2 ?? '—'}
+                />
+              </Field>
+            </div>
+          </Card>
+
+          <Card title="Resumo" stretch>
           {!loaded ? (
             <p className="muted">Carregue um dia para ver metas e totais.</p>
           ) : (
-            <>
-              <div className="stat-list">
-                <div className="stat">
-                  <span className="stat-label">Meta do dia</span>
-                  <span className="stat-value">
-                    {formatDurationSecs(loaded.targetSecs)}
-                  </span>
-                </div>
-                <div className="stat">
-                  <span className="stat-label">1ª jornada</span>
-                  <span className="stat-value">{preview?.first ?? '—'}</span>
-                </div>
-                <div className="stat">
-                  <span className="stat-label">2ª jornada</span>
-                  <span className="stat-value">{preview?.second ?? '—'}</span>
-                </div>
-                <div className="stat">
-                  <span className="stat-label">Total</span>
-                  <span className="stat-value">{preview?.total ?? '—'}</span>
-                </div>
-                <div className="stat accent">
-                  <span className="stat-label">Hora extra</span>
-                  <span className="stat-value">{preview?.extra ?? '—'}</span>
-                </div>
-              </div>
-            </>
+            <div className="stat-list" aria-live="polite">
+              <StatRow
+                label="Meta do Dia"
+                value={formatDurationSecs(loaded.targetSecs)}
+              />
+              <StatRow label="1ª Jornada" value={preview?.first ?? '—'} />
+              <StatRow label="2ª Jornada" value={preview?.second ?? '—'} />
+              <StatRow label="Total" value={preview?.total ?? '—'} />
+              <StatRow
+                label="Hora Extra"
+                value={preview?.extra ?? '—'}
+                accent
+              />
+            </div>
           )}
+          </Card>
         </div>
-        </div>
-      </div>
-    </section>
+      </Stack>
+    </Page>
   )
 }

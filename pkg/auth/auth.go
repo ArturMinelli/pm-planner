@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	"pm-cli/pkg/config"
 )
 
 // signInURL is the login endpoint; tests may override it.
@@ -26,11 +27,11 @@ type session struct {
 }
 
 func cachePath() (string, error) {
-	home, err := os.UserHomeDir()
+	dir, err := config.DefaultDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".config", "pm", "session.json"), nil
+	return filepath.Join(dir, "session.json"), nil
 }
 
 func readCachedSession() (*session, error) {
@@ -160,7 +161,11 @@ func GetAuthHeaders() (map[string]string, error) {
 	email := viper.GetString("email")
 	password := viper.GetString("password")
 	if email == "" || password == "" {
-		return nil, errors.New("missing credentials: set 'email' and 'password' in $HOME/.config/pm/config.yaml")
+		path, err := config.DefaultPath()
+		if err != nil {
+			return nil, errors.New("missing credentials: set 'email' and 'password' in the PM config file")
+		}
+		return nil, fmt.Errorf("missing credentials: set 'email' and 'password' in %s", path)
 	}
 
 	s, err := login(email, password)

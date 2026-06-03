@@ -72,7 +72,9 @@ export default function PlannerDatePicker({
   }, [open, close])
 
   useEffect(() => {
-    if (disabled) close()
+    if (!disabled) return
+    const frame = window.requestAnimationFrame(() => close())
+    return () => window.cancelAnimationFrame(frame)
   }, [disabled, close])
 
   return (

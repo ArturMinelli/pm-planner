@@ -7,12 +7,13 @@ export type PlannerTimeInputProps = {
   onBlurNormalize?: () => void
   disabled?: boolean
   id?: string
+  name?: string
   placeholder?: string
   className?: string
 }
 
 /** Normalize to HH:MM display from pasted or typed raw text (max 4 digits). */
-export function digitsToMaskedTime(raw: string): string {
+function digitsToMaskedTime(raw: string): string {
   const digits = raw.replace(/\D/g, '').slice(0, 4)
   if (digits.length === 0) return ''
   if (digits.length <= 2) return digits
@@ -26,12 +27,14 @@ export default function PlannerTimeInput({
   onBlurNormalize,
   disabled,
   id,
-  placeholder = 'HH:MM',
+  name,
+  placeholder = '08:00…',
   className,
 }: PlannerTimeInputProps): JSX.Element {
   return (
     <input
       id={id}
+      name={name}
       type="text"
       inputMode="numeric"
       autoComplete="off"
@@ -52,11 +55,6 @@ export default function PlannerTimeInput({
           e.preventDefault()
           onStep(-15)
         }
-      }}
-      onPaste={(e) => {
-        e.preventDefault()
-        const t = e.clipboardData?.getData('text') ?? ''
-        onChange(digitsToMaskedTime(t))
       }}
     />
   )

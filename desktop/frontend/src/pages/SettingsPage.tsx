@@ -8,6 +8,15 @@ import {
   type PlannerAnchorTimes,
   validatePlannerAnchors,
 } from '../util/plannerTimes'
+import {
+  Banner,
+  Button,
+  Card,
+  Field,
+  Page,
+  PageHeader,
+  Stack,
+} from '../components/ui'
 
 type AnchorField = keyof PlannerAnchorTimes
 
@@ -31,7 +40,7 @@ export default function SettingsPage() {
     ;(async () => {
       try {
         const c = await backend.getConfig()
-        setEmail(c.email)
+        setEmail(c.email ?? '')
         setPassword(c.password ?? '')
         if (c.cache_ttl_hours && c.cache_ttl_hours > 0) {
           setTTL(String(c.cache_ttl_hours))
@@ -68,8 +77,11 @@ export default function SettingsPage() {
       return
     }
     const cache_ttl_hours = ttl.trim() === '' ? undefined : Number(ttl)
-    if (ttl.trim() !== '' && !Number.isFinite(cache_ttl_hours)) {
-      setErr('TTL deve ser um número válido.')
+    if (
+      ttl.trim() !== '' &&
+      (!Number.isFinite(cache_ttl_hours) || Number(cache_ttl_hours) <= 0)
+    ) {
+      setErr('TTL deve ser um número positivo em horas.')
       return
     }
     setBusy(true)
@@ -79,7 +91,7 @@ export default function SettingsPage() {
         password,
         cache_ttl_hours,
       })
-      setMsg('Conta salva em ~/.config/pm/config.yaml')
+      setMsg('Conta salva no arquivo de configuração compartilhado.')
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
     } finally {
@@ -106,7 +118,7 @@ export default function SettingsPage() {
       await backend.mergeAndSave({
         planner: { ...anchors },
       })
-      setMsg('Horários do planner salvos em ~/.config/pm/config.yaml')
+      setMsg('Horários do planner salvos no arquivo de configuração compartilhado.')
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
     } finally {
@@ -145,93 +157,133 @@ export default function SettingsPage() {
   const builtins = builtinPlannerAnchors()
 
   return (
-    <section className="page narrow">
-      <header className="page-header">
-        <h1>Configurações</h1>
-        <p className="muted">
-          Mesmo arquivo YAML usado pela CLI (
-          <code className="pill">~/.config/pm/config.yaml</code>).
-        </p>
-      </header>
+    <Page narrow>
+      <PageHeader
+        title="Configurações"
+        description={
+          <>
+            Usa o mesmo arquivo de configuração da CLI, resolvido por{' '}
+            <code className="pill" translate="no">
+              pm
+            </code>{' '}
+            em cada plataforma.
+          </>
+        }
+      />
 
-      {devHint && <div className="banner muted">{devHint}</div>}
-      {err && (
-        <div className="banner error" role="alert">
-          {err}
-        </div>
-      )}
-      {msg && (
-        <div className="banner ok" role="status">
-          {msg}
-        </div>
-      )}
+      {devHint ? <Banner>{devHint}</Banner> : null}
+      {err ? <Banner tone="error">{err}</Banner> : null}
+      {msg ? <Banner tone="success">{msg}</Banner> : null}
 
-      <div className="card">
-        <h2 className="card-title">Conta e sessão</h2>
-        <div className="stack">
-          <label className="field">
-            <span>E-mail (login)</span>
+      <Card title="Conta e Sessão">
+        <form
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void saveAccount()
+          }}
+        >
+          <Stack>
+            <Field id="settings-email" label="E-mail de Login">
             <input
+              id="settings-email"
+              name="email"
+              type="email"
               autoComplete="username email"
+              spellCheck={false}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-          </label>
-          <label className="field">
-            <span>Senha</span>
+            </Field>
+            <Field id="settings-password" label="Senha">
             <input
+              id="settings-password"
+              name="password"
               type="password"
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-          </label>
-          <label className="field">
-            <span>Cache TTL (horas)</span>
+            </Field>
+            <Field
+              id="settings-cache-ttl"
+              label="Cache TTL em Horas"
+              hint={
+                <>
+                  Quando a API não envia validade da sessão, limita há quantas
+                  horas o arquivo{' '}
+                  <code className="pill" translate="no">
+                    session.json
+                  </code>{' '}
+                  é reutilizado.
+                </>
+              }
+            >
             <input
-              placeholder="Opcional · padrão 8"
+              id="settings-cache-ttl"
+              name="cache_ttl_hours"
+              type="number"
+              min="1"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="8…"
               value={ttl}
               onChange={(e) => setTTL(e.target.value)}
             />
-            <small className="hint">
-              Quando a API não envia validade da sessão, limita há quantas
-              horas o arquivo <code className="pill">session.json</code> é
-              reutilizado.
-            </small>
-          </label>
-        </div>
-        <div className="btn-row">
-          <button
-            type="button"
-            className="btn primary"
-            onClick={() => void saveAccount()}
+            </Field>
+          </Stack>
+          <div className="btn-row">
+          <Button
+            type="submit"
+            variant="primary"
             disabled={busy}
+            aria-busy={busy}
           >
-            Salvar conta
-          </button>
-          <button
+            {busy ? 'Salvando…' : 'Salvar Conta'}
+          </Button>
+          <Button
             type="button"
-            className="btn ghost"
+            variant="secondary"
             onClick={() => void test()}
             disabled={busy || !backend.hasWailsRuntime()}
+            aria-busy={busy}
           >
-            Testar login
-          </button>
-        </div>
-      </div>
+            Testar Login
+          </Button>
+          </div>
+        </form>
+      </Card>
 
-      <div className="card">
-        <h2 className="card-title">Horários padrão do planner</h2>
-        <p className="muted card-intro">
-          Âncoras usadas para atribuir batidas aos quatro campos e para preencher
-          Entrada 1 quando não há registro correspondente. A CLI (
-          <code className="pill">pm plan</code>) usa os mesmos valores.
-        </p>
-        <div className="stack planner-anchor-grid">
+      <Card
+        title="Horários Padrão do Planner"
+        intro={
+          <>
+            Âncoras usadas para atribuir batidas aos quatro campos e preencher
+            Entrada 1 quando não há registro correspondente. A CLI{' '}
+            <code className="pill" translate="no">
+              pm plan
+            </code>{' '}
+            usa os mesmos valores.
+          </>
+        }
+      >
+        <form
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void savePlanner()
+          }}
+        >
+          <div className="planner-anchor-grid">
           {ANCHOR_FIELDS.map(({ field, label }) => (
-            <label key={field} className="field">
-              <span>{label}</span>
+            <Field
+              key={field}
+              id={`settings-anchor-${field}`}
+              label={label}
+            >
               <PlannerTimeInput
+                id={`settings-anchor-${field}`}
+                name={`planner_${field}`}
                 value={anchors[field]}
                 onChange={(value) =>
                   applyAnchors({ ...anchors, [field]: value })
@@ -241,33 +293,34 @@ export default function SettingsPage() {
                 }
                 onBlurNormalize={() => applyAnchors(anchors)}
               />
-            </label>
+            </Field>
           ))}
-        </div>
-        <small className="hint">
+          </div>
+          <small className="hint">
           Padrão de fábrica: {builtins.in1}, {builtins.out1}, {builtins.in2},{' '}
           {builtins.out2}. Intervalo mínimo de 15 minutos entre horários
           consecutivos.
-        </small>
-        <div className="btn-row">
-          <button
+          </small>
+          <div className="btn-row">
+          <Button
             type="button"
-            className="btn ghost"
+            variant="secondary"
             onClick={() => applyAnchors(builtinPlannerAnchors())}
             disabled={busy}
           >
-            Restaurar padrões
-          </button>
-          <button
-            type="button"
-            className="btn primary"
-            onClick={() => void savePlanner()}
+            Restaurar Padrões
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
             disabled={busy}
+            aria-busy={busy}
           >
-            Salvar horários
-          </button>
-        </div>
-      </div>
-    </section>
+            {busy ? 'Salvando…' : 'Salvar Horários'}
+          </Button>
+          </div>
+        </form>
+      </Card>
+    </Page>
   )
 }

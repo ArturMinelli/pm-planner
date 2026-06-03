@@ -22,10 +22,19 @@ func TestVerifyCredentials_rejectsUnauthorized(t *testing.T) {
 
 	dir := t.TempDir()
 	oldHome := os.Getenv("HOME")
+	oldXDGConfigHome := os.Getenv("XDG_CONFIG_HOME")
 	os.Setenv("HOME", dir)
-	t.Cleanup(func() { os.Setenv("HOME", oldHome) })
+	os.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, ".config"))
+	t.Cleanup(func() {
+		os.Setenv("HOME", oldHome)
+		os.Setenv("XDG_CONFIG_HOME", oldXDGConfigHome)
+	})
 
-	pmDir := filepath.Join(dir, ".config", "pm")
+	sessionPath, err := cachePath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pmDir := filepath.Dir(sessionPath)
 	if err := os.MkdirAll(pmDir, 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -36,11 +45,11 @@ func TestVerifyCredentials_rejectsUnauthorized(t *testing.T) {
 		CachedAt: time.Now(),
 	}
 	b, _ := json.Marshal(valid)
-	if err := os.WriteFile(filepath.Join(pmDir, "session.json"), b, 0600); err != nil {
+	if err := os.WriteFile(sessionPath, b, 0600); err != nil {
 		t.Fatal(err)
 	}
 
-	err := VerifyCredentials("user@example.com", "wrong")
+	err = VerifyCredentials("user@example.com", "wrong")
 	if err == nil {
 		t.Fatal("expected login error for wrong password")
 	}
@@ -70,8 +79,13 @@ func TestVerifyCredentials_acceptsAndCaches(t *testing.T) {
 
 	dir := t.TempDir()
 	oldHome := os.Getenv("HOME")
+	oldXDGConfigHome := os.Getenv("XDG_CONFIG_HOME")
 	os.Setenv("HOME", dir)
-	t.Cleanup(func() { os.Setenv("HOME", oldHome) })
+	os.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, ".config"))
+	t.Cleanup(func() {
+		os.Setenv("HOME", oldHome)
+		os.Setenv("XDG_CONFIG_HOME", oldXDGConfigHome)
+	})
 
 	if err := VerifyCredentials("user@example.com", "secret"); err != nil {
 		t.Fatal(err)

@@ -2,7 +2,7 @@
   "$schema": "https://wails.io/schemas/config.v2.json",
   "name": "pm-desktop",
   "outputfilename": "pm-desktop",
-  "frontendInstall": "npm install",
+  "frontendInstall": "npm ci",
   "frontendBuild": "npm run build",
   "frontendDevWatcher": "npm run dev",
   "frontendDevServerUrl": "http://localhost:5173",
