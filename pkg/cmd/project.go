@@ -133,20 +133,50 @@ func newProjectInstallCommand(root *string) *cobra.Command {
 		Short: "Install project artifacts",
 	}
 
-	var skipBuild bool
+	var skipBuildMenu bool
 	desktopMenuCmd := &cobra.Command{
 		Use:   "desktop-menu",
-		Short: "Install the Linux desktop menu entry for the current user",
+		Short: "Install the Linux desktop menu entry for the current user (alias for install desktop)",
 		RunE: func(command *cobra.Command, args []string) error {
 			return project.InstallDesktopMenu(command.Context(), project.DesktopMenuOptions{
 				Root:      *root,
-				SkipBuild: skipBuild,
+				SkipBuild: skipBuildMenu,
 			}, runnerFor(command))
 		},
 	}
-	desktopMenuCmd.Flags().BoolVar(&skipBuild, "skip-build", false, "Install existing bin/pm-desktop without rebuilding")
+	desktopMenuCmd.Flags().BoolVar(&skipBuildMenu, "skip-build", false, "Install existing bin/pm-desktop without rebuilding")
 	installCmd.AddCommand(desktopMenuCmd)
+	installCmd.AddCommand(newProjectInstallDesktopCommand(root))
 	return installCmd
+}
+
+func newProjectInstallDesktopCommand(root *string) *cobra.Command {
+	var skipBuild bool
+	var systemInstall bool
+	var desktopShortcut bool
+
+	command := &cobra.Command{
+		Use:   "desktop",
+		Short: "Build and install the desktop app for this platform",
+		Long:  "Builds and installs PM Planner as a native application: .app bundle on macOS, XDG launcher on Linux, Start Menu entry on Windows.",
+		RunE: func(command *cobra.Command, args []string) error {
+			resolvedRoot, err := project.ResolveRoot(*root)
+			if err != nil {
+				return err
+			}
+			return project.InstallDesktop(command.Context(), project.DesktopInstallOptions{
+				Root:            resolvedRoot,
+				SkipBuild:       skipBuild,
+				System:          systemInstall,
+				DesktopShortcut: desktopShortcut,
+				Host:            project.DetectHostFacts(command.Context(), resolvedRoot),
+			}, runnerFor(command))
+		},
+	}
+	command.Flags().BoolVar(&skipBuild, "skip-build", false, "Install from existing build artifacts without rebuilding")
+	command.Flags().BoolVar(&systemInstall, "system", false, "macOS: install to /Applications instead of ~/Applications (may require sudo)")
+	command.Flags().BoolVar(&desktopShortcut, "desktop-shortcut", false, "Windows: also create a shortcut on the Desktop")
+	return command
 }
 
 func newProjectCleanCommand(root *string) *cobra.Command {

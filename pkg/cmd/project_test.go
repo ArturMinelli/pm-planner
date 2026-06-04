@@ -29,6 +29,11 @@ func TestProjectCommandTree(t *testing.T) {
 	install := assertCommand(t, command, "install")
 	desktopMenu := assertCommand(t, install, "desktop-menu")
 	assertFlag(t, desktopMenu, "skip-build")
+
+	desktopInstall := assertCommand(t, install, "desktop")
+	assertFlag(t, desktopInstall, "skip-build")
+	assertFlag(t, desktopInstall, "system")
+	assertFlag(t, desktopInstall, "desktop-shortcut")
 }
 
 func assertCommand(t *testing.T, parent *cobra.Command, name string) *cobra.Command {

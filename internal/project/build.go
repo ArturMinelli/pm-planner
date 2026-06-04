@@ -150,6 +150,87 @@ func DesktopBuildCommands(options DesktopBuildOptions) ([]CommandSpec, error) {
 	return commands, nil
 }
 
+func DesktopBundleBuildCommands(options DesktopBuildOptions) ([]CommandSpec, error) {
+	root, err := ResolveRoot(options.Root)
+	if err != nil {
+		return nil, err
+	}
+
+	host := normalizedHostFacts(options.Host)
+	if host.GOOS != "darwin" {
+		return nil, fmt.Errorf("desktop bundle build is only supported on macOS")
+	}
+
+	args := []string{
+		"build",
+		"-nosyncgomod",
+		"-skipbindings",
+		"-m",
+		"-nocolour",
+		"-platform", desktopPlatform(host),
+	}
+	if options.SkipFrontend {
+		args = append(args, "-s")
+	}
+
+	return []CommandSpec{
+		{
+			Dir:  ResolveOutputPath(root, "desktop"),
+			Name: "wails",
+			Args: args,
+		},
+	}, nil
+}
+
+func BuildDesktopBundle(ctx context.Context, options DesktopBuildOptions, runner Runner) error {
+	root, err := ResolveRoot(options.Root)
+	if err != nil {
+		return err
+	}
+	host := normalizedHostFacts(options.Host)
+	if host.GOOS != "darwin" {
+		return fmt.Errorf("desktop bundle build is only supported on macOS")
+	}
+
+	if err := prepareAppiconForBuild(root); err != nil {
+		return err
+	}
+	if err := EnsureTool("wails", "wails CLI was not found on PATH; install it with `go install github.com/wailsapp/wails/v2/cmd/wails@latest`"); err != nil {
+		return err
+	}
+
+	commands, err := DesktopBundleBuildCommands(DesktopBuildOptions{
+		Root:         root,
+		SkipFrontend: options.SkipFrontend,
+		ForceGoHost:  options.ForceGoHost,
+		Host:         host,
+	})
+	if err != nil {
+		return err
+	}
+	return runner.RunAll(ctx, commands)
+}
+
+func MacOSAppBundleArtifact(root string) string {
+	return filepath.Join(root, "desktop", "build", "bin", "pm-desktop.app")
+}
+
+func prepareAppiconForBuild(root string) error {
+	iconSource := filepath.Join(root, "packaging", "icons", "pm-desktop.png")
+	if _, err := os.Stat(iconSource); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	iconDestination := filepath.Join(root, "desktop", "build", "appicon.png")
+	if err := os.MkdirAll(filepath.Dir(iconDestination), 0755); err != nil {
+		return err
+	}
+	return copyFile(iconSource, iconDestination, 0644)
+}
+
 func BuildDesktop(ctx context.Context, options DesktopBuildOptions, runner Runner) error {
 	root, err := ResolveRoot(options.Root)
 	if err != nil {
@@ -174,6 +255,9 @@ func BuildDesktop(ctx context.Context, options DesktopBuildOptions, runner Runne
 		return err
 	}
 	if shouldUseWailsBuild(host) {
+		if err := prepareAppiconForBuild(root); err != nil {
+			return err
+		}
 		if err := EnsureTool("wails", "wails CLI was not found on PATH; install it with `go install github.com/wailsapp/wails/v2/cmd/wails@latest`"); err != nil {
 			return err
 		}

@@ -145,6 +145,67 @@ func TestDesktopBuildCommandsSkipFrontend(t *testing.T) {
 	assertArgPair(t, command.Args, "-o", "pm-desktop")
 }
 
+func TestDesktopBundleBuildCommandsOmitsNoPackage(t *testing.T) {
+	root := testProjectRoot(t)
+
+	commands, err := DesktopBundleBuildCommands(DesktopBuildOptions{
+		Root: root,
+		Host: HostFacts{
+			GOOS:          "darwin",
+			RuntimeGOARCH: "arm64",
+			GoEnvGOARCH:   "arm64",
+			Machine:       "arm64",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(commands) != 1 {
+		t.Fatalf("commands: got %d", len(commands))
+	}
+
+	for _, arg := range commands[0].Args {
+		if arg == "-nopackage" {
+			t.Fatalf("bundle build must not use -nopackage: %#v", commands[0].Args)
+		}
+	}
+	assertArgPair(t, commands[0].Args, "-platform", "darwin/arm64")
+}
+
+func TestMacOSAppBundleArtifactPath(t *testing.T) {
+	root := testProjectRoot(t)
+	got := MacOSAppBundleArtifact(root)
+	want := filepath.Join(root, "desktop", "build", "bin", "pm-desktop.app")
+	if got != want {
+		t.Fatalf("bundle: got %q want %q", got, want)
+	}
+}
+
+func TestPrepareAppiconForBuildCopiesPackagingIcon(t *testing.T) {
+	root := testProjectRoot(t)
+	iconDir := filepath.Join(root, "packaging", "icons")
+	if err := os.MkdirAll(iconDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	sourceIcon := filepath.Join(iconDir, "pm-desktop.png")
+	if err := os.WriteFile(sourceIcon, []byte("fake-png"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := prepareAppiconForBuild(root); err != nil {
+		t.Fatal(err)
+	}
+
+	destinationIcon := filepath.Join(root, "desktop", "build", "appicon.png")
+	contents, err := os.ReadFile(destinationIcon)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(contents) != "fake-png" {
+		t.Fatalf("icon contents: got %q", contents)
+	}
+}
+
 func TestWailsDesktopArtifactUsesPlatformBinaryName(t *testing.T) {
 	root := testProjectRoot(t)
 

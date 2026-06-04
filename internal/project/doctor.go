@@ -44,7 +44,16 @@ func Doctor(ctx context.Context, root string, out io.Writer) error {
 	checkTool(true, "Go", "go", "version")
 	checkTool(true, "Node.js", "node", "--version")
 	checkTool(true, "npm", "npm", "--version")
-	checkTool(false, "Wails CLI for dev", "wails", "version")
+
+	if facts.GOOS == "darwin" {
+		checkTool(true, "Wails CLI", "wails", "version")
+	} else {
+		checkTool(false, "Wails CLI for dev", "wails", "version")
+	}
+
+	if facts.GOOS == "windows" {
+		checkTool(true, "GCC (CGO)", "gcc", "--version")
+	}
 
 	if facts.GOOS == "linux" {
 		checkPkgConfig := func(required bool, label string, packages ...string) {

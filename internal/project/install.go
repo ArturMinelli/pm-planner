@@ -12,10 +12,35 @@ import (
 	"time"
 )
 
+type DesktopInstallOptions struct {
+	Root              string
+	SkipBuild         bool
+	System            bool
+	DesktopShortcut   bool
+	Host              HostFacts
+}
+
 type DesktopMenuOptions struct {
 	Root      string
 	SkipBuild bool
 	Host      HostFacts
+}
+
+func InstallDesktop(ctx context.Context, options DesktopInstallOptions, runner Runner) error {
+	switch runtime.GOOS {
+	case "linux":
+		return InstallDesktopMenu(ctx, DesktopMenuOptions{
+			Root:      options.Root,
+			SkipBuild: options.SkipBuild,
+			Host:      options.Host,
+		}, runner)
+	case "darwin":
+		return InstallDesktopDarwin(ctx, options, runner)
+	case "windows":
+		return InstallDesktopWindows(ctx, options, runner)
+	default:
+		return fmt.Errorf("desktop install is not supported on %s", runtime.GOOS)
+	}
 }
 
 type DesktopMenuPaths struct {
@@ -87,6 +112,8 @@ func InstallDesktopMenu(ctx context.Context, options DesktopMenuOptions, runner 
 
 	runOptional(ctx, paths.ApplicationDir, "update-desktop-database", paths.ApplicationDir)
 	runOptional(ctx, root, "gtk-update-icon-cache", "-f", "-t", filepath.Dir(paths.IconDir))
+
+	fmt.Fprintln(runner.Stdout, "PM Planner instalado — abra pelo menu de aplicativos ou execute pm-desktop.")
 	return nil
 }
 
@@ -139,6 +166,41 @@ func RenderDesktopEntry(template string, executable string) string {
 		}
 	}
 	return strings.Join(lines, "\n")
+}
+
+func copyDir(source string, destination string) error {
+	sourceInfo, err := os.Stat(source)
+	if err != nil {
+		return err
+	}
+	if !sourceInfo.IsDir() {
+		return fmt.Errorf("copyDir: %s is not a directory", source)
+	}
+
+	return filepath.Walk(source, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+
+		relativePath, err := filepath.Rel(source, path)
+		if err != nil {
+			return err
+		}
+		if relativePath == "." {
+			return os.MkdirAll(destination, sourceInfo.Mode())
+		}
+
+		destinationPath := filepath.Join(destination, relativePath)
+		if info.IsDir() {
+			return os.MkdirAll(destinationPath, info.Mode())
+		}
+
+		mode := info.Mode() & os.ModePerm
+		if mode == 0 {
+			mode = 0644
+		}
+		return copyFile(path, destinationPath, mode)
+	})
 }
 
 func copyFile(source string, destination string, mode os.FileMode) error {
