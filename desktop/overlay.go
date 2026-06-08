@@ -18,6 +18,8 @@ import (
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
+const overlayWindowTitle = "PM Planner Reminder"
+
 type OverlayApp struct {
 	mu        sync.Mutex
 	ctx       context.Context
@@ -26,10 +28,15 @@ type OverlayApp struct {
 	hasLayout bool
 	docked    bool
 	window    overlayWindowController
+	build     func(context.Context) (overlayLayout, error)
 }
 
 func NewOverlayApp(payload reminder.ScheduledReminder) *OverlayApp {
-	return &OverlayApp{payload: payload, window: wailsOverlayWindow{}}
+	return &OverlayApp{
+		payload: payload,
+		window:  wailsOverlayWindow{},
+		build:   buildOverlayLayout,
+	}
 }
 
 func (a *OverlayApp) Startup(ctx context.Context) {
@@ -48,6 +55,7 @@ func (a *OverlayApp) CloseOverlay() {
 	window := a.window
 	a.mu.Unlock()
 	if ctx != nil {
+		window.SetInputPassthrough(ctx, false)
 		window.Quit(ctx)
 	}
 }
@@ -62,11 +70,13 @@ func (a *OverlayApp) DockOverlay() {
 	layout := a.layout
 	hasLayout := a.hasLayout
 	window := a.window
+	build := a.build
 	a.docked = true
 	a.mu.Unlock()
 
+	window.SetInputPassthrough(ctx, false)
 	if !hasLayout {
-		next, err := buildOverlayLayout(ctx)
+		next, err := build(ctx)
 		if err != nil {
 			return
 		}
@@ -86,13 +96,15 @@ func (a *OverlayApp) StageOverlay(ctx context.Context) {
 	a.ctx = ctx
 	a.docked = false
 	window := a.window
+	build := a.build
 	a.mu.Unlock()
 
-	layout, err := buildOverlayLayout(ctx)
+	window.SetInputPassthrough(ctx, true)
+	layout, err := build(ctx)
 	if err != nil {
 		window.Center(ctx)
-		window.Show(ctx)
 		window.SetAlwaysOnTop(ctx, true)
+		window.ShowPassive(ctx)
 		return
 	}
 
@@ -103,7 +115,7 @@ func (a *OverlayApp) StageOverlay(ctx context.Context) {
 
 	window.SetRect(ctx, layout.Stage, layout.Reference)
 	window.SetAlwaysOnTop(ctx, true)
-	window.Show(ctx)
+	window.ShowPassive(ctx)
 }
 
 func runOverlay(encodedPayload string) error {
@@ -113,7 +125,7 @@ func runOverlay(encodedPayload string) error {
 	}
 	overlayApp := NewOverlayApp(payload)
 	return wails.Run(&options.App{
-		Title:             "PM Planner Reminder",
+		Title:             overlayWindowTitle,
 		Width:             overlayDockWidth,
 		Height:            overlayDockHeight,
 		DisableResize:     true,
@@ -159,6 +171,8 @@ func buildOverlayLayout(ctx context.Context) (overlayLayout, error) {
 type overlayWindowController interface {
 	SetRect(context.Context, overlayRect, overlayDisplayBounds)
 	SetAlwaysOnTop(context.Context, bool)
+	SetInputPassthrough(context.Context, bool)
+	ShowPassive(context.Context)
 	Show(context.Context)
 	Center(context.Context)
 	Quit(context.Context)
@@ -174,6 +188,16 @@ func (wailsOverlayWindow) SetRect(ctx context.Context, rect overlayRect, referen
 
 func (wailsOverlayWindow) SetAlwaysOnTop(ctx context.Context, value bool) {
 	wailsruntime.WindowSetAlwaysOnTop(ctx, value)
+}
+
+func (wailsOverlayWindow) SetInputPassthrough(_ context.Context, value bool) {
+	setOverlayInputPassthrough(value)
+}
+
+func (wailsOverlayWindow) ShowPassive(ctx context.Context) {
+	if !showOverlayWindowPassive() {
+		wailsruntime.WindowShow(ctx)
+	}
 }
 
 func (wailsOverlayWindow) Show(ctx context.Context) {

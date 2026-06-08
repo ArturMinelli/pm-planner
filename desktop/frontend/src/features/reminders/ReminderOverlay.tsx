@@ -71,12 +71,13 @@ export default function ReminderOverlay({ preview = false }: { preview?: boolean
   }, [close])
 
   useEffect(() => {
+    if (phase !== 'docked') return
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') close()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [close])
+  }, [close, phase])
 
   const animation = payload?.animation ?? 'train'
   const clock = useMemo(() => formatClock(payload?.slotTime ?? ''), [payload])
