@@ -89,6 +89,35 @@ pm --version
 pm list
 ```
 
+### Atualizar instalação existente
+
+Se você já instalou o PM Planner e quer obter a versão mais recente (código, CLI e app desktop):
+
+| Plataforma | Comando |
+| --- | --- |
+| **macOS / Linux** | `curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.sh \| bash` |
+| **Windows** | `irm https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.ps1 \| iex` |
+
+**macOS / Linux:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.sh | bash
+```
+
+**Windows:**
+
+```powershell
+irm https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.ps1 | iex
+```
+
+O script de update:
+
+1. Localiza a instalação existente (`~/pm-planner` ou o clone atual)
+2. Atualiza o código-fonte (`git pull` se houver repositório git; caso contrário, baixa o tarball mais recente)
+3. Reinstala a CLI (`pm`) e recompila/reinstala o app desktop
+
+Se a instalação ainda não existir, use o [script de setup](#instalação-rápida-recomendado) primeiro.
+
 ---
 
 ## Requisitos

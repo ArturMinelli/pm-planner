@@ -1,0 +1,254 @@
+#!/usr/bin/env bash
+# PM Planner — atualiza instalação existente (macOS e Linux).
+# Obtém a versão mais recente do código-fonte e recompila/reinstala CLI e desktop.
+
+set -euo pipefail
+
+readonly REPO_URL="https://github.com/ArturMinelli/pm-planner.git"
+readonly REPO_TARBALL_URL="https://github.com/ArturMinelli/pm-planner/archive/refs/heads/main.tar.gz"
+readonly DEFAULT_INSTALL_DIR="$HOME/pm-planner"
+readonly SETUP_URL="https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.sh"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+info()  { printf '%b\n' "${BLUE}→${NC} $*" >&2; }
+ok()    { printf '%b\n' "${GREEN}✓${NC} $*" >&2; }
+warn()  { printf '%b\n' "${YELLOW}!${NC} $*" >&2; }
+fail()  { printf '%b\n' "${RED}✗${NC} $*" >&2; }
+die()   { fail "$*"; exit 1; }
+
+usage() {
+	cat <<EOF
+Uso: update.sh [opções]
+
+Atualiza uma instalação existente do PM Planner: baixa código novo e
+recompila/reinstala a CLI (pm) e o app desktop.
+
+Opções:
+  --help  Exibe esta ajuda
+
+Exemplos:
+  curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.sh | bash
+  cd ~/pm-planner && ./scripts/update.sh
+EOF
+}
+
+parse_args() {
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			--help|-h) usage; exit 0 ;;
+			*)           die "Opção desconhecida: $1 (use --help)" ;;
+		esac
+	done
+}
+
+detect_os() {
+	case "$(uname -s)" in
+		Darwin) echo "darwin" ;;
+		Linux)  echo "linux" ;;
+		*)      die "Sistema operacional não suportado por update.sh: $(uname -s). Use scripts/update.ps1 no Windows." ;;
+	esac
+}
+
+is_project_root() {
+	[[ -f "$1/go.mod" ]] && grep -q '^module pm-cli$' "$1/go.mod" && [[ -f "$1/desktop/wails.json" ]]
+}
+
+find_project_root() {
+	local dir="${1:-$(pwd)}"
+	dir="$(cd "$dir" && pwd)"
+	while [[ "$dir" != "/" ]]; do
+		if is_project_root "$dir"; then
+			echo "$dir"
+			return 0
+		fi
+		dir="$(dirname "$dir")"
+	done
+
+	local bash_source="${BASH_SOURCE[0]:-}"
+	if [[ -n "$bash_source" && "$bash_source" != "/dev/stdin" && -f "$bash_source" ]]; then
+		local script_dir candidate
+		script_dir="$(cd "$(dirname "$bash_source")" && pwd)"
+		candidate="$(dirname "$script_dir")"
+		if is_project_root "$candidate"; then
+			echo "$candidate"
+			return 0
+		fi
+	fi
+	return 1
+}
+
+find_existing_install() {
+	local root=""
+	if root="$(find_project_root 2>/dev/null)"; then
+		echo "$root"
+		return 0
+	fi
+	if is_project_root "$DEFAULT_INSTALL_DIR"; then
+		echo "$DEFAULT_INSTALL_DIR"
+		return 0
+	fi
+	return 1
+}
+
+fetch_project_tarball() {
+	local target="$1"
+	local tmp
+	tmp="$(mktemp -d)"
+
+	info "Baixando código-fonte (tarball)..."
+	curl -fsSL "$REPO_TARBALL_URL" -o "$tmp/pm-planner.tar.gz"
+	tar -xzf "$tmp/pm-planner.tar.gz" -C "$tmp"
+	rm -rf "$target"
+	mv "$tmp/pm-planner-main" "$target"
+	rm -rf "$tmp"
+	ok "Código-fonte atualizado em $target"
+}
+
+update_git_repo() {
+	local root="$1"
+	local branch="main"
+
+	info "Atualizando repositório git em $root..."
+	(
+		cd "$root"
+		if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+			die "Diretório $root não é um repositório git válido"
+		fi
+
+		if git remote get-url origin >/dev/null 2>&1; then
+			git fetch origin --prune
+		else
+			warn "Remote origin ausente — adicionando $REPO_URL"
+			git remote add origin "$REPO_URL"
+			git fetch origin --prune
+		fi
+
+		if git show-ref --verify --quiet "refs/heads/$branch"; then
+			git checkout "$branch"
+		elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+			git checkout -B "$branch" "origin/$branch"
+		else
+			die "Branch $branch não encontrada no repositório"
+		fi
+
+		if ! git diff --quiet || ! git diff --cached --quiet; then
+			die "Há alterações locais em $root. Faça commit, stash ou descarte antes de atualizar:
+  git -C $root status
+  git -C $root stash -u   # guardar alterações temporariamente"
+		fi
+
+		if ! git pull --ff-only origin "$branch"; then
+			die "git pull falhou em $root. Resolva conflitos manualmente e execute o update novamente."
+		fi
+	)
+	ok "Repositório git atualizado (branch $branch)"
+}
+
+update_source() {
+	local root="$1"
+
+	if [[ -d "$root/.git" ]]; then
+		update_git_repo "$root"
+		return 0
+	fi
+
+	warn "Instalação sem git detectada — substituindo por tarball mais recente"
+	fetch_project_tarball "$root"
+}
+
+ensure_session_path() {
+	local paths=()
+	[[ -d "$HOME/.local/go/bin" ]] && paths+=("$HOME/.local/go/bin")
+	[[ -d "$HOME/go/bin" ]] && paths+=("$HOME/go/bin")
+	if command -v go >/dev/null 2>&1; then
+		paths+=("$(go env GOPATH 2>/dev/null)/bin")
+	fi
+
+	local path_entry
+	for path_entry in "${paths[@]}"; do
+		case ":$PATH:" in
+			*":$path_entry:"*) ;;
+			*) export PATH="$PATH:$path_entry" ;;
+		esac
+	done
+}
+
+rebuild_and_install() {
+	local root="$1"
+
+	if ! command -v go >/dev/null 2>&1; then
+		die "Go não encontrado no PATH. Execute o setup novamente:
+  curl -fsSL $SETUP_URL | bash"
+	fi
+
+	info "Instalando CLI (pm)..."
+	(cd "$root" && go install ./cmd/pm)
+	ensure_session_path
+	local gopath_bin
+	gopath_bin="$(go env GOPATH)/bin"
+	case ":$PATH:" in
+		*":$gopath_bin:"*) ;;
+		*) export PATH="$PATH:$gopath_bin" ;;
+	esac
+	ok "CLI instalada em $gopath_bin/pm"
+
+	info "Compilando app desktop..."
+	(cd "$root" && go run ./cmd/pm project build desktop)
+
+	info "Instalando app desktop..."
+	(cd "$root" && go run ./cmd/pm project install desktop --skip-build)
+
+	ok "CLI e app desktop reinstalados com sucesso!"
+}
+
+print_next_steps() {
+	local root="$1"
+	echo ""
+	info "Atualização concluída."
+	echo "  pm --version          # CLI atualizada"
+	if [[ -n "$root" ]]; then
+		echo "  Código-fonte em: $root"
+	fi
+	case "$(detect_os)" in
+		darwin) echo "  App desktop: ~/Applications/PM Planner.app (Launchpad)" ;;
+		linux)  echo "  App desktop: menu de aplicativos (PM Planner)" ;;
+	esac
+}
+
+main() {
+	parse_args "$@"
+
+	echo ""
+	info "PM Planner — update ($(detect_os))"
+	echo ""
+
+	local root
+	if ! root="$(find_existing_install)"; then
+		die "Instalação não encontrada. Execute o setup primeiro:
+  curl -fsSL $SETUP_URL | bash
+
+Ou, se já clonou manualmente, execute este script de dentro de pm-planner/."
+	fi
+
+	ok "Instalação encontrada em $root"
+	ensure_session_path
+
+	update_source "$root"
+	rebuild_and_install "$root"
+
+	if command -v go >/dev/null 2>&1; then
+		info "Verificando ambiente (project doctor)..."
+		(cd "$root" && go run ./cmd/pm project doctor) || warn "Verificação do projeto reportou problemas (veja acima)"
+	fi
+
+	print_next_steps "$root"
+	echo ""
+	ok "Update concluído."
+}
+
+main "$@"
