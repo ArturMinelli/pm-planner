@@ -39,7 +39,6 @@ func runDaemon() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	executable, _ := os.Executable()
 	statePath, err := reminder.DefaultStatePath()
 	if err != nil {
 		return err
@@ -47,8 +46,7 @@ func runDaemon() error {
 	daemon := reminder.NewDaemon(reminder.DaemonOptions{
 		Fetcher: api.New(),
 		Alerter: desktopAlerter{
-			executable: executable,
-			native:     systemNotifier{},
+			native: systemNotifier{},
 		},
 		Store:  reminder.NewFileStore(statePath),
 		Logger: log.New(os.Stderr, "pm-reminders: ", log.LstdFlags),

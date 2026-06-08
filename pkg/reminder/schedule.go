@@ -29,7 +29,6 @@ func BuildSchedule(day *DayPlan, settings config.Reminders) []ScheduledReminder 
 				SlotTime:    slot.Time,
 				LeadMinutes: lead,
 				FireAt:      fireAt,
-				Animation:   settings.Animation,
 			})
 		}
 	}

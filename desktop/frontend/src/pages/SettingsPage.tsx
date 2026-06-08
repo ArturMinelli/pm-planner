@@ -167,12 +167,8 @@ export default function SettingsPage() {
       return
     }
     const normalized = normalizeReminderSettings(reminders)
-    if (
-      normalized.enabled &&
-      !normalized.native_notifications &&
-      !normalized.popup_notifications
-    ) {
-      showError('Ative pelo menos um canal de lembrete.')
+    if (normalized.enabled && !normalized.native_notifications) {
+      showError('Ative notificações nativas para usar lembretes.')
       return
     }
     setBusy(true)

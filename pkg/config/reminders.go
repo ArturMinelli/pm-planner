@@ -3,25 +3,16 @@ package config
 import (
 	"fmt"
 	"sort"
-	"strings"
-)
-
-const (
-	ReminderAnimationTrain  = "train"
-	ReminderAnimationRocket = "rocket"
-	ReminderAnimationBell   = "bell"
 )
 
 var defaultReminderLeads = []int{15, 5}
 
 // Reminders holds user-configurable background reminder settings.
 type Reminders struct {
-	Enabled             bool   `json:"enabled" yaml:"enabled"`
-	Autostart           bool   `json:"autostart" yaml:"autostart"`
-	LeadMinutes         []int  `json:"lead_minutes,omitempty" yaml:"lead_minutes,omitempty"`
-	Animation           string `json:"animation,omitempty" yaml:"animation,omitempty"`
-	NativeNotifications *bool  `json:"native_notifications,omitempty" yaml:"native_notifications,omitempty"`
-	PopupNotifications  *bool  `json:"popup_notifications,omitempty" yaml:"popup_notifications,omitempty"`
+	Enabled             bool  `json:"enabled" yaml:"enabled"`
+	Autostart           bool  `json:"autostart" yaml:"autostart"`
+	LeadMinutes         []int `json:"lead_minutes,omitempty" yaml:"lead_minutes,omitempty"`
+	NativeNotifications *bool `json:"native_notifications,omitempty" yaml:"native_notifications,omitempty"`
 }
 
 func boolPtr(v bool) *bool {
@@ -34,9 +25,7 @@ func DefaultReminders() Reminders {
 		Enabled:             false,
 		Autostart:           false,
 		LeadMinutes:         append([]int(nil), defaultReminderLeads...),
-		Animation:           ReminderAnimationTrain,
 		NativeNotifications: boolPtr(true),
-		PopupNotifications:  boolPtr(true),
 	}
 }
 
@@ -50,14 +39,8 @@ func ResolveReminders(f *File) (Reminders, error) {
 		if len(raw.LeadMinutes) > 0 {
 			out.LeadMinutes = append([]int(nil), raw.LeadMinutes...)
 		}
-		if strings.TrimSpace(raw.Animation) != "" {
-			out.Animation = strings.TrimSpace(raw.Animation)
-		}
 		if raw.NativeNotifications != nil {
 			out.NativeNotifications = boolPtr(*raw.NativeNotifications)
-		}
-		if raw.PopupNotifications != nil {
-			out.PopupNotifications = boolPtr(*raw.PopupNotifications)
 		}
 	}
 	normalizeReminderLeads(out.LeadMinutes)
@@ -89,22 +72,12 @@ func ValidateReminders(r Reminders) error {
 		}
 		seen[lead] = true
 	}
-	switch r.Animation {
-	case ReminderAnimationTrain, ReminderAnimationRocket, ReminderAnimationBell:
-	default:
-		return fmt.Errorf("unknown animation %q", r.Animation)
-	}
-	if r.Enabled && (r.NativeNotifications == nil || !*r.NativeNotifications) &&
-		(r.PopupNotifications == nil || !*r.PopupNotifications) {
-		return fmt.Errorf("enable at least one notification channel")
+	if r.Enabled && (r.NativeNotifications == nil || !*r.NativeNotifications) {
+		return fmt.Errorf("enable native notifications")
 	}
 	return nil
 }
 
 func ReminderNativeEnabled(r Reminders) bool {
 	return r.NativeNotifications != nil && *r.NativeNotifications
-}
-
-func ReminderPopupEnabled(r Reminders) bool {
-	return r.PopupNotifications != nil && *r.PopupNotifications
 }

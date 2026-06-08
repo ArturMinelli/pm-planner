@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -35,8 +33,7 @@ type NotificationPermissionStatus struct {
 }
 
 type desktopAlerter struct {
-	executable string
-	native     nativeNotifier
+	native nativeNotifier
 }
 
 type nativeNotifier interface {
@@ -56,13 +53,6 @@ func (a desktopAlerter) SendReminder(ctx context.Context, event reminder.Schedul
 			sent = true
 		}
 	}
-	if config.ReminderPopupEnabled(settings) {
-		if err := launchOverlay(ctx, a.executable, event); err != nil {
-			errs = append(errs, err)
-		} else {
-			sent = true
-		}
-	}
 	if sent {
 		return nil
 	}
@@ -70,26 +60,6 @@ func (a desktopAlerter) SendReminder(ctx context.Context, event reminder.Schedul
 		return fmt.Errorf("no notification channel enabled")
 	}
 	return errors.Join(errs...)
-}
-
-func launchOverlay(ctx context.Context, executable string, event reminder.ScheduledReminder) error {
-	if strings.TrimSpace(executable) == "" {
-		var err error
-		executable, err = os.Executable()
-		if err != nil {
-			return err
-		}
-	}
-	payload, err := json.Marshal(event)
-	if err != nil {
-		return err
-	}
-	encoded := base64.StdEncoding.EncodeToString(payload)
-	cmd := exec.CommandContext(ctx, executable, "--overlay", "--payload", encoded)
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (a *App) GetReminderStatus() (*ReminderStatus, error) {
@@ -184,12 +154,9 @@ func (a *App) SendTestReminder() error {
 		SlotTime:    now.Add(5 * time.Minute),
 		LeadMinutes: 5,
 		FireAt:      now,
-		Animation:   settings.Animation,
 	}
-	executable, _ := os.Executable()
 	return desktopAlerter{
-		executable: executable,
-		native:     systemNotifier{},
+		native: systemNotifier{},
 	}.SendReminder(context.Background(), event, settings)
 }
 

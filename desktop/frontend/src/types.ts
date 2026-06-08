@@ -35,15 +35,11 @@ export interface PlannerSummary {
   overtimeSecs: number
 }
 
-export type ReminderAnimation = 'train' | 'rocket' | 'bell'
-
 export interface ReminderSettings {
   enabled: boolean
   autostart: boolean
   lead_minutes?: number[]
-  animation?: ReminderAnimation
   native_notifications?: boolean
-  popup_notifications?: boolean
 }
 
 export interface ReminderStatus {
@@ -59,15 +55,4 @@ export interface NotificationPermissionStatus {
   available: boolean
   authorized: boolean
   detail?: string
-}
-
-export interface OverlayPayload {
-  id: string
-  date: string
-  slotKey: string
-  slotLabel: string
-  slotTime: string
-  leadMinutes: number
-  fireAt: string
-  animation: ReminderAnimation
 }

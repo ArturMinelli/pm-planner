@@ -1,9 +1,8 @@
-import type { ReminderAnimation, ReminderSettings, ReminderStatus } from '../../types'
+import type { ReminderSettings, ReminderStatus } from '../../types'
 import { Button, Card, Field } from '../../components/ui'
 import {
   normalizeReminderSettings,
   reminderLeadPreset,
-  REMINDER_ANIMATIONS,
 } from '../../util/reminderSettings'
 
 type ReminderSettingsFormProps = {
@@ -22,12 +21,6 @@ const LEAD_PRESETS = [
   { id: '10-2', label: '10 e 2 min', leads: [10, 2] },
   { id: '5', label: '5 min', leads: [5] },
 ] as const
-
-const ANIMATION_LABELS: Record<ReminderAnimation, string> = {
-  train: 'Trem',
-  rocket: 'Foguete',
-  bell: 'Sino',
-}
 
 export default function ReminderSettingsForm({
   settings,
@@ -93,16 +86,6 @@ export default function ReminderSettingsForm({
             />
             <span>Notificação nativa</span>
           </label>
-          <label className="check-row">
-            <input
-              type="checkbox"
-              checked={Boolean(normalized.popup_notifications)}
-              onChange={(event) =>
-                update({ popup_notifications: event.target.checked })
-              }
-            />
-            <span>Pop-up animado</span>
-          </label>
         </div>
 
         <Field id="settings-reminder-leads" label="Avisar antes">
@@ -120,28 +103,6 @@ export default function ReminderSettingsForm({
                 onClick={() => update({ lead_minutes: [...preset.leads] })}
               >
                 {preset.label}
-              </button>
-            ))}
-          </div>
-        </Field>
-
-        <Field id="settings-reminder-animation" label="Animação">
-          <div
-            id="settings-reminder-animation"
-            className="segmented"
-            role="radiogroup"
-          >
-            {REMINDER_ANIMATIONS.map((animation) => (
-              <button
-                key={animation}
-                type="button"
-                className={
-                  normalized.animation === animation ? 'selected' : undefined
-                }
-                aria-pressed={normalized.animation === animation}
-                onClick={() => update({ animation })}
-              >
-                {ANIMATION_LABELS[animation]}
               </button>
             ))}
           </div>

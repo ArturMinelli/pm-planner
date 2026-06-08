@@ -13,14 +13,11 @@ func TestResolveReminders_defaults(t *testing.T) {
 	if got.Enabled {
 		t.Fatal("reminders should be opt-in")
 	}
-	if got.Animation != ReminderAnimationTrain {
-		t.Fatalf("animation: got %q", got.Animation)
-	}
 	if len(got.LeadMinutes) != 2 || got.LeadMinutes[0] != 15 || got.LeadMinutes[1] != 5 {
 		t.Fatalf("lead minutes: %#v", got.LeadMinutes)
 	}
-	if !ReminderNativeEnabled(got) || !ReminderPopupEnabled(got) {
-		t.Fatalf("channels should default enabled: %#v", got)
+	if !ReminderNativeEnabled(got) {
+		t.Fatalf("native notifications should default enabled: %#v", got)
 	}
 }
 
@@ -29,7 +26,6 @@ func TestResolveReminders_sortsLeadMinutes(t *testing.T) {
 		Reminders: &Reminders{
 			Enabled:     true,
 			LeadMinutes: []int{5, 15},
-			Animation:   ReminderAnimationRocket,
 		},
 	})
 	if err != nil {
@@ -37,9 +33,6 @@ func TestResolveReminders_sortsLeadMinutes(t *testing.T) {
 	}
 	if got.LeadMinutes[0] != 15 || got.LeadMinutes[1] != 5 {
 		t.Fatalf("lead minutes: %#v", got.LeadMinutes)
-	}
-	if got.Animation != ReminderAnimationRocket {
-		t.Fatalf("animation: %q", got.Animation)
 	}
 }
 
@@ -49,7 +42,6 @@ func TestResolveRemindersClearsAutostartWhenDisabled(t *testing.T) {
 			Enabled:     false,
 			Autostart:   true,
 			LeadMinutes: []int{15, 5},
-			Animation:   ReminderAnimationTrain,
 		},
 	})
 	if err != nil {
@@ -60,19 +52,17 @@ func TestResolveRemindersClearsAutostartWhenDisabled(t *testing.T) {
 	}
 }
 
-func TestResolveReminders_rejectsDisabledChannelsWhenEnabled(t *testing.T) {
+func TestResolveReminders_rejectsDisabledNativeNotificationsWhenEnabled(t *testing.T) {
 	off := false
 	_, err := ResolveReminders(&File{
 		Reminders: &Reminders{
 			Enabled:             true,
 			LeadMinutes:         []int{15, 5},
-			Animation:           ReminderAnimationTrain,
 			NativeNotifications: &off,
-			PopupNotifications:  &off,
 		},
 	})
-	if err == nil || !strings.Contains(err.Error(), "notification channel") {
-		t.Fatalf("expected channel validation error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "native notifications") {
+		t.Fatalf("expected native notification validation error, got %v", err)
 	}
 }
 
@@ -82,7 +72,6 @@ func TestSave_rejectsInvalidReminders(t *testing.T) {
 	err := Save(path, &File{
 		Reminders: &Reminders{
 			LeadMinutes: []int{15, 15},
-			Animation:   ReminderAnimationTrain,
 		},
 	})
 	if err == nil || !strings.Contains(err.Error(), "duplicate") {

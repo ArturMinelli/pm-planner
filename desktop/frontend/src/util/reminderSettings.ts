@@ -1,16 +1,13 @@
-import type { ReminderAnimation, ReminderSettings } from '../types'
+import type { ReminderSettings } from '../types'
 
 export const DEFAULT_REMINDER_LEADS = [15, 5] as const
-export const REMINDER_ANIMATIONS: ReminderAnimation[] = ['train', 'rocket', 'bell']
 
 export function defaultReminderSettings(): ReminderSettings {
   return {
     enabled: false,
     autostart: false,
     lead_minutes: [...DEFAULT_REMINDER_LEADS],
-    animation: 'train',
     native_notifications: true,
-    popup_notifications: true,
   }
 }
 
@@ -20,11 +17,6 @@ export function normalizeReminderSettings(
   const defaults = defaultReminderSettings()
   const leadMinutes =
     settings?.lead_minutes?.filter((value) => Number.isFinite(value) && value > 0)
-  const animation = REMINDER_ANIMATIONS.includes(
-    settings?.animation as ReminderAnimation,
-  )
-    ? settings?.animation
-    : defaults.animation
 
   const enabled = Boolean(settings?.enabled)
 
@@ -36,11 +28,8 @@ export function normalizeReminderSettings(
           (a, b) => b - a,
         )
       : defaults.lead_minutes,
-    animation,
     native_notifications:
       settings?.native_notifications ?? defaults.native_notifications,
-    popup_notifications:
-      settings?.popup_notifications ?? defaults.popup_notifications,
   }
 }
 

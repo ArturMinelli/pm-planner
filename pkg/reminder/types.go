@@ -47,7 +47,6 @@ type ScheduledReminder struct {
 	SlotTime    time.Time `json:"slotTime"`
 	LeadMinutes int       `json:"leadMinutes"`
 	FireAt      time.Time `json:"fireAt"`
-	Animation   string    `json:"animation"`
 }
 
 func ReminderID(date, slotKey string, leadMinutes int) string {

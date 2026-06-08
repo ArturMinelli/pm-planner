@@ -15,23 +15,12 @@ var assets embed.FS
 
 func main() {
 	var daemonMode bool
-	var overlayMode bool
-	var overlayPayload string
 	flag.BoolVar(&daemonMode, "daemon", false, "run background reminder daemon")
-	flag.BoolVar(&overlayMode, "overlay", false, "show a reminder overlay")
-	flag.StringVar(&overlayPayload, "payload", "", "base64 JSON overlay payload")
 	flag.Parse()
 
 	if daemonMode {
 		if err := runDaemon(); err != nil {
 			println("Daemon error:", err.Error())
-			os.Exit(1)
-		}
-		return
-	}
-	if overlayMode {
-		if err := runOverlay(overlayPayload); err != nil {
-			println("Overlay error:", err.Error())
 			os.Exit(1)
 		}
 		return
