@@ -9,6 +9,8 @@ O PM Planner é um auxiliar do PontoMais que permite planejar os horários de po
 
 ## Índice
 
+- [Instalação rápida](#instalação-rápida-recomendado)
+  - [Script de setup](#script-de-setup)
 - [Requisitos](#requisitos)
   - [macOS](#macos)
   - [Linux](#linux)
@@ -30,52 +32,237 @@ O PM Planner é um auxiliar do PontoMais que permite planejar os horários de po
 
 ---
 
+## Instalação rápida (recomendado)
+
+O repositório inclui scripts que detectam o sistema operacional, verificam dependências ausentes e instalam o que for possível automaticamente.
+
+### Script de setup
+
+| Plataforma | Arquivo | Instalar dependências | Compilar e instalar o app desktop |
+| --- | --- | --- | --- |
+| **macOS / Linux** | [`scripts/setup.sh`](scripts/setup.sh) | `./scripts/setup.sh` | `./scripts/setup.sh --build` |
+| **Windows** | [`scripts/setup.ps1`](scripts/setup.ps1) | `.\scripts\setup.ps1` | `.\scripts\setup.ps1 -Build` |
+
+**macOS / Linux** — instalar dependências sem clonar o repositório:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.sh | bash
+```
+
+**Windows** — instalar dependências (revise o script antes de executar):
+
+```powershell
+irm https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.ps1 | iex
+```
+
+**Compilar e instalar o app desktop** (requer o repositório clonado):
+
+```bash
+git clone https://github.com/ArturMinelli/pm-planner.git
+cd pm-planner
+./scripts/setup.sh --build
+```
+
+```powershell
+git clone https://github.com/ArturMinelli/pm-planner.git
+cd pm-planner
+.\scripts\setup.ps1 -Build
+```
+
+A flag `--build` / `-Build` compila o app desktop **e** o instala nativamente (Launchpad no macOS, menu de aplicativos no Linux, Menu Iniciar no Windows).
+
+Outras flags úteis:
+
+```bash
+./scripts/setup.sh --check-only    # apenas verifica, sem instalar
+./scripts/setup.sh --help
+```
+
+```powershell
+.\scripts\setup.ps1 -CheckOnly
+.\scripts\setup.ps1 -Help
+```
+
+Após o setup, verifique o ambiente:
+
+```bash
+go run ./cmd/pm project doctor
+```
+
+---
+
 ## Requisitos
+
+As seções abaixo descrevem a instalação manual de cada dependência. Para a maioria dos usuários, o [script de setup](#script-de-setup) é o caminho mais simples.
 
 ### macOS
 
-- Go 1.23+
-- Node.js/npm (apenas para o app desktop)
-- Xcode Command Line Tools (necessário para CGO):
+#### Go 1.23+
+
+Via Homebrew (recomendado):
+
+```bash
+brew install go
+go version
+```
+
+Ou baixe o instalador oficial em [go.dev/dl](https://go.dev/dl/).
+
+#### Node.js e npm
+
+Necessários apenas para o app desktop:
+
+```bash
+brew install node
+node --version
+npm --version
+```
+
+#### Xcode Command Line Tools
+
+Necessárias para CGO:
 
 ```bash
 xcode-select --install
 ```
 
-- Wails CLI (obrigatório para compilar e instalar o app desktop):
+#### Wails CLI
+
+Obrigatória para compilar e instalar o app desktop:
 
 ```bash
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
 ```
 
+Adicione o binário do Go ao PATH (se ainda não estiver):
+
+```bash
+echo 'export PATH="$PATH:$(go env GOPATH)/bin"' >> ~/.zshrc
+source ~/.zshrc
+wails version
+```
+
 ### Linux
 
-- Go 1.23+
-- Node.js/npm (apenas para o app desktop)
-- CGO, GTK e headers de desenvolvimento do WebKitGTK:
+#### Go 1.23+
+
+Instalação via tarball oficial (exemplo para amd64):
+
+```bash
+curl -fsSL https://go.dev/dl/go1.23.3.linux-amd64.tar.gz -o /tmp/go.tar.gz
+rm -rf ~/.local/go
+mkdir -p ~/.local
+tar -C ~/.local -xzf /tmp/go.tar.gz
+echo 'export PATH="$PATH:$HOME/.local/go/bin"' >> ~/.bashrc
+source ~/.bashrc
+go version
+```
+
+Substitua `linux-amd64` por `linux-arm64` em máquinas ARM.
+
+#### Node.js e npm
+
+Necessários apenas para o app desktop.
+
+Debian/Ubuntu (Node 20 LTS via NodeSource):
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+Fedora:
+
+```bash
+sudo dnf install -y nodejs npm
+```
+
+Arch:
+
+```bash
+sudo pacman -S nodejs npm
+```
+
+#### CGO, GTK e WebKitGTK
+
+Debian/Ubuntu:
 
 ```bash
 sudo apt install build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
 ```
 
-> Distribuições mais antigas podem precisar de `libwebkit2gtk-4.0-dev` com as build tags ajustadas.
+Fedora:
 
-- Wails CLI (apenas para desenvolvimento com hot reload):
+```bash
+sudo dnf install gcc gtk3-devel webkit2gtk4.1-devel
+```
+
+Arch:
+
+```bash
+sudo pacman -S base-devel gtk3 webkit2gtk-4.1
+```
+
+> Distribuições mais antigas podem precisar de `libwebkit2gtk-4.0-dev` / `webkit2gtk-4.0` com as build tags ajustadas.
+
+#### Wails CLI
 
 ```bash
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
+echo 'export PATH="$PATH:$(go env GOPATH)/bin"' >> ~/.bashrc
+source ~/.bashrc
+wails version
 ```
 
 ### Windows
 
-- Go 1.23+
-- Node.js/npm (apenas para o app desktop)
-- [GCC via TDM-GCC ou MinGW-w64](https://jmeubank.github.io/tdm-gcc/) (necessário para CGO — o compilador `gcc` deve estar no `PATH`)
-- WebView2 Runtime (já incluído no Windows 10/11; para versões anteriores, baixe o instalador em [developer.microsoft.com/microsoft-edge/webview2](https://developer.microsoft.com/microsoft-edge/webview2))
-- Wails CLI (apenas para desenvolvimento com hot reload):
+#### Go 1.23+
+
+```powershell
+winget install GoLang.Go
+go version
+```
+
+Ou baixe o instalador em [go.dev/dl](https://go.dev/dl/).
+
+#### Node.js e npm
+
+Necessários apenas para o app desktop:
+
+```powershell
+winget install OpenJS.NodeJS.LTS
+node --version
+npm --version
+```
+
+#### GCC (CGO)
+
+O compilador `gcc` deve estar no `PATH`:
+
+```powershell
+winget install BrechtSanders.WinLibs.POSIX.UCRT
+```
+
+Alternativa: [TDM-GCC ou MinGW-w64](https://jmeubank.github.io/tdm-gcc/).
+
+#### WebView2 Runtime
+
+Já incluído no Windows 10/11 na maioria das instalações. Para versões anteriores, baixe em [developer.microsoft.com/microsoft-edge/webview2](https://developer.microsoft.com/microsoft-edge/webview2):
+
+```powershell
+winget install Microsoft.EdgeWebView2Runtime
+```
+
+#### Wails CLI
 
 ```powershell
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
+```
+
+Adicione `%USERPROFILE%\go\bin` ao PATH do usuário e reinicie o terminal:
+
+```powershell
+wails version
 ```
 
 ---
@@ -326,6 +513,10 @@ bin/pm project clean
 
 | Sintoma | Solução |
 | --- | --- |
+| `wails` não encontrado após instalação | Adicione `$(go env GOPATH)/bin` ao PATH (`~/.zshrc`, `~/.bashrc` ou perfil do PowerShell) e reinicie o terminal |
+| `--build` / `-Build` falha fora do repositório | Clone o projeto primeiro: `git clone https://github.com/ArturMinelli/pm-planner.git` e execute o script de dentro de `pm-planner/` |
+| Distribuição Linux não suportada pelo script | Instale manualmente os pacotes listados em [Linux](#linux) ou consulte `wails doctor` |
+| PowerShell bloqueia `setup.ps1` | Execute `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` ou rode `powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1` |
 | `wails` não encontrado durante o desenvolvimento | Instale com `go install github.com/wailsapp/wails/v2/cmd/wails@latest` |
 | Build no Linux não encontra o WebKitGTK | Instale `libwebkit2gtk-4.1-dev`; distribuições mais antigas podem precisar de `libwebkit2gtk-4.0-dev` com build tags ajustadas |
 | `linux/386` tenta linkar contra GTK/WebKit 64 bits | Use `pm project build desktop`; o comando força `GOARCH=amd64` no Linux x86\_64, a menos que `--force-go-host` seja passado |
