@@ -9,6 +9,8 @@ readonly REPO_TARBALL_URL="https://github.com/ArturMinelli/pm-planner/archive/re
 readonly DEFAULT_INSTALL_DIR="$HOME/pm-planner"
 readonly SETUP_URL="https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.sh"
 
+daemon_was_running=false
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -161,6 +163,132 @@ update_source() {
 	fetch_project_tarball "$root"
 }
 
+config_dir() {
+	if [[ -n "${XDG_CONFIG_HOME:-}" ]]; then
+		echo "${XDG_CONFIG_HOME}/pm"
+	else
+		echo "${HOME}/.config/pm"
+	fi
+}
+
+daemon_pid_file() {
+	echo "$(config_dir)/reminder-daemon.pid"
+}
+
+daemon_is_running() {
+	local pid_file pid
+	pid_file="$(daemon_pid_file)"
+	[[ -f "$pid_file" ]] || return 1
+	pid="$(tr -d '[:space:]' < "$pid_file")"
+	[[ "$pid" =~ ^[0-9]+$ ]] || return 1
+	kill -0 "$pid" 2>/dev/null
+}
+
+installed_desktop_binary() {
+	case "$(detect_os)" in
+		darwin)
+			echo "$HOME/Applications/PM Planner.app/Contents/MacOS/pm-desktop"
+			;;
+		linux)
+			local bin_home="${XDG_BIN_HOME:-$HOME/.local/bin}"
+			echo "$bin_home/pm-desktop"
+			;;
+	esac
+}
+
+wait_for_process_exit() {
+	local pid="$1"
+	local max_waits="${2:-10}"
+	local waited=0
+	while kill -0 "$pid" 2>/dev/null && [[ $waited -lt $max_waits ]]; do
+		sleep 0.5
+		waited=$((waited + 1))
+	done
+}
+
+pm_desktop_processes_running() {
+	pgrep -x pm-desktop >/dev/null 2>&1
+}
+
+stop_pm_desktop_processes() {
+	if ! pm_desktop_processes_running; then
+		return 0
+	fi
+	pkill -TERM -x pm-desktop 2>/dev/null || true
+	local waited=0
+	while pm_desktop_processes_running && [[ $waited -lt 10 ]]; do
+		sleep 0.5
+		waited=$((waited + 1))
+	done
+	if ! pm_desktop_processes_running; then
+		return 0
+	fi
+	warn "App desktop ainda em execução; forçando encerramento..."
+	pkill -KILL -x pm-desktop 2>/dev/null || true
+	sleep 0.5
+}
+
+stop_reminder_daemon() {
+	local pid_file pid
+	pid_file="$(daemon_pid_file)"
+	[[ -f "$pid_file" ]] || return 0
+	pid="$(tr -d '[:space:]' < "$pid_file")"
+	if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+		info "Encerrando daemon de lembretes (PID $pid)..."
+		kill -TERM "$pid" 2>/dev/null || true
+		wait_for_process_exit "$pid" 10
+		if kill -0 "$pid" 2>/dev/null; then
+			warn "Daemon não respondeu ao SIGTERM; forçando encerramento..."
+			kill -KILL "$pid" 2>/dev/null || true
+		fi
+		ok "Daemon encerrado"
+	fi
+	rm -f "$pid_file"
+}
+
+stop_desktop_app() {
+	info "Encerrando app desktop PM Planner..."
+	case "$(detect_os)" in
+		darwin)
+			osascript -e 'tell application "PM Planner" to quit' 2>/dev/null || true
+			sleep 1
+			;;
+	esac
+	stop_pm_desktop_processes
+	if pm_desktop_processes_running; then
+		die "Não foi possível encerrar o app desktop. Feche o PM Planner manualmente e execute o update novamente."
+	fi
+	ok "App desktop encerrado"
+}
+
+stop_running_processes() {
+	if daemon_is_running; then
+		daemon_was_running=true
+	fi
+	stop_reminder_daemon
+	stop_desktop_app
+}
+
+start_reminder_daemon() {
+	local binary
+	binary="$(installed_desktop_binary)"
+	if [[ ! -x "$binary" ]]; then
+		warn "Binário desktop não encontrado em $binary — daemon não reiniciado."
+		return 0
+	fi
+	info "Reiniciando daemon de lembretes..."
+	nohup "$binary" --daemon >/dev/null 2>&1 &
+	disown 2>/dev/null || true
+	ok "Daemon de lembretes reiniciado"
+}
+
+maybe_restart_daemon() {
+	if [[ "$daemon_was_running" != true ]]; then
+		return 0
+	fi
+	start_reminder_daemon
+}
+
 ensure_session_path() {
 	local paths=()
 	[[ -d "$HOME/.local/go/bin" ]] && paths+=("$HOME/.local/go/bin")
@@ -239,7 +367,9 @@ Ou, se já clonou manualmente, execute este script de dentro de pm-planner/."
 	ensure_session_path
 
 	update_source "$root"
+	stop_running_processes
 	rebuild_and_install "$root"
+	maybe_restart_daemon
 
 	if command -v go >/dev/null 2>&1; then
 		info "Verificando ambiente (project doctor)..."

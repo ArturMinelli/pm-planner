@@ -114,7 +114,9 @@ O script de update:
 
 1. Localiza a instalação existente (`~/pm-planner` ou o clone atual)
 2. Atualiza o código-fonte (`git pull` se houver repositório git; caso contrário, baixa o tarball mais recente)
-3. Reinstala a CLI (`pm`) e recompila/reinstala o app desktop
+3. Encerra o app desktop e o daemon de lembretes (se estiverem em execução) para liberar os binários antes da reinstalação
+4. Reinstala a CLI (`pm`) e recompila/reinstala o app desktop
+5. Reinicia o daemon de lembretes automaticamente se ele estava ativo antes do update
 
 Se a instalação ainda não existir, use o [script de setup](#instalação-rápida-recomendado) primeiro.
 

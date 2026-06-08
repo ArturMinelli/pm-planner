@@ -13,6 +13,8 @@ $RepoTarballUrl = "https://github.com/ArturMinelli/pm-planner/archive/refs/heads
 $DefaultInstallDir = Join-Path $env:USERPROFILE "pm-planner"
 $SetupUrl = "https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.ps1"
 
+$script:DaemonWasRunning = $false
+
 function Write-Info($Message)  { Write-Host "→ $Message" -ForegroundColor Blue }
 function Write-Ok($Message)    { Write-Host "✓ $Message" -ForegroundColor Green }
 function Write-Warn($Message)  { Write-Host "! $Message" -ForegroundColor Yellow }
@@ -171,6 +173,99 @@ function Update-Source {
     Get-ProjectTarball $Root
 }
 
+function Get-ConfigDir {
+    return Join-Path $env:APPDATA "pm"
+}
+
+function Get-DaemonPidFile {
+    return Join-Path (Get-ConfigDir) "reminder-daemon.pid"
+}
+
+function Test-DaemonRunning {
+    $pidFile = Get-DaemonPidFile
+    if (-not (Test-Path $pidFile)) {
+        return $false
+    }
+
+    $pidText = (Get-Content -Raw $pidFile).Trim()
+    if ($pidText -notmatch '^\d+$') {
+        return $false
+    }
+
+    $processId = [int]$pidText
+    return $null -ne (Get-Process -Id $processId -ErrorAction SilentlyContinue)
+}
+
+function Get-InstalledDesktopBinary {
+    return Join-Path $env:LOCALAPPDATA "Programs\PM Planner\pm-desktop.exe"
+}
+
+function Stop-ReminderDaemon {
+    $pidFile = Get-DaemonPidFile
+    if (-not (Test-Path $pidFile)) {
+        return
+    }
+
+    $pidText = (Get-Content -Raw $pidFile).Trim()
+    if ($pidText -match '^\d+$') {
+        $processId = [int]$pidText
+        $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+        if ($null -ne $process) {
+            Write-Info "Encerrando daemon de lembretes (PID $processId)..."
+            Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+            Write-Ok "Daemon encerrado"
+        }
+    }
+
+    Remove-Item -Force $pidFile -ErrorAction SilentlyContinue
+}
+
+function Stop-DesktopApp {
+    Write-Info "Encerrando app desktop PM Planner..."
+    $processes = Get-Process -Name "pm-desktop" -ErrorAction SilentlyContinue
+    if ($null -eq $processes) {
+        Write-Ok "App desktop encerrado"
+        return
+    }
+
+    $processes | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 1
+
+    $remaining = Get-Process -Name "pm-desktop" -ErrorAction SilentlyContinue
+    if ($null -ne $remaining) {
+        throw "Não foi possível encerrar o app desktop. Feche o PM Planner manualmente e execute o update novamente."
+    }
+
+    Write-Ok "App desktop encerrado"
+}
+
+function Stop-RunningProcesses {
+    if (Test-DaemonRunning) {
+        $script:DaemonWasRunning = $true
+    }
+    Stop-ReminderDaemon
+    Stop-DesktopApp
+}
+
+function Start-ReminderDaemon {
+    $binary = Get-InstalledDesktopBinary
+    if (-not (Test-Path $binary)) {
+        Write-Warn "Binário desktop não encontrado em $binary — daemon não reiniciado."
+        return
+    }
+
+    Write-Info "Reiniciando daemon de lembretes..."
+    Start-Process -FilePath $binary -ArgumentList "--daemon" -WindowStyle Hidden
+    Write-Ok "Daemon de lembretes reiniciado"
+}
+
+function Restart-DaemonIfNeeded {
+    if (-not $script:DaemonWasRunning) {
+        return
+    }
+    Start-ReminderDaemon
+}
+
 function Refresh-Path {
     $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
@@ -246,7 +341,9 @@ Write-Ok "Instalação encontrada em $root"
 Ensure-SessionPath
 
 Update-Source $root
+Stop-RunningProcesses
 Invoke-RebuildAndInstall $root
+Restart-DaemonIfNeeded
 
 if (Get-Command go -ErrorAction SilentlyContinue) {
     Write-Info "Verificando ambiente (project doctor)..."
