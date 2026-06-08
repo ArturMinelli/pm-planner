@@ -2,6 +2,7 @@ import type { OverlayPayload } from '../types'
 
 interface GoOverlayApp {
   GetOverlayPayload(): Promise<OverlayPayload>
+  DockOverlay(): Promise<void>
   CloseOverlay(): Promise<void>
 }
 
@@ -18,6 +19,10 @@ export async function getOverlayPayload(): Promise<OverlayPayload> {
   const app = overlayApp()
   if (!app) throw new Error('Overlay runtime unavailable.')
   return app.GetOverlayPayload()
+}
+
+export async function dockOverlay(): Promise<void> {
+  await overlayApp()?.DockOverlay()
 }
 
 export async function closeOverlay(): Promise<void> {

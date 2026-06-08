@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"pm-cli/pkg/reminder"
 
@@ -17,21 +18,23 @@ import (
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-const (
-	overlayWidth  = 430
-	overlayHeight = 190
-)
-
 type OverlayApp struct {
-	ctx     context.Context
-	payload reminder.ScheduledReminder
+	mu        sync.Mutex
+	ctx       context.Context
+	payload   reminder.ScheduledReminder
+	layout    overlayLayout
+	hasLayout bool
+	docked    bool
+	window    overlayWindowController
 }
 
 func NewOverlayApp(payload reminder.ScheduledReminder) *OverlayApp {
-	return &OverlayApp{payload: payload}
+	return &OverlayApp{payload: payload, window: wailsOverlayWindow{}}
 }
 
 func (a *OverlayApp) Startup(ctx context.Context) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	a.ctx = ctx
 }
 
@@ -40,9 +43,67 @@ func (a *OverlayApp) GetOverlayPayload() reminder.ScheduledReminder {
 }
 
 func (a *OverlayApp) CloseOverlay() {
-	if a.ctx != nil {
-		wailsruntime.Quit(a.ctx)
+	a.mu.Lock()
+	ctx := a.ctx
+	window := a.window
+	a.mu.Unlock()
+	if ctx != nil {
+		window.Quit(ctx)
 	}
+}
+
+func (a *OverlayApp) DockOverlay() {
+	a.mu.Lock()
+	if a.ctx == nil || a.docked {
+		a.mu.Unlock()
+		return
+	}
+	ctx := a.ctx
+	layout := a.layout
+	hasLayout := a.hasLayout
+	window := a.window
+	a.docked = true
+	a.mu.Unlock()
+
+	if !hasLayout {
+		next, err := buildOverlayLayout(ctx)
+		if err != nil {
+			return
+		}
+		layout = next
+		a.mu.Lock()
+		a.layout = layout
+		a.hasLayout = true
+		a.mu.Unlock()
+	}
+
+	window.SetRect(ctx, layout.Dock, layout.Reference)
+	window.SetAlwaysOnTop(ctx, true)
+}
+
+func (a *OverlayApp) StageOverlay(ctx context.Context) {
+	a.mu.Lock()
+	a.ctx = ctx
+	a.docked = false
+	window := a.window
+	a.mu.Unlock()
+
+	layout, err := buildOverlayLayout(ctx)
+	if err != nil {
+		window.Center(ctx)
+		window.Show(ctx)
+		window.SetAlwaysOnTop(ctx, true)
+		return
+	}
+
+	a.mu.Lock()
+	a.layout = layout
+	a.hasLayout = true
+	a.mu.Unlock()
+
+	window.SetRect(ctx, layout.Stage, layout.Reference)
+	window.SetAlwaysOnTop(ctx, true)
+	window.Show(ctx)
 }
 
 func runOverlay(encodedPayload string) error {
@@ -53,20 +114,17 @@ func runOverlay(encodedPayload string) error {
 	overlayApp := NewOverlayApp(payload)
 	return wails.Run(&options.App{
 		Title:             "PM Planner Reminder",
-		Width:             overlayWidth,
-		Height:            overlayHeight,
-		MinWidth:          overlayWidth,
-		MinHeight:         overlayHeight,
-		MaxWidth:          overlayWidth,
-		MaxHeight:         overlayHeight,
+		Width:             overlayDockWidth,
+		Height:            overlayDockHeight,
 		DisableResize:     true,
 		Frameless:         true,
+		StartHidden:       true,
 		AlwaysOnTop:       true,
 		HideWindowOnClose: false,
 		BackgroundColour:  options.NewRGBA(0, 0, 0, 0),
 		AssetServer:       &assetserver.Options{Assets: assets},
 		OnStartup:         overlayApp.Startup,
-		OnDomReady:        positionOverlay,
+		OnDomReady:        overlayApp.StageOverlay,
 		Bind:              []interface{}{overlayApp},
 		Windows:           &windows.Options{WindowIsTranslucent: true, WebviewIsTransparent: true, DisableFramelessWindowDecorations: true},
 		Mac:               &mac.Options{WindowIsTranslucent: true, WebviewIsTransparent: true},
@@ -89,27 +147,43 @@ func decodeOverlayPayload(encoded string) (reminder.ScheduledReminder, error) {
 	return payload, nil
 }
 
-func positionOverlay(ctx context.Context) {
-	screens, err := wailsruntime.ScreenGetAll(ctx)
-	if err != nil || len(screens) == 0 {
-		wailsruntime.WindowCenter(ctx)
-		return
+func buildOverlayLayout(ctx context.Context) (overlayLayout, error) {
+	displays, _ := overlayDisplaysForRuntime(ctx)
+	layout, layoutErr := overlayLayoutForDisplays(displays)
+	if layoutErr != nil {
+		return overlayLayout{}, layoutErr
 	}
-	screen := screens[0]
-	for _, candidate := range screens {
-		if candidate.IsCurrent || candidate.IsPrimary {
-			screen = candidate
-			break
-		}
-	}
-	x := screen.Width - overlayWidth - 24
-	y := screen.Height - overlayHeight - 56
-	if x < 0 {
-		x = 0
-	}
-	if y < 0 {
-		y = 0
-	}
+	return layout, nil
+}
+
+type overlayWindowController interface {
+	SetRect(context.Context, overlayRect, overlayDisplayBounds)
+	SetAlwaysOnTop(context.Context, bool)
+	Show(context.Context)
+	Center(context.Context)
+	Quit(context.Context)
+}
+
+type wailsOverlayWindow struct{}
+
+func (wailsOverlayWindow) SetRect(ctx context.Context, rect overlayRect, reference overlayDisplayBounds) {
+	x, y := overlayPositionForRect(rect, reference)
 	wailsruntime.WindowSetPosition(ctx, x, y)
-	wailsruntime.WindowSetAlwaysOnTop(ctx, true)
+	wailsruntime.WindowSetSize(ctx, rect.Width, rect.Height)
+}
+
+func (wailsOverlayWindow) SetAlwaysOnTop(ctx context.Context, value bool) {
+	wailsruntime.WindowSetAlwaysOnTop(ctx, value)
+}
+
+func (wailsOverlayWindow) Show(ctx context.Context) {
+	wailsruntime.WindowShow(ctx)
+}
+
+func (wailsOverlayWindow) Center(ctx context.Context) {
+	wailsruntime.WindowCenter(ctx)
+}
+
+func (wailsOverlayWindow) Quit(ctx context.Context) {
+	wailsruntime.Quit(ctx)
 }
