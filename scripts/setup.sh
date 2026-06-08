@@ -19,9 +19,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-info()  { printf '%b\n' "${BLUE}→${NC} $*"; }
-ok()    { printf '%b\n' "${GREEN}✓${NC} $*"; }
-warn()  { printf '%b\n' "${YELLOW}!${NC} $*"; }
+info()  { printf '%b\n' "${BLUE}→${NC} $*" >&2; }
+ok()    { printf '%b\n' "${GREEN}✓${NC} $*" >&2; }
+warn()  { printf '%b\n' "${YELLOW}!${NC} $*" >&2; }
 fail()  { printf '%b\n' "${RED}✗${NC} $*" >&2; }
 die()   { fail "$*"; exit 1; }
 
@@ -89,11 +89,14 @@ find_project_root() {
 	done
 
 	# Tenta a partir do diretório do script.
-	if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
-		local script_dir
-		script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-		if is_project_root "$(dirname "$script_dir")"; then
-			echo "$(dirname "$script_dir")"
+	# Ignora quando executado via pipe (BASH_SOURCE[0] é vazio ou /dev/stdin).
+	local bash_source="${BASH_SOURCE[0]:-}"
+	if [[ -n "$bash_source" && "$bash_source" != "/dev/stdin" && -f "$bash_source" ]]; then
+		local script_dir candidate
+		script_dir="$(cd "$(dirname "$bash_source")" && pwd)"
+		candidate="$(dirname "$script_dir")"
+		if is_project_root "$candidate"; then
+			echo "$candidate"
 			return 0
 		fi
 	fi
@@ -161,10 +164,14 @@ ensure_path_block() {
 	if command -v go >/dev/null 2>&1; then
 		go_bin="$(go env GOPATH 2>/dev/null)/bin"
 	fi
+	# Default GOPATH when go is not yet on PATH (fresh install).
+	local default_go_bin="$HOME/go/bin"
 
 	local paths=()
 	[[ -d "$HOME/.local/go/bin" ]] && paths+=("$HOME/.local/go/bin")
-	[[ -n "$go_bin" && -d "$go_bin" ]] && paths+=("$go_bin")
+	[[ -n "$go_bin" && "$go_bin" != "/bin" ]] && paths+=("$go_bin")
+	# Always include the default Go bin so freshly-installed binaries are found.
+	[[ "$default_go_bin" != "$go_bin" ]] && paths+=("$default_go_bin")
 
 	for p in "${paths[@]}"; do
 		case ":$PATH:" in
@@ -196,11 +203,8 @@ ensure_path_block() {
 		echo ""
 		echo "$PATH_MARKER"
 		echo 'export PATH="$PATH:$HOME/.local/go/bin"'
-		if [[ -n "$go_bin" ]]; then
-			echo 'export PATH="$PATH:$(go env GOPATH)/bin"'
-		else
-			echo 'export PATH="$PATH:$HOME/go/bin"'
-		fi
+		echo 'export PATH="$PATH:$HOME/go/bin"'
+		echo 'if command -v go >/dev/null 2>&1; then export PATH="$PATH:$(go env GOPATH)/bin"; fi'
 	} >>"$shell_rc"
 	warn "PATH atualizado em $shell_rc — reinicie o terminal ou execute: source $shell_rc"
 }
@@ -462,8 +466,15 @@ build_and_install_apps() {
 
 	info "Instalando CLI (pm)..."
 	(cd "$root" && go install ./cmd/pm)
+	# Refresh PATH so the freshly-installed pm binary is available in this session.
 	ensure_path_block
-	ok "CLI instalada em $(go env GOPATH)/bin/pm"
+	local gopath_bin
+	gopath_bin="$(go env GOPATH)/bin"
+	case ":$PATH:" in
+		*":$gopath_bin:"*) ;;
+		*) export PATH="$PATH:$gopath_bin" ;;
+	esac
+	ok "CLI instalada em $gopath_bin/pm"
 
 	info "Compilando app desktop..."
 	(cd "$root" && go run ./cmd/pm project build desktop)
