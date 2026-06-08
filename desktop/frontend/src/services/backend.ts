@@ -1,4 +1,4 @@
-import type { PmConfig, PlannerAnchorsConfig, PlannerPayload, PlannerSummary } from '../types'
+import type { PmConfig, PlannerAnchorsConfig, PlannerPayload } from '../types'
 import { builtinPlannerAnchors } from '../util/plannerDefaults'
 
 interface GoPmApp {
@@ -6,13 +6,6 @@ interface GoPmApp {
   SaveConfig(c: PmConfig): Promise<void>
   TestAuth(email: string, password: string): Promise<string>
   LoadPlanner(date: string): Promise<PlannerPayload>
-  RecalculatePlanner(
-    date: string,
-    targetSecs: number,
-    in1: string,
-    out1: string,
-    in2: string,
-  ): Promise<PlannerSummary>
 }
 
 function goApp(): GoPmApp | undefined {
@@ -99,20 +92,4 @@ export async function testAuth(
 
 export async function loadPlanner(date: string): Promise<PlannerPayload> {
   return requireRuntime().LoadPlanner(date)
-}
-
-export async function recalculatePlanner(
-  date: string,
-  targetSecs: number,
-  in1: string,
-  out1: string,
-  in2: string,
-): Promise<PlannerSummary> {
-  return requireRuntime().RecalculatePlanner(
-    date,
-    targetSecs,
-    in1,
-    out1,
-    in2,
-  )
 }

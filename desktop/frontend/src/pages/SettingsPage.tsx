@@ -1,31 +1,14 @@
 import { useEffect, useState } from 'react'
-import PlannerTimeInput from '../components/PlannerTimeInput'
 import * as backend from '../services/backend'
 import { builtinPlannerAnchors } from '../util/plannerDefaults'
 import {
-  adjustPlannerAnchor,
   enforceAnchorOrder,
   type PlannerAnchorTimes,
   validatePlannerAnchors,
 } from '../util/plannerTimes'
-import {
-  Banner,
-  Button,
-  Card,
-  Field,
-  Page,
-  PageHeader,
-  Stack,
-} from '../components/ui'
-
-type AnchorField = keyof PlannerAnchorTimes
-
-const ANCHOR_FIELDS: { field: AnchorField; label: string }[] = [
-  { field: 'in1', label: 'Entrada 1' },
-  { field: 'out1', label: 'Saída 1' },
-  { field: 'in2', label: 'Entrada 2' },
-  { field: 'out2', label: 'Saída 2' },
-]
+import { Banner, Page, PageHeader } from '../components/ui'
+import AccountSettingsForm from '../features/settings/AccountSettingsForm'
+import PlannerDefaultsForm from '../features/settings/PlannerDefaultsForm'
 
 export default function SettingsPage() {
   const [email, setEmail] = useState('')
@@ -40,6 +23,7 @@ export default function SettingsPage() {
     ;(async () => {
       try {
         const c = await backend.getConfig()
+        const builtins = builtinPlannerAnchors()
         setEmail(c.email ?? '')
         setPassword(c.password ?? '')
         if (c.cache_ttl_hours && c.cache_ttl_hours > 0) {
@@ -47,10 +31,10 @@ export default function SettingsPage() {
         }
         if (c.planner) {
           setAnchors({
-            in1: c.planner.in1 ?? builtinPlannerAnchors().in1,
-            out1: c.planner.out1 ?? builtinPlannerAnchors().out1,
-            in2: c.planner.in2 ?? builtinPlannerAnchors().in2,
-            out2: c.planner.out2 ?? builtinPlannerAnchors().out2,
+            in1: c.planner.in1 ?? builtins.in1,
+            out1: c.planner.out1 ?? builtins.out1,
+            in2: c.planner.in2 ?? builtins.in2,
+            out2: c.planner.out2 ?? builtins.out2,
           })
         }
       } catch (e) {
@@ -154,8 +138,6 @@ export default function SettingsPage() {
       ''
     : 'Modo navegador: edição apenas local; gravar/API exige o shell Wails.'
 
-  const builtins = builtinPlannerAnchors()
-
   return (
     <Page narrow>
       <PageHeader
@@ -175,152 +157,25 @@ export default function SettingsPage() {
       {err ? <Banner tone="error">{err}</Banner> : null}
       {msg ? <Banner tone="success">{msg}</Banner> : null}
 
-      <Card title="Conta e Sessão">
-        <form
-          className="form-stack"
-          onSubmit={(event) => {
-            event.preventDefault()
-            void saveAccount()
-          }}
-        >
-          <Stack>
-            <Field id="settings-email" label="E-mail de Login">
-            <input
-              id="settings-email"
-              name="email"
-              type="email"
-              autoComplete="username email"
-              spellCheck={false}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            </Field>
-            <Field id="settings-password" label="Senha">
-            <input
-              id="settings-password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            </Field>
-            <Field
-              id="settings-cache-ttl"
-              label="Cache TTL em Horas"
-              hint={
-                <>
-                  Quando a API não envia validade da sessão, limita há quantas
-                  horas o arquivo{' '}
-                  <code className="pill" translate="no">
-                    session.json
-                  </code>{' '}
-                  é reutilizado.
-                </>
-              }
-            >
-            <input
-              id="settings-cache-ttl"
-              name="cache_ttl_hours"
-              type="number"
-              min="1"
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder="8…"
-              value={ttl}
-              onChange={(e) => setTTL(e.target.value)}
-            />
-            </Field>
-          </Stack>
-          <div className="btn-row">
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={busy}
-            aria-busy={busy}
-          >
-            {busy ? 'Salvando…' : 'Salvar Conta'}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => void test()}
-            disabled={busy || !backend.hasWailsRuntime()}
-            aria-busy={busy}
-          >
-            Testar Login
-          </Button>
-          </div>
-        </form>
-      </Card>
+      <AccountSettingsForm
+        email={email}
+        password={password}
+        ttl={ttl}
+        busy={busy}
+        canTest={backend.hasWailsRuntime()}
+        onEmailChange={setEmail}
+        onPasswordChange={setPassword}
+        onTTLChange={setTTL}
+        onSave={() => void saveAccount()}
+        onTest={() => void test()}
+      />
 
-      <Card
-        title="Horários Padrão do Planner"
-        intro={
-          <>
-            Âncoras usadas para atribuir batidas aos quatro campos e preencher
-            Entrada 1 quando não há registro correspondente. A CLI{' '}
-            <code className="pill" translate="no">
-              pm plan
-            </code>{' '}
-            usa os mesmos valores.
-          </>
-        }
-      >
-        <form
-          className="form-stack"
-          onSubmit={(event) => {
-            event.preventDefault()
-            void savePlanner()
-          }}
-        >
-          <div className="planner-anchor-grid">
-          {ANCHOR_FIELDS.map(({ field, label }) => (
-            <Field
-              key={field}
-              id={`settings-anchor-${field}`}
-              label={label}
-            >
-              <PlannerTimeInput
-                id={`settings-anchor-${field}`}
-                name={`planner_${field}`}
-                value={anchors[field]}
-                onChange={(value) =>
-                  applyAnchors({ ...anchors, [field]: value })
-                }
-                onStep={(delta) =>
-                  applyAnchors(adjustPlannerAnchor(anchors, field, delta))
-                }
-                onBlurNormalize={() => applyAnchors(anchors)}
-              />
-            </Field>
-          ))}
-          </div>
-          <small className="hint">
-          Padrão de fábrica: {builtins.in1}, {builtins.out1}, {builtins.in2},{' '}
-          {builtins.out2}. Intervalo mínimo de 15 minutos entre horários
-          consecutivos.
-          </small>
-          <div className="btn-row">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => applyAnchors(builtinPlannerAnchors())}
-            disabled={busy}
-          >
-            Restaurar Padrões
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={busy}
-            aria-busy={busy}
-          >
-            {busy ? 'Salvando…' : 'Salvar Horários'}
-          </Button>
-          </div>
-        </form>
-      </Card>
+      <PlannerDefaultsForm
+        anchors={anchors}
+        busy={busy}
+        onAnchorsChange={applyAnchors}
+        onSave={() => void savePlanner()}
+      />
     </Page>
   )
 }

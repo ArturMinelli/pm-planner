@@ -59,8 +59,3 @@ func (a *App) LoadPlanner(date string) (*app.PlannerPayload, error) {
 	defer cancel()
 	return app.FetchPlannerPayload(ctx, cl, date)
 }
-
-// RecalculatePlanner recomputes saída 2 and segment summaries after edits.
-func (a *App) RecalculatePlanner(date string, targetSecs int64, in1 string, out1 string, in2 string) (*app.PlannerSummary, error) {
-	return app.RecalculatePlanner(date, targetSecs, in1, out1, in2)
-}
