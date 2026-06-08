@@ -107,13 +107,13 @@ fetch_project_tarball() {
 	local target="$1"
 	local tmp
 	tmp="$(mktemp -d)"
-	trap 'rm -rf "$tmp"' RETURN
 
 	info "Baixando código-fonte (tarball)..."
 	curl -fsSL "$REPO_TARBALL_URL" -o "$tmp/pm-planner.tar.gz"
 	tar -xzf "$tmp/pm-planner.tar.gz" -C "$tmp"
 	rm -rf "$target"
 	mv "$tmp/pm-planner-main" "$target"
+	rm -rf "$tmp"
 	ok "Código-fonte extraído em $target"
 }
 
@@ -239,12 +239,12 @@ install_go_tarball() {
 	info "Baixando Go ${GO_VERSION}..."
 	local tmp
 	tmp="$(mktemp -d)"
-	trap 'rm -rf "$tmp"' RETURN
 
 	curl -fsSL "$url" -o "$tmp/$tarball"
 	rm -rf "$HOME/.local/go"
 	mkdir -p "$HOME/.local"
 	tar -C "$HOME/.local" -xzf "$tmp/$tarball"
+	rm -rf "$tmp"
 	export PATH="$HOME/.local/go/bin:$PATH"
 	ok "Go ${GO_VERSION} instalado em ~/.local/go"
 }
