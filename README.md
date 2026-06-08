@@ -34,47 +34,46 @@ O PM Planner é um auxiliar do PontoMais que permite planejar os horários de po
 
 ## Instalação rápida (recomendado)
 
-O repositório inclui scripts que detectam o sistema operacional, verificam dependências ausentes e instalam o que for possível automaticamente.
+Um único comando instala dependências, obtém o código-fonte, compila a CLI (`pm`) e instala o app desktop nativamente.
 
-### Script de setup
+| Plataforma | Script | Instalação completa |
+| --- | --- | --- |
+| **macOS / Linux** | [`scripts/setup.sh`](scripts/setup.sh) | `curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.sh \| bash` |
+| **Windows** | [`scripts/setup.ps1`](scripts/setup.ps1) | `irm https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.ps1 \| iex` |
 
-| Plataforma | Arquivo | Instalar dependências | Compilar e instalar o app desktop |
-| --- | --- | --- | --- |
-| **macOS / Linux** | [`scripts/setup.sh`](scripts/setup.sh) | `./scripts/setup.sh` | `./scripts/setup.sh --build` |
-| **Windows** | [`scripts/setup.ps1`](scripts/setup.ps1) | `.\scripts\setup.ps1` | `.\scripts\setup.ps1 -Build` |
-
-**macOS / Linux** — instalar dependências sem clonar o repositório:
+**macOS / Linux:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.sh | bash
 ```
 
-**Windows** — instalar dependências (revise o script antes de executar):
+**Windows** (revise o script antes de executar):
 
 ```powershell
 irm https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.ps1 | iex
 ```
 
-**Compilar e instalar o app desktop** (requer o repositório clonado):
+O script faz tudo automaticamente:
+
+1. Instala dependências (Go, Node.js, Wails e bibliotecas nativas)
+2. Obtém o código-fonte em `~/pm-planner` (clone via git ou download do tarball, se você não estiver dentro de um clone)
+3. Instala a CLI `pm` em `$(go env GOPATH)/bin`
+4. Compila e instala o app desktop (Launchpad no macOS, menu de aplicativos no Linux, Menu Iniciar no Windows)
+
+Se você já clonou o repositório, execute o script de dentro de `pm-planner/` — ele usa o clone local em vez de baixar novamente:
 
 ```bash
-git clone https://github.com/ArturMinelli/pm-planner.git
-cd pm-planner
-./scripts/setup.sh --build
+./scripts/setup.sh
 ```
 
 ```powershell
-git clone https://github.com/ArturMinelli/pm-planner.git
-cd pm-planner
-.\scripts\setup.ps1 -Build
+.\scripts\setup.ps1
 ```
-
-A flag `--build` / `-Build` compila o app desktop **e** o instala nativamente (Launchpad no macOS, menu de aplicativos no Linux, Menu Iniciar no Windows).
 
 Outras flags úteis:
 
 ```bash
-./scripts/setup.sh --check-only    # apenas verifica, sem instalar
+./scripts/setup.sh --check-only    # apenas verifica dependências, sem instalar nem compilar
 ./scripts/setup.sh --help
 ```
 
@@ -83,10 +82,11 @@ Outras flags úteis:
 .\scripts\setup.ps1 -Help
 ```
 
-Após o setup, verifique o ambiente:
+Após o setup, reinicie o terminal e teste:
 
 ```bash
-go run ./cmd/pm project doctor
+pm --version
+pm list
 ```
 
 ---
@@ -278,6 +278,8 @@ go run ./cmd/pm project doctor
 ## Instalação
 
 ### Compilar a CLI
+
+O [script de setup](#script-de-setup) já instala a CLI com `go install ./cmd/pm` (binário `pm` em `$(go env GOPATH)/bin`). Para compilar manualmente:
 
 ```bash
 go run ./cmd/pm project build cli
@@ -514,7 +516,9 @@ bin/pm project clean
 | Sintoma | Solução |
 | --- | --- |
 | `wails` não encontrado após instalação | Adicione `$(go env GOPATH)/bin` ao PATH (`~/.zshrc`, `~/.bashrc` ou perfil do PowerShell) e reinicie o terminal |
-| `--build` / `-Build` falha fora do repositório | Clone o projeto primeiro: `git clone https://github.com/ArturMinelli/pm-planner.git` e execute o script de dentro de `pm-planner/` |
+| `pm` não encontrado após instalação | Reinicie o terminal (o script adiciona `$(go env GOPATH)/bin` ao PATH) ou execute `source ~/.zshrc` |
+| Falha ao obter código-fonte no setup | Verifique conexão de rede; instale `git` ou clone manualmente: `git clone https://github.com/ArturMinelli/pm-planner.git ~/pm-planner` e execute o script novamente |
+| Compilação falha com dependências parciais | Conclua instalações pendentes (Xcode CLT no macOS, GTK/WebKit no Linux, GCC/WebView2 no Windows) e execute o script novamente |
 | Distribuição Linux não suportada pelo script | Instale manualmente os pacotes listados em [Linux](#linux) ou consulte `wails doctor` |
 | PowerShell bloqueia `setup.ps1` | Execute `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` ou rode `powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1` |
 | `wails` não encontrado durante o desenvolvimento | Instale com `go install github.com/wailsapp/wails/v2/cmd/wails@latest` |

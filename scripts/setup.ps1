@@ -1,10 +1,9 @@
 # PM Planner — script de setup para Windows.
-# Detecta dependências ausentes, instala via winget quando possível e
-# opcionalmente compila e instala o app desktop (-Build).
+# Instala dependências, obtém o código-fonte e compila/instala a CLI e o app desktop.
 
 [CmdletBinding()]
 param(
-    [switch]$Build,
+    [switch]$Build,     # obsoleto: compilação é o comportamento padrão
     [switch]$CheckOnly,
     [switch]$Help
 )
@@ -14,6 +13,8 @@ $ErrorActionPreference = "Stop"
 $GoMinVersion = [version]"1.23.0"
 $WailsPkg = "github.com/wailsapp/wails/v2/cmd/wails@latest"
 $RepoUrl = "https://github.com/ArturMinelli/pm-planner.git"
+$RepoTarballUrl = "https://github.com/ArturMinelli/pm-planner/archive/refs/heads/main.tar.gz"
+$DefaultInstallDir = Join-Path $env:USERPROFILE "pm-planner"
 $PathMarker = "# pm-planner setup"
 
 function Write-Info($Message)  { Write-Host "→ $Message" -ForegroundColor Blue }
@@ -25,17 +26,16 @@ function Show-Usage {
     @"
 Uso: setup.ps1 [opções]
 
-Instala dependências do PM Planner (Go, Node.js, GCC, WebView2, Wails).
+Instala dependências, compila e instala a CLI (pm) e o app desktop do PM Planner.
 
 Opções:
-  -Build       Compila e instala o app desktop (requer estar no repositório)
-  -CheckOnly   Apenas verifica dependências, sem instalar
+  -CheckOnly   Apenas verifica dependências, sem instalar nem compilar
   -Help        Exibe esta ajuda
 
 Exemplos:
   irm https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.ps1 | iex
   git clone https://github.com/ArturMinelli/pm-planner.git; cd pm-planner
-  .\scripts\setup.ps1 -Build
+  .\scripts\setup.ps1
 
 Nota: revise o script antes de executar com irm | iex.
 "@
@@ -67,6 +67,66 @@ function Find-ProjectRoot {
     if (Test-ProjectRoot $candidate) { return $candidate }
 
     return $null
+}
+
+function Get-ProjectTarball {
+    param([string]$Target)
+
+    $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("pm-planner-" + [guid]::NewGuid().ToString())
+    New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+
+    try {
+        Write-Info "Baixando código-fonte (tarball)..."
+        $archivePath = Join-Path $tempDir "pm-planner.tar.gz"
+        Invoke-WebRequest -Uri $RepoTarballUrl -OutFile $archivePath -UseBasicParsing
+        tar -xzf $archivePath -C $tempDir
+        if (Test-Path $Target) {
+            Remove-Item -Recurse -Force $Target
+        }
+        Move-Item (Join-Path $tempDir "pm-planner-main") $Target
+        Write-Ok "Código-fonte extraído em $Target"
+    } finally {
+        if (Test-Path $tempDir) {
+            Remove-Item -Recurse -Force $tempDir
+        }
+    }
+}
+
+function Clone-ProjectRepo {
+    param([string]$Target)
+
+    if (Test-Path $Target) {
+        Remove-Item -Recurse -Force $Target
+    }
+    Write-Info "Clonando repositório..."
+    git clone $RepoUrl $Target
+    Write-Ok "Repositório clonado em $Target"
+}
+
+function Ensure-ProjectRoot {
+    $root = Find-ProjectRoot
+    if ($root) { return $root }
+
+    if (Test-ProjectRoot $DefaultInstallDir) {
+        Write-Ok "Repositório encontrado em $DefaultInstallDir"
+        return $DefaultInstallDir
+    }
+
+    if ($CheckOnly) { return $null }
+
+    if (Test-Path $DefaultInstallDir) {
+        Write-Warn "Removendo instalação inválida em $DefaultInstallDir"
+        Remove-Item -Recurse -Force $DefaultInstallDir
+    }
+
+    Write-Info "Obtendo código-fonte em $DefaultInstallDir..."
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        Clone-ProjectRepo $DefaultInstallDir
+        return $DefaultInstallDir
+    }
+
+    Get-ProjectTarball $DefaultInstallDir
+    return $DefaultInstallDir
 }
 
 function Test-Winget {
@@ -239,6 +299,9 @@ function Install-Wails {
 
 function Invoke-Doctor {
     $root = Find-ProjectRoot
+    if (-not $root -and (Test-ProjectRoot $DefaultInstallDir)) {
+        $root = $DefaultInstallDir
+    }
     if (-not $root) { return }
     if (-not (Get-Command go -ErrorAction SilentlyContinue)) { return }
     Write-Info "Executando verificação do projeto (project doctor)..."
@@ -250,48 +313,57 @@ function Invoke-Doctor {
     }
 }
 
-function Invoke-BuildAndInstall {
-    $root = Find-ProjectRoot
+function Invoke-BuildAndInstallApps {
+    $root = Ensure-ProjectRoot
     if (-not $root) {
         throw @"
-Opção -Build requer o repositório pm-planner. Clone primeiro:
-  git clone $RepoUrl
-  cd pm-planner
-  .\scripts\setup.ps1 -Build
+Não foi possível obter o código-fonte. Verifique conexão de rede ou clone manualmente:
+  git clone $RepoUrl $DefaultInstallDir
 "@
     }
 
-    Write-Info "Compilando app desktop..."
+    if (-not (Get-Command go -ErrorAction SilentlyContinue)) {
+        throw "Go não disponível — não é possível compilar"
+    }
+
     Push-Location $root
     try {
+        Write-Info "Instalando CLI (pm)..."
+        go install ./cmd/pm
+        Ensure-GoBinPath
+        Refresh-Path
+        Write-Ok "CLI instalada em $(Join-Path (go env GOPATH) 'bin\pm')"
+
+        Write-Info "Compilando app desktop..."
         go run ./cmd/pm project build desktop
         Write-Info "Instalando app desktop..."
         go run ./cmd/pm project install desktop --skip-build
     } finally {
         Pop-Location
     }
-    Write-Ok "App desktop compilado e instalado com sucesso!"
+    Write-Ok "CLI e app desktop instalados com sucesso!"
 }
 
 function Show-NextSteps {
     $root = Find-ProjectRoot
-    if (-not $root) {
-        Write-Host ""
-        Write-Info "Próximos passos:"
-        Write-Host "  git clone $RepoUrl"
-        Write-Host "  cd pm-planner"
-        Write-Host "  .\scripts\setup.ps1 -Build"
-        Write-Host ""
-        Write-Host "  Ou verifique o ambiente após clonar:"
-        Write-Host "  go run ./cmd/pm project doctor"
+    if (-not $root -and (Test-ProjectRoot $DefaultInstallDir)) {
+        $root = $DefaultInstallDir
+    }
+
+    Write-Host ""
+    Write-Info "Próximos passos:"
+
+    if ($CheckOnly) {
+        Write-Host "  Execute sem -CheckOnly para instalar dependências, compilar e instalar CLI + desktop"
         return
     }
-    if (-not $Build) {
-        Write-Host ""
-        Write-Info "Próximos passos:"
-        Write-Host "  .\scripts\setup.ps1 -Build    # compilar e instalar o app desktop"
-        Write-Host "  go run ./cmd/pm project doctor"
+
+    Write-Host "  pm --version          # CLI (reinicie o PowerShell)"
+    Write-Host "  pm list               # listar pontos do dia"
+    if ($root) {
+        Write-Host "  Código-fonte em: $root"
     }
+    Write-Host "  App desktop: Menu Iniciar (PM Planner)"
 }
 
 # --- main ---
@@ -317,14 +389,14 @@ if ($failed -and -not $CheckOnly) {
     Write-Warn "Algumas dependências precisam de atenção manual (veja mensagens acima)"
 }
 
+if (-not $CheckOnly) {
+    Invoke-BuildAndInstallApps
+}
+
 try {
     Invoke-Doctor
 } catch {
     Write-Warn "Verificação do projeto falhou: $_"
-}
-
-if ($Build) {
-    Invoke-BuildAndInstall
 }
 
 Show-NextSteps

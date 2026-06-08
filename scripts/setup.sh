@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # PM Planner — script de setup para macOS e Linux.
-# Detecta dependências ausentes, instala o que for possível e opcionalmente
-# compila e instala o app desktop (--build).
+# Instala dependências, obtém o código-fonte e compila/instala a CLI e o app desktop.
 
 set -euo pipefail
 
 readonly GO_VERSION="1.23.3"
 readonly WAILS_PKG="github.com/wailsapp/wails/v2/cmd/wails@latest"
 readonly REPO_URL="https://github.com/ArturMinelli/pm-planner.git"
+readonly REPO_TARBALL_URL="https://github.com/ArturMinelli/pm-planner/archive/refs/heads/main.tar.gz"
+readonly DEFAULT_INSTALL_DIR="$HOME/pm-planner"
 readonly PATH_MARKER="# pm-planner setup"
 
 CHECK_ONLY=0
-DO_BUILD=0
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -29,24 +29,23 @@ usage() {
 	cat <<'EOF'
 Uso: setup.sh [opções]
 
-Instala dependências do PM Planner (Go, Node.js, Wails e bibliotecas nativas).
+Instala dependências, compila e instala a CLI (pm) e o app desktop do PM Planner.
 
 Opções:
-  --build       Compila e instala o app desktop (requer estar no repositório)
-  --check-only  Apenas verifica dependências, sem instalar
+  --check-only  Apenas verifica dependências, sem instalar nem compilar
   --help        Exibe esta ajuda
 
 Exemplos:
   curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.sh | bash
   git clone https://github.com/ArturMinelli/pm-planner.git && cd pm-planner
-  ./scripts/setup.sh --build
+  ./scripts/setup.sh
 EOF
 }
 
 parse_args() {
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-			--build)      DO_BUILD=1; shift ;;
+			--build)      shift ;; # obsoleto: compilação é o comportamento padrão
 			--check-only) CHECK_ONLY=1; shift ;;
 			--help|-h)    usage; exit 0 ;;
 			*)            die "Opção desconhecida: $1 (use --help)" ;;
@@ -99,6 +98,62 @@ find_project_root() {
 		fi
 	fi
 	return 1
+}
+
+fetch_project_tarball() {
+	local target="$1"
+	local tmp
+	tmp="$(mktemp -d)"
+	trap 'rm -rf "$tmp"' RETURN
+
+	info "Baixando código-fonte (tarball)..."
+	curl -fsSL "$REPO_TARBALL_URL" -o "$tmp/pm-planner.tar.gz"
+	tar -xzf "$tmp/pm-planner.tar.gz" -C "$tmp"
+	rm -rf "$target"
+	mv "$tmp/pm-planner-main" "$target"
+	ok "Código-fonte extraído em $target"
+}
+
+clone_project_repo() {
+	local target="$1"
+	rm -rf "$target"
+	info "Clonando repositório..."
+	git clone "$REPO_URL" "$target"
+	ok "Repositório clonado em $target"
+}
+
+ensure_project_root() {
+	local root=""
+
+	if root="$(find_project_root 2>/dev/null)"; then
+		echo "$root"
+		return 0
+	fi
+
+	if is_project_root "$DEFAULT_INSTALL_DIR"; then
+		ok "Repositório encontrado em $DEFAULT_INSTALL_DIR"
+		echo "$DEFAULT_INSTALL_DIR"
+		return 0
+	fi
+
+	if [[ "$CHECK_ONLY" -eq 1 ]]; then
+		return 1
+	fi
+
+	if [[ -d "$DEFAULT_INSTALL_DIR" ]]; then
+		warn "Removendo instalação inválida em $DEFAULT_INSTALL_DIR"
+		rm -rf "$DEFAULT_INSTALL_DIR"
+	fi
+
+	info "Obtendo código-fonte em $DEFAULT_INSTALL_DIR..."
+	if command -v git >/dev/null 2>&1; then
+		clone_project_repo "$DEFAULT_INSTALL_DIR"
+		echo "$DEFAULT_INSTALL_DIR"
+		return 0
+	fi
+
+	fetch_project_tarball "$DEFAULT_INSTALL_DIR"
+	echo "$DEFAULT_INSTALL_DIR"
 }
 
 ensure_path_block() {
@@ -377,8 +432,14 @@ install_wails() {
 }
 
 run_doctor() {
-	local root
-	if ! root="$(find_project_root 2>/dev/null)"; then
+	local root=""
+	if root="$(find_project_root 2>/dev/null)"; then
+		:
+	elif is_project_root "$DEFAULT_INSTALL_DIR"; then
+		root="$DEFAULT_INSTALL_DIR"
+	fi
+
+	if [[ -z "$root" ]]; then
 		return 0
 	fi
 	if ! command -v go >/dev/null 2>&1; then
@@ -388,14 +449,21 @@ run_doctor() {
 	(cd "$root" && go run ./cmd/pm project doctor)
 }
 
-build_and_install() {
+build_and_install_apps() {
 	local root
-	if ! root="$(find_project_root 2>/dev/null)"; then
-		die "Opção --build requer o repositório pm-planner. Clone primeiro:
-  git clone $REPO_URL
-  cd pm-planner
-  ./scripts/setup.sh --build"
+	if ! root="$(ensure_project_root)"; then
+		die "Não foi possível obter o código-fonte. Verifique conexão de rede ou clone manualmente:
+  git clone $REPO_URL $DEFAULT_INSTALL_DIR"
 	fi
+
+	if ! command -v go >/dev/null 2>&1; then
+		die "Go não disponível — não é possível compilar"
+	fi
+
+	info "Instalando CLI (pm)..."
+	(cd "$root" && go install ./cmd/pm)
+	ensure_path_block
+	ok "CLI instalada em $(go env GOPATH)/bin/pm"
 
 	info "Compilando app desktop..."
 	(cd "$root" && go run ./cmd/pm project build desktop)
@@ -403,31 +471,35 @@ build_and_install() {
 	info "Instalando app desktop..."
 	(cd "$root" && go run ./cmd/pm project install desktop --skip-build)
 
-	ok "App desktop compilado e instalado com sucesso!"
+	ok "CLI e app desktop instalados com sucesso!"
 }
 
 print_next_steps() {
 	local root=""
-	find_project_root >/dev/null 2>&1 && root="$(find_project_root)" || true
+	if root="$(find_project_root 2>/dev/null)"; then
+		:
+	elif is_project_root "$DEFAULT_INSTALL_DIR"; then
+		root="$DEFAULT_INSTALL_DIR"
+	fi
 
-	if [[ -z "$root" ]]; then
-		echo ""
-		info "Próximos passos:"
-		echo "  git clone $REPO_URL"
-		echo "  cd pm-planner"
-		echo "  ./scripts/setup.sh --build"
-		echo ""
-		echo "  Ou verifique o ambiente após clonar:"
-		echo "  go run ./cmd/pm project doctor"
+	echo ""
+	info "Próximos passos:"
+
+	if [[ "$CHECK_ONLY" -eq 1 ]]; then
+		echo "  Execute sem --check-only para instalar dependências, compilar e instalar CLI + desktop"
 		return
 	fi
 
-	if [[ "$DO_BUILD" -eq 0 ]]; then
-		echo ""
-		info "Próximos passos:"
-		echo "  ./scripts/setup.sh --build    # compilar e instalar o app desktop"
-		echo "  go run ./cmd/pm project doctor"
+	echo "  pm --version          # CLI (reinicie o terminal ou: source ~/.zshrc)"
+	echo "  pm list               # listar pontos do dia"
+	if [[ -n "$root" ]]; then
+		echo "  Código-fonte em: $root"
 	fi
+
+	case "$(detect_os)" in
+		darwin) echo "  App desktop: ~/Applications/PM Planner.app (Launchpad)" ;;
+		linux)  echo "  App desktop: menu de aplicativos (PM Planner)" ;;
+	esac
 }
 
 main() {
@@ -452,11 +524,11 @@ main() {
 		warn "Algumas dependências precisam de atenção manual (veja mensagens acima)"
 	fi
 
-	run_doctor || true
-
-	if [[ "$DO_BUILD" -eq 1 ]]; then
-		build_and_install
+	if [[ "$CHECK_ONLY" -eq 0 ]]; then
+		build_and_install_apps
 	fi
+
+	run_doctor || true
 
 	print_next_steps
 	echo ""
