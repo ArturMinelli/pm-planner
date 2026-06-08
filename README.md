@@ -405,6 +405,13 @@ planner:
   out1: "12:00"
   in2: "13:30"
   out2: "18:00"
+reminders:
+  enabled: true
+  autostart: true
+  lead_minutes: [15, 5]
+  animation: train
+  native_notifications: true
+  popup_notifications: true
 ```
 
 | Campo | Descrição |
@@ -412,6 +419,7 @@ planner:
 | `email` / `password` | Credenciais de login do PontoMais |
 | `cache_ttl_hours` | Horas em que o cache de sessão local permanece válido quando a API não fornece uma data de expiração. Padrão: 8. |
 | `planner.in1/out1/in2/out2` | Horários âncora padrão para os quatro campos de ponto. Usados tanto pelo `pm plan` quanto pelo planner do app desktop como sugestão inicial para o dia. |
+| `reminders.*` | Lembretes opt-in do app desktop. Quando ativados, `pm-desktop --daemon` verifica os horários recomendados e dispara notificações nativas e/ou pop-up animado. |
 
 Os headers de autenticação são armazenados em cache como `session.json` no mesmo diretório e reutilizados até expirarem.
 
@@ -472,6 +480,15 @@ bin/pm-desktop
 
 Ou, se o lançador desktop foi instalado no Linux, abra **PM — Planner** pelo menu de aplicativos.
 
+O mesmo binário também possui modos internos usados pelos lembretes:
+
+```bash
+bin/pm-desktop --daemon
+bin/pm-desktop --overlay --payload <base64-json>
+```
+
+Normalmente você não precisa chamá-los manualmente: a página de Configurações registra o daemon no autostart do usuário quando os lembretes são ativados.
+
 O app tem duas páginas acessíveis pela barra lateral.
 
 ### Página do Planner
@@ -509,6 +526,13 @@ Clique no ícone de configurações na barra lateral para configurar o app.
 - Horários consecutivos devem ter pelo menos 15 minutos de diferença.
 - Clique em **Restaurar Padrões** para voltar a `08:00 / 12:00 / 13:30 / 18:00`.
 - Clique em **Salvar Horários** para persistir no `config.yaml`. Esses valores também são utilizados pelo `pm plan` na CLI.
+
+**Lembretes de Jornada:**
+
+- Ative os lembretes para iniciar o daemon em segundo plano e avisar antes de Entrada 1, Saída 1, Entrada 2 e Saída 2.
+- Escolha o aviso em `15 e 5 min`, `10 e 2 min` ou `5 min`, e a animação `Trem`, `Foguete` ou `Sino`.
+- Quando **Iniciar com o sistema** estiver ativo, o app cria um LaunchAgent no macOS, uma entrada XDG autostart no Linux, ou um atalho Startup no Windows.
+- Use **Permitir Notificações** e **Testar Lembrete** para validar o canal nativo e o pop-up animado.
 
 ---
 

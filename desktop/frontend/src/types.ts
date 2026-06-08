@@ -12,6 +12,7 @@ export interface PmConfig {
   password: string
   cache_ttl_hours?: number
   planner?: PlannerAnchorsConfig
+  reminders?: ReminderSettings
 }
 
 /** Mirrors pkg/app payloads */
@@ -32,4 +33,41 @@ export interface PlannerSummary {
   secondSpanSecs: number
   totalSpanSecs: number
   overtimeSecs: number
+}
+
+export type ReminderAnimation = 'train' | 'rocket' | 'bell'
+
+export interface ReminderSettings {
+  enabled: boolean
+  autostart: boolean
+  lead_minutes?: number[]
+  animation?: ReminderAnimation
+  native_notifications?: boolean
+  popup_notifications?: boolean
+}
+
+export interface ReminderStatus {
+  settings: ReminderSettings
+  autostartEnabled: boolean
+  daemonRunning: boolean
+  notificationAvailable: boolean
+  notificationAuthorized: boolean
+  notificationStatusDetail?: string
+}
+
+export interface NotificationPermissionStatus {
+  available: boolean
+  authorized: boolean
+  detail?: string
+}
+
+export interface OverlayPayload {
+  id: string
+  date: string
+  slotKey: string
+  slotLabel: string
+  slotTime: string
+  leadMinutes: number
+  fireAt: string
+  animation: ReminderAnimation
 }

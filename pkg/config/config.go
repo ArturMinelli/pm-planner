@@ -27,6 +27,7 @@ type File struct {
 	Password      string          `json:"password" yaml:"password"`
 	CacheTTLHours int             `json:"cache_ttl_hours,omitempty" yaml:"cache_ttl_hours,omitempty"`
 	Planner       *PlannerAnchors `json:"planner,omitempty" yaml:"planner,omitempty"`
+	Reminders     *Reminders      `json:"reminders,omitempty" yaml:"reminders,omitempty"`
 }
 
 // DefaultDir returns the platform-native config directory for PM.
@@ -110,6 +111,11 @@ func Save(cfgFileOverride string, f *File) error {
 		}
 		if err := ValidatePlannerAnchors(anchors); err != nil {
 			return fmt.Errorf("planner: %w", err)
+		}
+	}
+	if f != nil && f.Reminders != nil {
+		if _, err := ResolveReminders(f); err != nil {
+			return fmt.Errorf("reminders: %w", err)
 		}
 	}
 	path, err := ResolvePath(cfgFileOverride)

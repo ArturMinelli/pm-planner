@@ -19,6 +19,12 @@ func anchorCost(stamp, anchor time.Time) time.Duration {
 	return absDur(stamp.Sub(anchor))
 }
 
+// AssignStampsToPlannerSlots maps chronological stamps to the four planner slots.
+// Returned slice has length 4: each slot is the stamp index in sorted stamps, or -1.
+func AssignStampsToPlannerSlots(sorted []time.Time, date time.Time, anchorsHM [4]string) [4]int {
+	return assignStampsToPlannerSlots(sorted, date, anchorsHM)
+}
+
 // anchorCombinations returns all C(4,k) increasing index tuples drawn from {0,1,2,3}.
 func anchorCombinations(k int) [][]int {
 	if k <= 0 || k > 4 {

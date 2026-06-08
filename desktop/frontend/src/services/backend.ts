@@ -1,11 +1,23 @@
-import type { PmConfig, PlannerAnchorsConfig, PlannerPayload } from '../types'
+import type {
+  NotificationPermissionStatus,
+  PmConfig,
+  PlannerAnchorsConfig,
+  PlannerPayload,
+  ReminderSettings,
+  ReminderStatus,
+} from '../types'
 import { builtinPlannerAnchors } from '../util/plannerDefaults'
+import { defaultReminderSettings, normalizeReminderSettings } from '../util/reminderSettings'
 
 interface GoPmApp {
   GetConfig(): Promise<PmConfig>
   SaveConfig(c: PmConfig): Promise<void>
   TestAuth(email: string, password: string): Promise<string>
   LoadPlanner(date: string): Promise<PlannerPayload>
+  GetReminderStatus(): Promise<ReminderStatus>
+  SaveReminderSettings(settings: ReminderSettings): Promise<void>
+  RequestNotificationPermission(): Promise<NotificationPermissionStatus>
+  SendTestReminder(): Promise<void>
 }
 
 function goApp(): GoPmApp | undefined {
@@ -44,12 +56,14 @@ export async function getConfig(): Promise<PmConfig> {
       password: '',
       cache_ttl_hours: undefined,
       planner: builtinPlannerAnchors(),
+      reminders: defaultReminderSettings(),
     }
   }
   const c = await requireRuntime().GetConfig()
   return {
     ...c,
     planner: normalizePlanner(c.planner) ?? builtinPlannerAnchors(),
+    reminders: normalizeReminderSettings(c.reminders),
   }
 }
 
@@ -73,6 +87,9 @@ export async function saveConfig(c: PmConfig): Promise<void> {
       out2: c.planner.out2,
     }
   }
+  if (c.reminders) {
+    payload.reminders = normalizeReminderSettings(c.reminders)
+  }
   return requireRuntime().SaveConfig(payload)
 }
 
@@ -92,4 +109,38 @@ export async function testAuth(
 
 export async function loadPlanner(date: string): Promise<PlannerPayload> {
   return requireRuntime().LoadPlanner(date)
+}
+
+export async function getReminderStatus(): Promise<ReminderStatus> {
+  if (!hasWailsRuntime()) {
+    return {
+      settings: defaultReminderSettings(),
+      autostartEnabled: false,
+      daemonRunning: false,
+      notificationAvailable: false,
+      notificationAuthorized: false,
+      notificationStatusDetail: 'Modo navegador',
+    }
+  }
+  const status = await requireRuntime().GetReminderStatus()
+  return {
+    ...status,
+    settings: normalizeReminderSettings(status.settings),
+  }
+}
+
+export async function saveReminderSettings(
+  settings: ReminderSettings,
+): Promise<void> {
+  return requireRuntime().SaveReminderSettings(
+    normalizeReminderSettings(settings),
+  )
+}
+
+export async function requestNotificationPermission(): Promise<NotificationPermissionStatus> {
+  return requireRuntime().RequestNotificationPermission()
+}
+
+export async function sendTestReminder(): Promise<void> {
+  return requireRuntime().SendTestReminder()
 }

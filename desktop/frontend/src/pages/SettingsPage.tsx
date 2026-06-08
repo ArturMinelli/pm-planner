@@ -1,20 +1,27 @@
 import { useEffect, useState } from 'react'
 import * as backend from '../services/backend'
+import type { ReminderSettings, ReminderStatus } from '../types'
 import { builtinPlannerAnchors } from '../util/plannerDefaults'
 import {
   enforceAnchorOrder,
   type PlannerAnchorTimes,
   validatePlannerAnchors,
 } from '../util/plannerTimes'
+import { defaultReminderSettings, normalizeReminderSettings } from '../util/reminderSettings'
 import { Banner, Page, PageHeader } from '../components/ui'
 import AccountSettingsForm from '../features/settings/AccountSettingsForm'
 import PlannerDefaultsForm from '../features/settings/PlannerDefaultsForm'
+import ReminderSettingsForm from '../features/settings/ReminderSettingsForm'
 
 export default function SettingsPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [ttl, setTTL] = useState<string>('')
   const [anchors, setAnchors] = useState<PlannerAnchorTimes>(builtinPlannerAnchors)
+  const [reminders, setReminders] = useState<ReminderSettings>(
+    defaultReminderSettings,
+  )
+  const [reminderStatus, setReminderStatus] = useState<ReminderStatus | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -36,6 +43,12 @@ export default function SettingsPage() {
             in2: c.planner.in2 ?? builtins.in2,
             out2: c.planner.out2 ?? builtins.out2,
           })
+        }
+        setReminders(normalizeReminderSettings(c.reminders))
+        if (backend.hasWailsRuntime()) {
+          const status = await backend.getReminderStatus()
+          setReminderStatus(status)
+          setReminders(status.settings)
         }
       } catch (e) {
         setErr(e instanceof Error ? e.message : String(e))
@@ -110,6 +123,84 @@ export default function SettingsPage() {
     }
   }
 
+  const refreshReminderStatus = async () => {
+    if (!backend.hasWailsRuntime()) return
+    const status = await backend.getReminderStatus()
+    setReminderStatus(status)
+    setReminders(status.settings)
+  }
+
+  const saveReminders = async () => {
+    setMsg(null)
+    setErr(null)
+    if (!backend.hasWailsRuntime()) {
+      setErr(
+        'Configurações são gravadas pelo app desktop. Use pm-desktop aqui.',
+      )
+      return
+    }
+    const normalized = normalizeReminderSettings(reminders)
+    if (
+      normalized.enabled &&
+      !normalized.native_notifications &&
+      !normalized.popup_notifications
+    ) {
+      setErr('Ative pelo menos um canal de lembrete.')
+      return
+    }
+    setBusy(true)
+    try {
+      await backend.saveReminderSettings(normalized)
+      await refreshReminderStatus()
+      setMsg('Lembretes salvos e daemon sincronizado.')
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const requestReminderPermission = async () => {
+    setMsg(null)
+    setErr(null)
+    if (!backend.hasWailsRuntime()) {
+      setErr('Permissão de notificações só funciona dentro do desktop.')
+      return
+    }
+    setBusy(true)
+    try {
+      const status = await backend.requestNotificationPermission()
+      await refreshReminderStatus()
+      setMsg(
+        status.authorized
+          ? 'Notificações autorizadas.'
+          : status.detail || 'Notificações ainda não autorizadas.',
+      )
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const testReminder = async () => {
+    setMsg(null)
+    setErr(null)
+    if (!backend.hasWailsRuntime()) {
+      setErr('Teste de lembrete só funciona dentro do desktop.')
+      return
+    }
+    setBusy(true)
+    try {
+      await backend.sendTestReminder()
+      setMsg('Lembrete de teste enviado.')
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const test = async () => {
     setMsg(null)
     setErr(null)
@@ -175,6 +266,17 @@ export default function SettingsPage() {
         busy={busy}
         onAnchorsChange={applyAnchors}
         onSave={() => void savePlanner()}
+      />
+
+      <ReminderSettingsForm
+        settings={reminders}
+        status={reminderStatus}
+        busy={busy}
+        canUseRuntime={backend.hasWailsRuntime()}
+        onSettingsChange={setReminders}
+        onSave={() => void saveReminders()}
+        onRequestPermission={() => void requestReminderPermission()}
+        onTest={() => void testReminder()}
       />
     </Page>
   )
