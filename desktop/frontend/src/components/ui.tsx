@@ -6,6 +6,7 @@ import type {
 
 type BannerTone = 'info' | 'success' | 'error'
 type ButtonVariant = 'primary' | 'secondary'
+type ToastTone = 'success' | 'error'
 
 function classNames(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(' ')
@@ -75,6 +76,37 @@ export function Banner({
       aria-live={tone === 'error' ? 'assertive' : 'polite'}
     >
       {children}
+    </div>
+  )
+}
+
+export function Toast({
+  tone,
+  children,
+  onDismiss,
+}: {
+  tone: ToastTone
+  children: ReactNode
+  onDismiss?: () => void
+}) {
+  const role = tone === 'error' ? 'alert' : 'status'
+  return (
+    <div
+      className={classNames('toast', tone)}
+      role={role}
+      aria-live={tone === 'error' ? 'assertive' : 'polite'}
+    >
+      <div className="toast-body">{children}</div>
+      {onDismiss ? (
+        <button
+          type="button"
+          className="toast-dismiss"
+          aria-label="Fechar aviso"
+          onClick={onDismiss}
+        >
+          x
+        </button>
+      ) : null}
     </div>
   )
 }

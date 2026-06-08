@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import * as backend from '../services/backend'
 import type { ReminderSettings, ReminderStatus } from '../types'
 import { builtinPlannerAnchors } from '../util/plannerDefaults'
@@ -8,10 +8,17 @@ import {
   validatePlannerAnchors,
 } from '../util/plannerTimes'
 import { defaultReminderSettings, normalizeReminderSettings } from '../util/reminderSettings'
-import { Banner, Page, PageHeader } from '../components/ui'
+import { Banner, Page, PageHeader, Toast } from '../components/ui'
 import AccountSettingsForm from '../features/settings/AccountSettingsForm'
 import PlannerDefaultsForm from '../features/settings/PlannerDefaultsForm'
 import ReminderSettingsForm from '../features/settings/ReminderSettingsForm'
+
+type SettingsToast = {
+  tone: 'success' | 'error'
+  message: string
+}
+
+const TOAST_AUTO_DISMISS_MS = 4200
 
 export default function SettingsPage() {
   const [email, setEmail] = useState('')
@@ -22,9 +29,32 @@ export default function SettingsPage() {
     defaultReminderSettings,
   )
   const [reminderStatus, setReminderStatus] = useState<ReminderStatus | null>(null)
-  const [msg, setMsg] = useState<string | null>(null)
-  const [err, setErr] = useState<string | null>(null)
+  const [toast, setToast] = useState<SettingsToast | null>(null)
   const [busy, setBusy] = useState(false)
+
+  const dismissToast = useCallback(() => {
+    setToast(null)
+  }, [])
+
+  const showSuccess = useCallback((message: string) => {
+    setToast({ tone: 'success', message })
+  }, [])
+
+  const showError = useCallback((errorOrMessage: unknown) => {
+    setToast({
+      tone: 'error',
+      message:
+        errorOrMessage instanceof Error ? errorOrMessage.message : String(errorOrMessage),
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!toast) return
+    const timeout = window.setTimeout(() => {
+      setToast(null)
+    }, TOAST_AUTO_DISMISS_MS)
+    return () => window.clearTimeout(timeout)
+  }, [toast])
 
   useEffect(() => {
     ;(async () => {
@@ -51,26 +81,25 @@ export default function SettingsPage() {
           setReminders(status.settings)
         }
       } catch (e) {
-        setErr(e instanceof Error ? e.message : String(e))
+        showError(e)
       }
     })()
-  }, [])
+  }, [showError])
 
   const applyAnchors = (next: PlannerAnchorTimes) => {
     setAnchors(enforceAnchorOrder(next))
   }
 
   const saveAccount = async () => {
-    setMsg(null)
-    setErr(null)
+    dismissToast()
     if (!backend.hasWailsRuntime()) {
-      setErr(
+      showError(
         'Configurações são gravadas pelo app desktop. Use pm-desktop aqui.',
       )
       return
     }
     if (!email.trim()) {
-      setErr('Informe o e-mail.')
+      showError('Informe o e-mail.')
       return
     }
     const cache_ttl_hours = ttl.trim() === '' ? undefined : Number(ttl)
@@ -78,7 +107,7 @@ export default function SettingsPage() {
       ttl.trim() !== '' &&
       (!Number.isFinite(cache_ttl_hours) || Number(cache_ttl_hours) <= 0)
     ) {
-      setErr('TTL deve ser um número positivo em horas.')
+      showError('TTL deve ser um número positivo em horas.')
       return
     }
     setBusy(true)
@@ -88,26 +117,25 @@ export default function SettingsPage() {
         password,
         cache_ttl_hours,
       })
-      setMsg('Conta salva no arquivo de configuração compartilhado.')
+      showSuccess('Conta salva no arquivo de configuração compartilhado.')
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      showError(e)
     } finally {
       setBusy(false)
     }
   }
 
   const savePlanner = async () => {
-    setMsg(null)
-    setErr(null)
+    dismissToast()
     if (!backend.hasWailsRuntime()) {
-      setErr(
+      showError(
         'Configurações são gravadas pelo app desktop. Use pm-desktop aqui.',
       )
       return
     }
     const anchorErr = validatePlannerAnchors(anchors)
     if (anchorErr) {
-      setErr(anchorErr)
+      showError(anchorErr)
       return
     }
     setBusy(true)
@@ -115,9 +143,9 @@ export default function SettingsPage() {
       await backend.mergeAndSave({
         planner: { ...anchors },
       })
-      setMsg('Horários do planner salvos no arquivo de configuração compartilhado.')
+      showSuccess('Horários do planner salvos no arquivo de configuração compartilhado.')
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      showError(e)
     } finally {
       setBusy(false)
     }
@@ -131,10 +159,9 @@ export default function SettingsPage() {
   }
 
   const saveReminders = async () => {
-    setMsg(null)
-    setErr(null)
+    dismissToast()
     if (!backend.hasWailsRuntime()) {
-      setErr(
+      showError(
         'Configurações são gravadas pelo app desktop. Use pm-desktop aqui.',
       )
       return
@@ -145,80 +172,77 @@ export default function SettingsPage() {
       !normalized.native_notifications &&
       !normalized.popup_notifications
     ) {
-      setErr('Ative pelo menos um canal de lembrete.')
+      showError('Ative pelo menos um canal de lembrete.')
       return
     }
     setBusy(true)
     try {
       await backend.saveReminderSettings(normalized)
       await refreshReminderStatus()
-      setMsg('Lembretes salvos e daemon sincronizado.')
+      showSuccess('Lembretes salvos e daemon sincronizado.')
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      showError(e)
     } finally {
       setBusy(false)
     }
   }
 
   const requestReminderPermission = async () => {
-    setMsg(null)
-    setErr(null)
+    dismissToast()
     if (!backend.hasWailsRuntime()) {
-      setErr('Permissão de notificações só funciona dentro do desktop.')
+      showError('Permissão de notificações só funciona dentro do desktop.')
       return
     }
     setBusy(true)
     try {
       const status = await backend.requestNotificationPermission()
       await refreshReminderStatus()
-      setMsg(
-        status.authorized
-          ? 'Notificações autorizadas.'
-          : status.detail || 'Notificações ainda não autorizadas.',
-      )
+      if (status.authorized) {
+        showSuccess('Notificações autorizadas.')
+      } else {
+        showError(status.detail || 'Notificações ainda não autorizadas.')
+      }
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      showError(e)
     } finally {
       setBusy(false)
     }
   }
 
   const testReminder = async () => {
-    setMsg(null)
-    setErr(null)
+    dismissToast()
     if (!backend.hasWailsRuntime()) {
-      setErr('Teste de lembrete só funciona dentro do desktop.')
+      showError('Teste de lembrete só funciona dentro do desktop.')
       return
     }
     setBusy(true)
     try {
       await backend.sendTestReminder()
-      setMsg('Lembrete de teste enviado.')
+      showSuccess('Lembrete de teste enviado.')
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      showError(e)
     } finally {
       setBusy(false)
     }
   }
 
   const test = async () => {
-    setMsg(null)
-    setErr(null)
+    dismissToast()
     if (!backend.hasWailsRuntime()) {
-      setErr('Autenticação só funciona dentro do desktop.')
+      showError('Autenticação só funciona dentro do desktop.')
       return
     }
     if (!email.trim() || !password) {
-      setErr('Informe e-mail e senha para testar.')
+      showError('Informe e-mail e senha para testar.')
       return
     }
     setBusy(true)
     try {
       const problem = await backend.testAuth(email, password)
-      if (problem) setErr(problem)
-      else setMsg('Credenciais válidas.')
+      if (problem) showError(problem)
+      else showSuccess('Credenciais válidas.')
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      showError(e)
     } finally {
       setBusy(false)
     }
@@ -245,8 +269,6 @@ export default function SettingsPage() {
       />
 
       {devHint ? <Banner>{devHint}</Banner> : null}
-      {err ? <Banner tone="error">{err}</Banner> : null}
-      {msg ? <Banner tone="success">{msg}</Banner> : null}
 
       <AccountSettingsForm
         email={email}
@@ -278,6 +300,12 @@ export default function SettingsPage() {
         onRequestPermission={() => void requestReminderPermission()}
         onTest={() => void testReminder()}
       />
+
+      {toast ? (
+        <Toast tone={toast.tone} onDismiss={dismissToast}>
+          {toast.message}
+        </Toast>
+      ) : null}
     </Page>
   )
 }
