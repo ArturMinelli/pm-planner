@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as backend from '../services/backend'
 import type { ReminderSettings, ReminderStatus } from '../types'
-import { builtinPlannerAnchors } from '../util/plannerDefaults'
+import {
+  builtinPlannerAnchors,
+  DEFAULT_MAX_DAILY_EXTRA_MINUTES,
+} from '../util/plannerDefaults'
 import {
   enforceAnchorOrder,
   type PlannerAnchorTimes,
@@ -19,11 +22,13 @@ type SettingsToast = {
 }
 
 const TOAST_AUTO_DISMISS_MS = 4200
-
 export default function SettingsPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [ttl, setTTL] = useState<string>('')
+  const [maxDailyExtraHours, setMaxDailyExtraHours] = useState(
+    String(DEFAULT_MAX_DAILY_EXTRA_MINUTES / 60),
+  )
   const [anchors, setAnchors] = useState<PlannerAnchorTimes>(builtinPlannerAnchors)
   const [reminders, setReminders] = useState<ReminderSettings>(
     defaultReminderSettings,
@@ -66,6 +71,11 @@ export default function SettingsPage() {
         if (c.cache_ttl_hours && c.cache_ttl_hours > 0) {
           setTTL(String(c.cache_ttl_hours))
         }
+        setMaxDailyExtraHours(
+          String(
+            (c.max_daily_extra_minutes ?? DEFAULT_MAX_DAILY_EXTRA_MINUTES) / 60,
+          ),
+        )
         if (c.planner) {
           setAnchors({
             in1: c.planner.in1 ?? builtins.in1,
@@ -138,12 +148,22 @@ export default function SettingsPage() {
       showError(anchorErr)
       return
     }
+    const maxDailyExtraMinutes = Math.round(Number(maxDailyExtraHours) * 60)
+    if (
+      !Number.isFinite(maxDailyExtraMinutes) ||
+      maxDailyExtraMinutes < 1 ||
+      maxDailyExtraMinutes > 24 * 60
+    ) {
+      showError('O limite diário deve estar entre 1 minuto e 24 horas.')
+      return
+    }
     setBusy(true)
     try {
       await backend.mergeAndSave({
         planner: { ...anchors },
+        max_daily_extra_minutes: maxDailyExtraMinutes,
       })
-      showSuccess('Horários do planner salvos no arquivo de configuração compartilhado.')
+      showSuccess('Configurações do planner salvas no arquivo compartilhado.')
     } catch (e) {
       showError(e)
     } finally {
@@ -281,8 +301,10 @@ export default function SettingsPage() {
 
       <PlannerDefaultsForm
         anchors={anchors}
+        maxDailyExtraHours={maxDailyExtraHours}
         busy={busy}
         onAnchorsChange={applyAnchors}
+        onMaxDailyExtraHoursChange={setMaxDailyExtraHours}
         onSave={() => void savePlanner()}
       />
 

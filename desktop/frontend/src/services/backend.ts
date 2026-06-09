@@ -6,7 +6,10 @@ import type {
   ReminderSettings,
   ReminderStatus,
 } from '../types'
-import { builtinPlannerAnchors } from '../util/plannerDefaults'
+import {
+  builtinPlannerAnchors,
+  DEFAULT_MAX_DAILY_EXTRA_MINUTES,
+} from '../util/plannerDefaults'
 import { defaultReminderSettings, normalizeReminderSettings } from '../util/reminderSettings'
 
 interface GoPmApp {
@@ -55,6 +58,7 @@ export async function getConfig(): Promise<PmConfig> {
       email: '',
       password: '',
       cache_ttl_hours: undefined,
+      max_daily_extra_minutes: DEFAULT_MAX_DAILY_EXTRA_MINUTES,
       planner: builtinPlannerAnchors(),
       reminders: defaultReminderSettings(),
     }
@@ -78,6 +82,13 @@ export async function saveConfig(c: PmConfig): Promise<void> {
     c.cache_ttl_hours > 0
   ) {
     payload.cache_ttl_hours = Math.trunc(c.cache_ttl_hours)
+  }
+  if (
+    typeof c.max_daily_extra_minutes === 'number' &&
+    Number.isFinite(c.max_daily_extra_minutes) &&
+    c.max_daily_extra_minutes > 0
+  ) {
+    payload.max_daily_extra_minutes = Math.trunc(c.max_daily_extra_minutes)
   }
   if (c.planner) {
     payload.planner = {

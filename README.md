@@ -402,6 +402,7 @@ Exemplo de `config.yaml`:
 email: "voce@empresa.com"
 password: "sua-senha"
 cache_ttl_hours: 8
+max_daily_extra_minutes: 180
 planner:
   in1: "08:00"
   out1: "12:00"
@@ -418,6 +419,7 @@ reminders:
 | --- | --- |
 | `email` / `password` | Credenciais de login do PontoMais |
 | `cache_ttl_hours` | Horas em que o cache de sessão local permanece válido quando a API não fornece uma data de expiração. Padrão: 8. |
+| `max_daily_extra_minutes` | Limite de trabalho extra usado para calcular a saída alternativa de quitação de saldo negativo. Padrão: 180 minutos. |
 | `planner.in1/out1/in2/out2` | Horários âncora padrão para os quatro campos de ponto. Usados tanto pelo `pm plan` quanto pelo planner do app desktop como sugestão inicial para o dia. |
 | `reminders.*` | Lembretes opt-in do app desktop. Quando ativados, `pm-desktop --daemon` verifica os horários recomendados e dispara notificações nativas. |
 
@@ -459,7 +461,7 @@ O planner:
 4. Permite editar os três primeiros campos; a **Saída 2 normal** e a alternativa são recalculadas juntas.
 5. Exibe um resumo da jornada normal: meta do dia, jornadas, total trabalhado e horas extras.
 
-Quando o saldo é negativo, cada minuto extra trabalhado gera `1,5x` de crédito no banco. Por exemplo, uma dívida de `01:30` exige `01:00` de trabalho extra. O planner limita esse trabalho extra a no máximo `03:00` por dia. Saldo positivo é usado na proporção `1:1` para oferecer uma saída mais cedo. Para datas passadas ou futuras, não é exibida uma alternativa.
+Quando o saldo é negativo, cada minuto extra trabalhado gera `1,5x` de crédito no banco. Por exemplo, uma dívida de `01:30` exige `01:00` de trabalho extra. O planner limita esse trabalho extra ao valor configurado em `max_daily_extra_minutes`, cujo padrão é `03:00` por dia. Saldo positivo é usado na proporção `1:1` para oferecer uma saída mais cedo. Para datas passadas ou futuras, não é exibida uma alternativa.
 
 Na CLI, a **Saída 2** sempre representa a jornada normal. Quando aplicável, uma única linha `Saída 2 alternativa: HH:MM (banco ±HH:MM)` aparece logo abaixo. Se a consulta do banco falhar hoje, o planejamento normal continua e uma mensagem curta informa a indisponibilidade.
 
@@ -504,7 +506,7 @@ Esta é a tela principal, equivalente ao `pm plan` no terminal.
 3. O card **Marcações Sugeridas** exibe os quatro campos de horário de ponto:
    - **Entrada 1**, **Saída 1** e **Entrada 2** são editáveis. Use os botões de passo (▲/▼) para ajustar em incrementos de 15 minutos, ou digite o horário diretamente.
    - **Saída 2** é o horário normal, somente leitura, e atualiza automaticamente conforme os outros três campos são alterados.
-   - Quando houver uma opção de banco para hoje, um horário alternativo colorido aparece ao lado. O selo compacto mostra o saldo; passe o cursor, toque ou foque o selo para ver o cálculo, o crédito em `1,5x`, o saldo restante e eventual limite diário de `03:00`.
+   - Quando houver uma opção de banco para hoje, um horário alternativo colorido aparece ao lado. O selo compacto mostra o saldo; passe o cursor, toque ou foque o selo para ver o cálculo, o crédito em `1,5x`, o saldo restante e eventual limite diário configurado.
    - Se o saldo estiver indisponível hoje, um selo discreto informa isso sem alterar a saída normal. Recarregar o dia tenta a consulta novamente.
 4. O card **Resumo** atualiza em tempo real enquanto você edita, exibindo:
    - **Meta do Dia** — jornada normal informada pelo PontoMais
@@ -528,12 +530,13 @@ Clique no ícone de configurações na barra lateral para configurar o app.
 - Clique em **Salvar Conta** para gravar no `config.yaml` compartilhado.
 - Clique em **Testar Login** para verificar as credenciais contra a API antes de salvar.
 
-**Horários Padrão do Planner:**
+**Planner:**
 
 - Ajuste os quatro horários âncora (**Entrada 1**, **Saída 1**, **Entrada 2**, **Saída 2**) usados como padrão quando o planner não tem ponto correspondente para iniciar.
+- Defina o **Limite Diário de Trabalho Extra** usado pela saída alternativa ao pagar saldo negativo. O padrão é 3 horas.
 - Horários consecutivos devem ter pelo menos 15 minutos de diferença.
-- Clique em **Restaurar Padrões** para voltar a `08:00 / 12:00 / 13:30 / 18:00`.
-- Clique em **Salvar Horários** para persistir no `config.yaml`. Esses valores também são utilizados pelo `pm plan` na CLI.
+- Clique em **Restaurar Padrões** para voltar a `08:00 / 12:00 / 13:30 / 18:00` e ao limite de 3 horas.
+- Clique em **Salvar Planner** para persistir no `config.yaml`. Esses valores também são utilizados pelo `pm plan` na CLI.
 
 **Lembretes de Jornada:**
 

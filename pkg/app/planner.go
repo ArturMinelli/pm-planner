@@ -75,17 +75,22 @@ func FetchPlannerPayload(ctx context.Context, client *api.Client, dateStr string
 	if wd.ShiftTime > 0 {
 		baseTarget = time.Duration(wd.ShiftTime * float64(time.Second))
 	}
+	cfg, _ := config.Read("")
+	maxDailyExtraWork, err := config.ResolveMaxDailyExtraWork(cfg)
+	if err != nil {
+		maxDailyExtraWork = time.Duration(config.DefaultMaxDailyExtraMinutes) * time.Minute
+	}
 	var balanceAdjustment *plan.BalanceAdjustment
 	var balanceErr string
 	if balance, err := client.FetchEmployeeBalance(ctx); err != nil {
 		balanceErr = err.Error()
 	} else {
-		adjustment := plan.CalculateBalanceAdjustment(baseTarget, balance.TimeBalanceSecs, date, time.Now().In(loc))
+		adjustment := plan.CalculateBalanceAdjustment(baseTarget, maxDailyExtraWork, balance.TimeBalanceSecs, date, time.Now().In(loc))
 		balanceAdjustment = &adjustment
 	}
 
 	anchors := plan.BuiltinAnchors()
-	if cfg, err := config.Read(""); err == nil {
+	if cfg != nil {
 		if resolved, err := config.ResolvePlannerAnchors(cfg); err == nil {
 			anchors = resolved
 		}

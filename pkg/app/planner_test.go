@@ -71,6 +71,35 @@ func TestFetchPlannerPayloadKeepsPlanningWhenBalanceFails(t *testing.T) {
 	}
 }
 
+func TestFetchPlannerPayloadUsesConfiguredDailyExtraCap(t *testing.T) {
+	setupPlannerSession(t)
+	if err := config.Save("", &config.File{MaxDailyExtraMinutes: 90}); err != nil {
+		t.Fatal(err)
+	}
+	today := time.Now().Format("2006-01-02")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/time_card_control/current/work_days/" + today:
+			_, _ = w.Write([]byte(`{"work_day":{"shift_time":30600,"shift_day":{"periods":[]},"time_cards":[{"time":"08:00"}]}}`))
+		case "/employees/my_time_break":
+			_, _ = w.Write([]byte(`{"employee":{"id":42}}`))
+		case "/employees/statuses/42":
+			_, _ = w.Write([]byte(`{"statuses":{"time_balance":-28800}}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	payload, err := FetchPlannerPayload(context.Background(), plannerTestClient(srv.URL), today)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if payload.Balance == nil || payload.Balance.TargetAdjustmentSecs != 90*60 || !payload.Balance.Capped {
+		t.Fatalf("configured cap not applied: %#v", payload.Balance)
+	}
+}
+
 func TestRecalculatePlannerKeepsNormalClockoutPrimary(t *testing.T) {
 	balance := plan.BalanceAdjustment{
 		AppliesToday:         true,

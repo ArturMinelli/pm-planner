@@ -11,6 +11,7 @@ export interface PmConfig {
   email: string
   password: string
   cache_ttl_hours?: number
+  max_daily_extra_minutes?: number
   planner?: PlannerAnchorsConfig
   reminders?: ReminderSettings
 }

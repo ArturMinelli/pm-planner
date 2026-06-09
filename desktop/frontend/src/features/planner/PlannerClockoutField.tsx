@@ -18,7 +18,9 @@ function tooltipCopy(balance: BalanceAdjustment): string {
     return `Usa ${used} do banco para sair ${used} mais cedo. Saldo estimado: ${formatSignedRoundedMinutes(balance.remainingBalanceSecs)}.`
   }
 
-  const capped = balance.capped ? ' Limite diário de 03:00 aplicado.' : ''
+  const capped = balance.capped
+    ? ` Limite diário de ${formatDurationMinutes(balance.targetAdjustmentSecs)} aplicado.`
+    : ''
   return `Trabalhe ${formatDurationMinutes(balance.targetAdjustmentSecs)} a mais para gerar ${formatSignedRoundedMinutes(balance.estimatedBalanceChangeSecs)} de crédito a ${balance.multiplier.toFixed(1)}x. Saldo estimado: ${formatSignedRoundedMinutes(balance.remainingBalanceSecs)}.${capped}`
 }
 

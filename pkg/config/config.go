@@ -23,11 +23,12 @@ type PlannerAnchors struct {
 
 // File mirrors ~/.config/pm/config.yaml keys used by pm-cli.
 type File struct {
-	Email         string          `json:"email" yaml:"email"`
-	Password      string          `json:"password" yaml:"password"`
-	CacheTTLHours int             `json:"cache_ttl_hours,omitempty" yaml:"cache_ttl_hours,omitempty"`
-	Planner       *PlannerAnchors `json:"planner,omitempty" yaml:"planner,omitempty"`
-	Reminders     *Reminders      `json:"reminders,omitempty" yaml:"reminders,omitempty"`
+	Email                string          `json:"email" yaml:"email"`
+	Password             string          `json:"password" yaml:"password"`
+	CacheTTLHours        int             `json:"cache_ttl_hours,omitempty" yaml:"cache_ttl_hours,omitempty"`
+	MaxDailyExtraMinutes int             `json:"max_daily_extra_minutes,omitempty" yaml:"max_daily_extra_minutes,omitempty"`
+	Planner              *PlannerAnchors `json:"planner,omitempty" yaml:"planner,omitempty"`
+	Reminders            *Reminders      `json:"reminders,omitempty" yaml:"reminders,omitempty"`
 }
 
 // DefaultDir returns the platform-native config directory for PM.
@@ -116,6 +117,11 @@ func Save(cfgFileOverride string, f *File) error {
 	if f != nil && f.Reminders != nil {
 		if _, err := ResolveReminders(f); err != nil {
 			return fmt.Errorf("reminders: %w", err)
+		}
+	}
+	if f != nil {
+		if _, err := ResolveMaxDailyExtraWork(f); err != nil {
+			return fmt.Errorf("max_daily_extra_minutes: %w", err)
 		}
 	}
 	path, err := ResolvePath(cfgFileOverride)

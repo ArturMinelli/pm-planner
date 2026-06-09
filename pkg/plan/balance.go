@@ -2,10 +2,7 @@ package plan
 
 import "time"
 
-const (
-	BalanceCreditMultiplier = 1.5
-	MaxDailyExtraWork       = 3 * time.Hour
-)
+const BalanceCreditMultiplier = 1.5
 
 // BalanceAdjustment describes how the current time bank changes a selected day's target.
 type BalanceAdjustment struct {
@@ -20,9 +17,12 @@ type BalanceAdjustment struct {
 }
 
 // CalculateBalanceAdjustment applies the time bank only when the selected date is today.
-func CalculateBalanceAdjustment(baseTarget time.Duration, balanceSecs int64, selectedDate, today time.Time) BalanceAdjustment {
+func CalculateBalanceAdjustment(baseTarget, maxDailyExtraWork time.Duration, balanceSecs int64, selectedDate, today time.Time) BalanceAdjustment {
 	if baseTarget < 0 {
 		baseTarget = 0
+	}
+	if maxDailyExtraWork < 0 {
+		maxDailyExtraWork = 0
 	}
 	out := BalanceAdjustment{
 		BalanceSecs:          balanceSecs,
@@ -39,7 +39,7 @@ func CalculateBalanceAdjustment(baseTarget time.Duration, balanceSecs int64, sel
 	case balanceSecs < 0:
 		debt := -balanceSecs
 		requiredWorkSecs := ceilToMinute(ceilDiv(debt*2, 3))
-		maxExtraSecs := int64(MaxDailyExtraWork.Seconds())
+		maxExtraSecs := int64(maxDailyExtraWork.Seconds())
 		if requiredWorkSecs > maxExtraSecs {
 			requiredWorkSecs = maxExtraSecs
 			out.Capped = true

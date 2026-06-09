@@ -36,6 +36,22 @@ describe('PlannerClockoutField', () => {
     expect(html).toContain('role="tooltip"')
   })
 
+  it('shows the configured cap instead of a fixed value', () => {
+    const html = renderToStaticMarkup(
+      <PlannerClockoutField
+        out2="18:00"
+        alternativeOut2="19:30"
+        balance={adjustment({
+          targetAdjustmentSecs: 1.5 * 60 * 60,
+          adjustedTargetSecs: 10 * 60 * 60,
+        })}
+      />,
+    )
+
+    expect(html).toContain('Limite diário de 01:30 aplicado')
+    expect(html).not.toContain('Limite diário de 03:00 aplicado')
+  })
+
   it('shows a green earlier alternative for positive credit', () => {
     const html = renderToStaticMarkup(
       <PlannerClockoutField
