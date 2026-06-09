@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"pm-cli/pkg/auth"
 )
@@ -53,21 +55,26 @@ func (v *signedSeconds) UnmarshalJSON(data []byte) error {
 	}
 	var n json.Number
 	if err := json.Unmarshal(data, &n); err == nil {
-		seconds, err := strconv.ParseInt(n.String(), 10, 64)
-		if err != nil {
-			return err
-		}
-		*v = signedSeconds(seconds)
-		return nil
+		return v.setWholeSeconds(n.String())
 	}
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
 	}
-	seconds, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return err
+	return v.setWholeSeconds(s)
+}
+
+func (v *signedSeconds) setWholeSeconds(value string) error {
+	value = strings.TrimSpace(value)
+	if seconds, err := strconv.ParseInt(value, 10, 64); err == nil {
+		*v = signedSeconds(seconds)
+		return nil
 	}
+	rational, ok := new(big.Rat).SetString(value)
+	if !ok || !rational.IsInt() || !rational.Num().IsInt64() {
+		return fmt.Errorf("invalid whole-second balance %q", value)
+	}
+	seconds := rational.Num().Int64()
 	*v = signedSeconds(seconds)
 	return nil
 }

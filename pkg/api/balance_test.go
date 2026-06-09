@@ -56,6 +56,38 @@ func TestFetchEmployeeBalanceParsesStringSeconds(t *testing.T) {
 	}
 }
 
+func TestFetchEmployeeBalanceParsesDecimalWholeSeconds(t *testing.T) {
+	for _, value := range []string{`-31560.0`, `"-31560.0"`} {
+		t.Run(value, func(t *testing.T) {
+			setupBalanceSession(t, "42")
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, _ = w.Write([]byte(`{"statuses":{"time_balance":` + value + `}}`))
+			}))
+			defer srv.Close()
+
+			got, err := balanceTestClient(srv.URL).FetchEmployeeBalance(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.TimeBalanceSecs != -31560 {
+				t.Fatalf("seconds: got %d", got.TimeBalanceSecs)
+			}
+		})
+	}
+}
+
+func TestFetchEmployeeBalanceRejectsFractionalSeconds(t *testing.T) {
+	setupBalanceSession(t, "42")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"statuses":{"time_balance":1.5}}`))
+	}))
+	defer srv.Close()
+
+	if _, err := balanceTestClient(srv.URL).FetchEmployeeBalance(context.Background()); err == nil {
+		t.Fatal("expected fractional seconds error")
+	}
+}
+
 func TestFetchEmployeeBalanceReturnsNonSuccessStatus(t *testing.T) {
 	setupBalanceSession(t, "42")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
