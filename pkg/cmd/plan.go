@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"pm-cli/pkg/api"
 	"pm-cli/pkg/app"
+	"pm-cli/pkg/plan"
 	"pm-cli/pkg/ui"
 )
 
@@ -45,7 +46,6 @@ var planCmd = &cobra.Command{
 		}
 		sort.Slice(stamps, func(i, j int) bool { return stamps[i].Before(stamps[j]) })
 
-		target := time.Duration(st.TargetSecs) * time.Second
 		baseTarget := time.Duration(st.BaseTargetSecs) * time.Second
 
 		in1Str := st.In1
@@ -53,7 +53,7 @@ var planCmd = &cobra.Command{
 		in2Str := st.In2
 
 		if live {
-			m := ui.NewPlanModel(date, baseTarget, target, stamps, in1Str, out1Str, in2Str, st.Balance, st.BalanceError)
+			m := ui.NewPlanModel(date, baseTarget, stamps, in1Str, out1Str, in2Str, st.Balance, balanceUnavailableToday(date, st.BalanceError))
 			p := tea.NewProgram(m)
 			if _, err := p.Run(); err != nil {
 				return err
@@ -62,65 +62,54 @@ var planCmd = &cobra.Command{
 		}
 
 		out2Str := st.Out2
+		initialSummary, _ := app.RecalculatePlanner(planDate, st.BaseTargetSecs, st.Balance, in1Str, out1Str, in2Str)
+		fields := []huh.Field{
+			huh.NewNote().Title("Registros originais").Description(formatStamps(stamps)),
+			huh.NewInput().Title("Entrada 1").Value(&in1Str),
+			huh.NewInput().Title("Saída 1").Value(&out1Str),
+			huh.NewInput().Title("Entrada 2").Value(&in2Str),
+			huh.NewNote().Title("Saída 2").Description(out2Str),
+		}
+		if initialSummary != nil {
+			if line := formatAlternativeClockout(initialSummary.AlternativeOut2, st.Balance); line != "" {
+				fields = append(fields, huh.NewNote().Title("Opção de banco").Description(line))
+			}
+		}
+		if warning := balanceUnavailableToday(date, st.BalanceError); warning != "" {
+			fields = append(fields, huh.NewNote().Title("Banco de horas").Description(warning))
+		}
 		form := huh.NewForm(
-			huh.NewGroup(
-				huh.NewNote().Title("Registros originais").Description(formatStamps(stamps)),
-				huh.NewNote().Title("Banco de horas").Description(formatBalanceGuidance(st)),
-				huh.NewInput().Title("Entrada 1").Value(&in1Str),
-				huh.NewInput().Title("Saída 1").Value(&out1Str),
-				huh.NewInput().Title("Entrada 2").Value(&in2Str),
-				huh.NewNote().Title("Saída 2 (calculado)").Description(out2Str),
-			),
+			huh.NewGroup(fields...),
 		)
 		if err := form.Run(); err != nil {
 			return err
 		}
 
-		if sum, err := app.RecalculatePlanner(planDate, st.BaseTargetSecs, st.TargetSecs, in1Str, out1Str, in2Str); err == nil {
+		alternativeOut2 := ""
+		if sum, err := app.RecalculatePlanner(planDate, st.BaseTargetSecs, st.Balance, in1Str, out1Str, in2Str); err == nil {
 			out2Str = sum.Out2
+			alternativeOut2 = sum.AlternativeOut2
 		}
 
 		fmt.Println()
 		fmt.Printf("Entrada 1: %s\nSaída 1: %s\nEntrada 2: %s\nSaída 2: %s\n", in1Str, out1Str, in2Str, out2Str)
-		fmt.Printf("\n%s\n", formatBalanceGuidance(st))
+		if line := formatAlternativeClockout(alternativeOut2, st.Balance); line != "" {
+			fmt.Println(line)
+		} else if warning := balanceUnavailableToday(date, st.BalanceError); warning != "" {
+			fmt.Println(warning)
+		}
 		return nil
 	},
 }
 
-func formatBalanceGuidance(st *app.PlannerPayload) string {
-	if st == nil {
-		return "Saldo indisponível."
+func formatAlternativeClockout(out2 string, balance *plan.BalanceAdjustment) string {
+	if out2 == "" || balance == nil || !balance.AppliesToday || balance.TargetAdjustmentSecs == 0 {
+		return ""
 	}
-	if st.Balance == nil {
-		if st.BalanceError != "" {
-			return "Saldo indisponível: " + st.BalanceError
-		}
-		return "Saldo indisponível."
-	}
-	b := st.Balance
-	line := fmt.Sprintf("Saldo atual: %s", formatSignedSeconds(b.BalanceSecs))
-	if !b.AppliesToday {
-		return line + " (informativo; ajustes automáticos só valem para hoje)"
-	}
-	if b.TargetAdjustmentSecs > 0 {
-		line += fmt.Sprintf(" • trabalho planejado: %s • crédito estimado: %s (%.1fx)",
-			formatSignedSeconds(b.TargetAdjustmentSecs),
-			formatSignedSeconds(b.EstimatedBalanceChangeSecs),
-			b.Multiplier,
-		)
-	} else if b.TargetAdjustmentSecs < 0 {
-		line += fmt.Sprintf(" • uso planejado do banco: %s", formatSignedSeconds(b.TargetAdjustmentSecs))
-	} else {
-		line += " • nenhum ajuste necessário hoje"
-	}
-	line += fmt.Sprintf(" • saldo estimado: %s", formatSignedSeconds(b.RemainingBalanceSecs))
-	if b.Capped {
-		line += " • limite saudável de 03:00 aplicado"
-	}
-	return line
+	return fmt.Sprintf("Saída 2 alternativa: %s (banco %s)", out2, formatSignedMinutes(balance.BalanceSecs))
 }
 
-func formatSignedSeconds(seconds int64) string {
+func formatSignedMinutes(seconds int64) string {
 	sign := "+"
 	if seconds < 0 {
 		sign = "-"
@@ -129,8 +118,16 @@ func formatSignedSeconds(seconds int64) string {
 	if seconds == 0 {
 		sign = ""
 	}
-	d := time.Duration(seconds) * time.Second
-	return fmt.Sprintf("%s%02d:%02d:%02d", sign, int(d.Hours()), int(d.Minutes())%60, int(d.Seconds())%60)
+	minutes := (seconds + 30) / 60
+	return fmt.Sprintf("%s%02d:%02d", sign, minutes/60, minutes%60)
+}
+
+func balanceUnavailableToday(date time.Time, balanceError string) string {
+	now := time.Now().In(date.Location())
+	if balanceError == "" || date.Year() != now.Year() || date.YearDay() != now.YearDay() {
+		return ""
+	}
+	return "Saldo indisponível; Saída 2 normal mantida."
 }
 
 func formatStamps(stamps []time.Time) string {

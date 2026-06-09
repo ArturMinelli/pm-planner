@@ -5,7 +5,7 @@ export const DEFAULT_TARGET_SECS = 8 * 60 * 60 + 30 * 60
 
 export type PlannerSummaryInput = {
   baseTargetSecs: number
-  targetSecs: number
+  alternativeTargetSecs?: number
   in1: string
   out1: string
   in2: string
@@ -42,23 +42,25 @@ function computeOut2(in1: string, out1: string, in2: string, targetSecs: number)
 
 export function calculatePlannerSummary({
   baseTargetSecs,
-  targetSecs,
+  alternativeTargetSecs,
   in1,
   out1,
   in2,
 }: PlannerSummaryInput): PlannerSummary {
-  const target = normalizedTargetSecs(targetSecs)
-  const baseTarget =
-    Number.isFinite(baseTargetSecs) && baseTargetSecs > 0
-      ? Math.floor(baseTargetSecs)
-      : target
-  const out2 = computeOut2(in1, out1, in2, target)
+  const baseTarget = normalizedTargetSecs(baseTargetSecs)
+  const out2 = computeOut2(in1, out1, in2, baseTarget)
+  const alternativeOut2 =
+    alternativeTargetSecs !== undefined &&
+    normalizedTargetSecs(alternativeTargetSecs) !== baseTarget
+      ? computeOut2(in1, out1, in2, alternativeTargetSecs)
+      : undefined
   const firstSpanSecs = spanSecs(in1, out1)
   const secondSpanSecs = spanSecs(in2, out2)
   const totalSpanSecs = firstSpanSecs + secondSpanSecs
 
   return {
     out2,
+    alternativeOut2,
     firstSpanSecs,
     secondSpanSecs,
     totalSpanSecs,

@@ -12,24 +12,24 @@ import (
 )
 
 type PlanModel struct {
-	in1          textinput.Model
-	out1         textinput.Model
-	in2          textinput.Model
-	first        time.Duration
-	second       time.Duration
-	total        time.Duration
-	extra        time.Duration
-	out2Str      string
-	originals    []time.Time
-	baseTarget   time.Duration
-	target       time.Duration
-	balance      *plan.BalanceAdjustment
-	balanceError string
-	date         time.Time
-	focus        int
+	in1                textinput.Model
+	out1               textinput.Model
+	in2                textinput.Model
+	first              time.Duration
+	second             time.Duration
+	total              time.Duration
+	extra              time.Duration
+	out2Str            string
+	alternativeOut2Str string
+	originals          []time.Time
+	baseTarget         time.Duration
+	balance            *plan.BalanceAdjustment
+	balanceError       string
+	date               time.Time
+	focus              int
 }
 
-func NewPlanModel(date time.Time, baseTarget, target time.Duration, originals []time.Time, in1, out1, in2 string, balance *plan.BalanceAdjustment, balanceError string) PlanModel {
+func NewPlanModel(date time.Time, baseTarget time.Duration, originals []time.Time, in1, out1, in2 string, balance *plan.BalanceAdjustment, balanceError string) PlanModel {
 	mk := func(val string) textinput.Model {
 		t := textinput.New()
 		t.Prompt = ""
@@ -47,7 +47,6 @@ func NewPlanModel(date time.Time, baseTarget, target time.Duration, originals []
 		in2:          mk(in2),
 		originals:    originals,
 		baseTarget:   baseTarget,
-		target:       target,
 		balance:      balance,
 		balanceError: balanceError,
 		date:         date,
@@ -72,7 +71,7 @@ func (m *PlanModel) recalc() {
 	in2 := m.parse(m.in2.Value())
 
 	m.first = durBetween(in1, out1)
-	need := m.target - m.first
+	need := m.baseTarget - m.first
 	if need < 0 {
 		need = 0
 	}
@@ -80,9 +79,18 @@ func (m *PlanModel) recalc() {
 		out2 := in2.Add(need)
 		m.second = durBetween(in2, out2)
 		m.out2Str = out2.Format("15:04")
+		m.alternativeOut2Str = ""
+		if m.balance != nil && m.balance.AppliesToday && m.balance.TargetAdjustmentSecs != 0 {
+			alternativeNeed := time.Duration(m.balance.AdjustedTargetSecs)*time.Second - m.first
+			if alternativeNeed < 0 {
+				alternativeNeed = 0
+			}
+			m.alternativeOut2Str = in2.Add(alternativeNeed).Format("15:04")
+		}
 	} else {
 		m.second = 0
 		m.out2Str = "--:--"
+		m.alternativeOut2Str = ""
 	}
 	m.total = m.first + m.second
 	extra := m.total - m.baseTarget
@@ -240,11 +248,7 @@ func (m *PlanModel) syncFocus() {
 
 func (m PlanModel) View() string {
 	header := styles.Title.Render("Ponto Planner")
-	targetLabel := "Meta " + fmtDur(m.target)
-	if m.target != m.baseTarget {
-		targetLabel = "Meta planejada " + fmtDur(m.target) + "  •  Contratual " + fmtDur(m.baseTarget)
-	}
-	sub := styles.Subtitle.Render(m.date.Format("2006-01-02") + "  •  " + targetLabel)
+	sub := styles.Subtitle.Render(m.date.Format("2006-01-02") + "  •  Meta " + fmtDur(m.baseTarget))
 	orig := styles.Muted.Render(originalsLine(m.originals))
 
 	inputs := lipgloss.JoinVertical(lipgloss.Left,
@@ -253,30 +257,22 @@ func (m PlanModel) View() string {
 		row("Entrada 2", m.in2.View()),
 		row("Saída 2", styles.Calculated.Render(m.out2Str)+" "+styles.Muted.Render("(calculado)")),
 	)
+	if m.alternativeOut2Str != "" && m.balance != nil {
+		inputs = lipgloss.JoinVertical(lipgloss.Left, inputs,
+			styles.Muted.Render("Saída 2 alternativa: "+m.alternativeOut2Str+" (banco "+fmtSignedMinutes(m.balance.BalanceSecs)+")"),
+		)
+	} else if m.balanceError != "" {
+		inputs = lipgloss.JoinVertical(lipgloss.Left, inputs, styles.Muted.Render(m.balanceError))
+	}
 	inputs = styles.Panel.Render(inputs)
 
 	resume := lipgloss.JoinVertical(lipgloss.Left,
+		row("Meta do Dia", fmtDur(m.baseTarget)),
 		row("1ª Jornada", fmtDur(m.first)),
 		row("2ª Jornada", fmtDur(m.second)),
 		row("Total", fmtDur(m.total)),
 		row("Hora Extra", fmtDur(m.extra)),
 	)
-	if m.balance != nil {
-		resume = lipgloss.JoinVertical(lipgloss.Left,
-			resume,
-			row("Saldo atual", fmtSignedDur(time.Duration(m.balance.BalanceSecs)*time.Second)),
-			row("Ajuste hoje", fmtSignedDur(time.Duration(m.balance.TargetAdjustmentSecs)*time.Second)),
-			row("Saldo estimado", fmtSignedDur(time.Duration(m.balance.RemainingBalanceSecs)*time.Second)),
-		)
-		if !m.balance.AppliesToday {
-			resume = lipgloss.JoinVertical(lipgloss.Left, resume, styles.Muted.Render("Saldo informativo; ajuste só vale hoje"))
-		}
-		if m.balance.Capped {
-			resume = lipgloss.JoinVertical(lipgloss.Left, resume, styles.Muted.Render("Limite saudável de 03:00 aplicado"))
-		}
-	} else if m.balanceError != "" {
-		resume = lipgloss.JoinVertical(lipgloss.Left, resume, styles.Muted.Render("Saldo indisponível"))
-	}
 	resume = styles.Panel.Render(resume)
 
 	content := lipgloss.JoinHorizontal(lipgloss.Top, inputs, styles.Spacer, resume)
@@ -308,16 +304,17 @@ func fmtDur(d time.Duration) string {
 	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
 }
 
-func fmtSignedDur(d time.Duration) string {
+func fmtSignedMinutes(seconds int64) string {
 	sign := "+"
-	if d < 0 {
+	if seconds < 0 {
 		sign = "-"
-		d = -d
+		seconds = -seconds
 	}
-	if d == 0 {
+	if seconds == 0 {
 		sign = ""
 	}
-	return sign + fmtDur(d)
+	minutes := (seconds + 30) / 60
+	return fmt.Sprintf("%s%02d:%02d", sign, minutes/60, minutes%60)
 }
 
 var colors = struct {

@@ -22,6 +22,7 @@
   --danger: #ba1a1a;
   --ok-bg: #eaf7ee;
   --ok: #146c36;
+  --warning-bg: #fff5df;
   --warning: #9a5b00;
   --radius: 8px;
   --focus: 0 0 0 3px rgba(8, 127, 140, 0.22);
@@ -46,6 +47,7 @@
     --danger: #ffb4ab;
     --ok-bg: #183624;
     --ok: #8bd99f;
+    --warning-bg: #3a2b14;
     --warning: #f0c06a;
     --shadow: none;
   }
@@ -639,56 +641,111 @@ input[readonly] {
   color: var(--warning);
 }
 
-.balance-card-header {
+.clockout-field {
+  position: relative;
+}
+
+.clockout-label-row,
+.clockout-values {
   display: flex;
-  gap: 1rem;
-  align-items: flex-start;
+  min-width: 0;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.clockout-label-row {
+  min-height: 1.3rem;
   justify-content: space-between;
 }
 
-.balance-value {
-  margin: 0;
-  font-size: 1.85rem;
-  line-height: 1.1;
+.clockout-values input {
+  flex: 1 1 auto;
+}
+
+.alternative-clockout,
+.balance-badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
   font-variant-numeric: tabular-nums;
-  font-weight: 820;
+  font-weight: 780;
 }
 
-.balance-value.positive {
+.alternative-clockout {
+  min-height: 2.58rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid currentColor;
+}
+
+.balance-badge {
+  min-height: 1.45rem;
+  padding: 0.1rem 0.42rem;
+  border: 0;
+  cursor: help;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.alternative-clockout.positive,
+.balance-badge.positive {
   color: var(--ok);
+  background: var(--ok-bg);
 }
 
-.balance-value.negative {
-  color: var(--danger);
-}
-
-.balance-state,
-.balance-guidance p,
-.balance-message,
-.balance-updated {
-  margin: 0.35rem 0 0;
-}
-
-.balance-guidance {
-  margin-top: 0.85rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border);
-}
-
-.balance-message {
-  padding: 0.55rem 0.65rem;
-  border-radius: var(--radius);
-  font-size: 0.9rem;
-}
-
-.balance-message.error {
-  color: var(--danger);
-  background: var(--danger-bg);
-}
-
-.balance-message.warning {
+.alternative-clockout.debt,
+.balance-badge.debt {
   color: var(--warning);
+  background: var(--warning-bg);
+}
+
+.balance-badge.unavailable {
+  color: var(--muted);
   background: var(--panel-soft);
+}
+
+.balance-badge:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.clockout-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.clockout-tooltip {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 0.5rem);
+  z-index: 90;
+  width: min(19rem, calc(100vw - 3rem));
+  padding: 0.58rem 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  visibility: hidden;
+  color: var(--text);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.2rem);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    visibility 120ms ease;
+}
+
+.clockout-tooltip-wrap:hover .clockout-tooltip,
+.clockout-tooltip-wrap:focus-within .clockout-tooltip,
+.clockout-tooltip.open {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .planner-date-picker-field {
@@ -850,8 +907,13 @@ input[readonly] {
     width: 100%;
   }
 
-  .balance-card-header {
-    display: grid;
+  .clockout-values {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .alternative-clockout {
+    width: 100%;
   }
 
   .planner-datepicker-popover {

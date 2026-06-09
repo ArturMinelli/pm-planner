@@ -19,9 +19,7 @@ export interface PmConfig {
 export interface PlannerPayload {
   date: string
   baseTargetSecs: number
-  targetSecs: number
   balance?: BalanceAdjustment
-  balanceUpdatedAt?: string
   balanceError?: string
   originalTimes: string[]
   in1: string
@@ -33,6 +31,7 @@ export interface PlannerPayload {
 
 export interface PlannerSummary {
   out2: string
+  alternativeOut2?: string
   firstSpanSecs: number
   secondSpanSecs: number
   totalSpanSecs: number
@@ -48,12 +47,6 @@ export interface BalanceAdjustment {
   remainingBalanceSecs: number
   multiplier: number
   capped: boolean
-}
-
-export interface BalancePayload {
-  employeeId: string
-  balanceSecs: number
-  updatedAt?: string
 }
 
 export interface ReminderSettings {

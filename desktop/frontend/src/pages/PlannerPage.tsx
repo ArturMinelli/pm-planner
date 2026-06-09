@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { BalancePayload, PlannerPayload } from '../types'
+import { useCallback, useMemo, useState } from 'react'
+import type { PlannerPayload } from '../types'
 import * as backend from '../services/backend'
 import { localDateYYYYMMDD } from '../util/timeFormat'
 import {
@@ -10,7 +10,6 @@ import {
 } from '../util/plannerTimes'
 import { Banner, Page, PageHeader, Stack } from '../components/ui'
 import PlannerLoadCard from '../features/planner/PlannerLoadCard'
-import PlannerBalanceCard from '../features/planner/PlannerBalanceCard'
 import PlannerSummaryPanel from '../features/planner/PlannerSummaryPanel'
 import PlannerTimeFields from '../features/planner/PlannerTimeFields'
 import { calculatePlannerSummary } from '../features/planner/plannerSummary'
@@ -20,16 +19,17 @@ export default function PlannerPage() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [loaded, setLoaded] = useState<PlannerPayload | null>(null)
-  const [balance, setBalance] = useState<BalancePayload | null>(null)
-  const [balanceBusy, setBalanceBusy] = useState(backend.hasWailsRuntime)
-  const [balanceErr, setBalanceErr] = useState<string | null>(null)
 
   const [in1, setIn1] = useState('')
   const [out1, setOut1] = useState('')
   const [in2, setIn2] = useState('')
 
-  const targetSecs = loaded?.targetSecs ?? 0
-  const baseTargetSecs = loaded?.baseTargetSecs ?? targetSecs
+  const baseTargetSecs = loaded?.baseTargetSecs ?? 0
+  const alternativeTargetSecs =
+    loaded?.balance?.appliesToday &&
+    loaded.balance.targetAdjustmentSecs !== 0
+      ? loaded.balance.adjustedTargetSecs
+      : undefined
   const timesDisabled = busy || !loaded
   const hasRuntime = backend.hasWailsRuntime()
   const times = useMemo<PlannerTimes>(() => ({ in1, out1, in2 }), [in1, out1, in2])
@@ -38,44 +38,15 @@ export default function PlannerPage() {
     () =>
       loaded
         ? calculatePlannerSummary({
-            targetSecs,
             baseTargetSecs,
+            alternativeTargetSecs,
             in1,
             out1,
             in2,
           })
         : null,
-    [loaded, baseTargetSecs, targetSecs, in1, out1, in2],
+    [loaded, baseTargetSecs, alternativeTargetSecs, in1, out1, in2],
   )
-
-  const refreshBalance = useCallback(async () => {
-    if (!backend.hasWailsRuntime()) return
-    setBalanceBusy(true)
-    setBalanceErr(null)
-    try {
-      setBalance(await backend.loadBalance())
-    } catch (e) {
-      setBalanceErr(e instanceof Error ? e.message : String(e))
-    } finally {
-      setBalanceBusy(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!backend.hasWailsRuntime()) return
-    backend
-      .loadBalance()
-      .then((nextBalance) => {
-        setBalance(nextBalance)
-        setBalanceErr(null)
-      })
-      .catch((e: unknown) => {
-        setBalanceErr(e instanceof Error ? e.message : String(e))
-      })
-      .finally(() => {
-        setBalanceBusy(false)
-      })
-  }, [])
 
   const applyTimes = useCallback((next: PlannerTimes) => {
     setIn1(next.in1)
@@ -115,16 +86,6 @@ export default function PlannerPage() {
       }
       const payload = await backend.loadPlanner(date)
       setLoaded(payload)
-      if (payload.balance) {
-        setBalance((current) => ({
-          employeeId: current?.employeeId ?? '',
-          balanceSecs: payload.balance?.balanceSecs ?? 0,
-          updatedAt: payload.balanceUpdatedAt,
-        }))
-        setBalanceErr(null)
-      } else if (payload.balanceError) {
-        setBalanceErr(payload.balanceError)
-      }
       setIn1(payload.in1)
       setOut1(payload.out1)
       setIn2(payload.in2)
@@ -171,21 +132,17 @@ export default function PlannerPage() {
 
         {err ? <Banner tone="error">{err}</Banner> : null}
 
-        <PlannerBalanceCard
-          balance={balance}
-          adjustment={loaded?.balance}
-          busy={balanceBusy}
-          canRefresh={hasRuntime}
-          error={balanceErr}
-          onRefresh={() => void refreshBalance()}
-        />
-
         <div className="grid-2">
           <PlannerTimeFields
             originals={originals}
             times={times}
             disabled={timesDisabled}
             out2={summary?.out2 ?? loaded?.out2 ?? '—'}
+            alternativeOut2={summary?.alternativeOut2}
+            balance={loaded?.balance}
+            balanceError={
+              loaded?.date === localDateYYYYMMDD() ? loaded.balanceError : undefined
+            }
             onTimeChange={changeTime}
             onStep={stepTime}
             onBlurNormalize={(field) => blurTime(field, times[field])}

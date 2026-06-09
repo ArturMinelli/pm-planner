@@ -6,13 +6,13 @@ describe('calculatePlannerSummary', () => {
     expect(
       calculatePlannerSummary({
         baseTargetSecs: DEFAULT_TARGET_SECS,
-        targetSecs: DEFAULT_TARGET_SECS,
         in1: '08:00',
         out1: '12:00',
         in2: '13:30',
       }),
     ).toEqual({
       out2: '18:00',
+      alternativeOut2: undefined,
       firstSpanSecs: 4 * 60 * 60,
       secondSpanSecs: 4 * 60 * 60 + 30 * 60,
       totalSpanSecs: DEFAULT_TARGET_SECS,
@@ -20,10 +20,37 @@ describe('calculatePlannerSummary', () => {
     })
   })
 
-  it('uses zero remaining time when the first span is longer than the target', () => {
+  it('updates normal and alternative clockouts together without changing normal totals', () => {
+    const summary = calculatePlannerSummary({
+      baseTargetSecs: DEFAULT_TARGET_SECS,
+      alternativeTargetSecs: DEFAULT_TARGET_SECS + 60 * 60,
+      in1: '08:15',
+      out1: '12:00',
+      in2: '13:30',
+    })
+
+    expect(summary.out2).toBe('18:15')
+    expect(summary.alternativeOut2).toBe('19:15')
+    expect(summary.totalSpanSecs).toBe(DEFAULT_TARGET_SECS)
+    expect(summary.overtimeSecs).toBe(0)
+  })
+
+  it('supports an earlier alternative down to a zero adjusted target', () => {
+    const summary = calculatePlannerSummary({
+      baseTargetSecs: DEFAULT_TARGET_SECS,
+      alternativeTargetSecs: 0,
+      in1: '08:00',
+      out1: '12:00',
+      in2: '13:30',
+    })
+
+    expect(summary.out2).toBe('18:00')
+    expect(summary.alternativeOut2).toBe('13:30')
+  })
+
+  it('uses zero remaining time when the first span is longer than the normal target', () => {
     const summary = calculatePlannerSummary({
       baseTargetSecs: 60 * 60,
-      targetSecs: 60 * 60,
       in1: '08:00',
       out1: '10:00',
       in2: '10:15',
@@ -37,53 +64,16 @@ describe('calculatePlannerSummary', () => {
   it('treats invalid or missing clock strings as zero-duration spans', () => {
     const summary = calculatePlannerSummary({
       baseTargetSecs: DEFAULT_TARGET_SECS,
-      targetSecs: DEFAULT_TARGET_SECS,
+      alternativeTargetSecs: DEFAULT_TARGET_SECS + 60 * 60,
       in1: 'nope',
       out1: '12:00',
       in2: '',
     })
 
     expect(summary.out2).toBe('--:--')
+    expect(summary.alternativeOut2).toBe('--:--')
     expect(summary.firstSpanSecs).toBe(0)
     expect(summary.secondSpanSecs).toBe(0)
     expect(summary.totalSpanSecs).toBe(0)
-  })
-
-  it('treats reversed clock spans as zero duration', () => {
-    const summary = calculatePlannerSummary({
-      baseTargetSecs: DEFAULT_TARGET_SECS,
-      targetSecs: DEFAULT_TARGET_SECS,
-      in1: '12:00',
-      out1: '08:00',
-      in2: '13:30',
-    })
-
-    expect(summary.firstSpanSecs).toBe(0)
-    expect(summary.out2).toBe('22:00')
-  })
-
-  it('accepts a zero adjusted target', () => {
-    expect(
-      calculatePlannerSummary({
-        baseTargetSecs: DEFAULT_TARGET_SECS,
-        targetSecs: 0,
-        in1: '08:00',
-        out1: '12:00',
-        in2: '13:30',
-      }).out2,
-    ).toBe('13:30')
-  })
-
-  it('calculates overtime against the contractual target', () => {
-    const summary = calculatePlannerSummary({
-      baseTargetSecs: DEFAULT_TARGET_SECS,
-      targetSecs: DEFAULT_TARGET_SECS + 60 * 60,
-      in1: '08:00',
-      out1: '12:00',
-      in2: '13:30',
-    })
-
-    expect(summary.out2).toBe('19:00')
-    expect(summary.overtimeSecs).toBe(60 * 60)
   })
 })

@@ -1,12 +1,17 @@
 import PlannerTimeInput from '../../components/PlannerTimeInput'
 import { Card, Field } from '../../components/ui'
+import type { BalanceAdjustment } from '../../types'
 import type { PlannerTimeField, PlannerTimes } from '../../util/plannerTimes'
+import PlannerClockoutField from './PlannerClockoutField'
 
 type PlannerTimeFieldsProps = {
   originals: string
   times: PlannerTimes
   disabled: boolean
   out2: string
+  alternativeOut2?: string
+  balance?: BalanceAdjustment
+  balanceError?: string
   onTimeChange: (field: PlannerTimeField, value: string) => void
   onStep: (field: PlannerTimeField, delta: number) => void
   onBlurNormalize: (field: PlannerTimeField) => void
@@ -23,6 +28,9 @@ export default function PlannerTimeFields({
   times,
   disabled,
   out2,
+  alternativeOut2,
+  balance,
+  balanceError,
   onTimeChange,
   onStep,
   onBlurNormalize,
@@ -44,15 +52,12 @@ export default function PlannerTimeFields({
             />
           </Field>
         ))}
-        <Field id="planner-out2" label="Saída 2 Calculada">
-          <input
-            id="planner-out2"
-            name="planner-out2"
-            readOnly
-            tabIndex={-1}
-            value={out2}
-          />
-        </Field>
+        <PlannerClockoutField
+          out2={out2}
+          alternativeOut2={alternativeOut2}
+          balance={balance}
+          balanceError={balanceError}
+        />
       </div>
     </Card>
   )

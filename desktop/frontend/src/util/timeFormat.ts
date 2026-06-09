@@ -19,6 +19,25 @@ export function formatSignedDurationSecs(totalSecs: number): string {
   return `${seconds > 0 ? '+' : '-'}${formatDurationSecs(Math.abs(seconds))}`
 }
 
+export function formatDurationMinutes(totalSecs: number): string {
+  const minutes =
+    typeof totalSecs === 'number' && Number.isFinite(totalSecs)
+      ? Math.round(Math.abs(totalSecs) / 60)
+      : 0
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+export function formatSignedRoundedMinutes(totalSecs: number): string {
+  const seconds =
+    typeof totalSecs === 'number' && Number.isFinite(totalSecs)
+      ? totalSecs
+      : 0
+  if (seconds === 0) return '00:00'
+  return `${seconds > 0 ? '+' : '-'}${formatDurationMinutes(seconds)}`
+}
+
 export function localDateYYYYMMDD(d = new Date()): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')

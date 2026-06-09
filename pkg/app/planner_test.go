@@ -12,6 +12,7 @@ import (
 
 	"pm-cli/pkg/api"
 	"pm-cli/pkg/config"
+	"pm-cli/pkg/plan"
 )
 
 func TestFetchPlannerPayloadAppliesTodayBalance(t *testing.T) {
@@ -35,11 +36,14 @@ func TestFetchPlannerPayloadAppliesTodayBalance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if payload.BaseTargetSecs != 30600 || payload.TargetSecs != 34200 {
-		t.Fatalf("targets: base=%d adjusted=%d", payload.BaseTargetSecs, payload.TargetSecs)
+	if payload.BaseTargetSecs != 30600 {
+		t.Fatalf("base target: %d", payload.BaseTargetSecs)
 	}
 	if payload.Balance == nil || payload.Balance.TargetAdjustmentSecs != 3600 {
 		t.Fatalf("balance: %#v", payload.Balance)
+	}
+	if payload.Out2 == "" {
+		t.Fatal("normal clockout should remain available")
 	}
 }
 
@@ -62,8 +66,83 @@ func TestFetchPlannerPayloadKeepsPlanningWhenBalanceFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if payload.TargetSecs != payload.BaseTargetSecs || payload.Balance != nil || payload.BalanceError == "" {
+	if payload.Balance != nil || payload.BalanceError == "" || payload.Out2 == "" {
 		t.Fatalf("payload should retain normal plan with balance error: %#v", payload)
+	}
+}
+
+func TestRecalculatePlannerKeepsNormalClockoutPrimary(t *testing.T) {
+	balance := plan.BalanceAdjustment{
+		AppliesToday:         true,
+		TargetAdjustmentSecs: 3600,
+		AdjustedTargetSecs:   9.5 * 60 * 60,
+	}
+	got, err := RecalculatePlanner("2026-06-09", 8.5*60*60, &balance, "08:00", "12:00", "13:30")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Out2 != "18:00" || got.AlternativeOut2 != "19:00" {
+		t.Fatalf("clockouts: %#v", got)
+	}
+	if got.TotalSpanSecs != 8.5*60*60 || got.OvertimeSecs != 0 {
+		t.Fatalf("normal totals changed by balance: %#v", got)
+	}
+}
+
+func TestRecalculatePlannerSupportsEarlierAndCappedAlternatives(t *testing.T) {
+	tests := []struct {
+		name        string
+		balance     plan.BalanceAdjustment
+		alternative string
+	}{
+		{
+			name: "positive credit",
+			balance: plan.BalanceAdjustment{
+				AppliesToday:         true,
+				TargetAdjustmentSecs: -60 * 60,
+				AdjustedTargetSecs:   7.5 * 60 * 60,
+			},
+			alternative: "17:00",
+		},
+		{
+			name: "three hour cap",
+			balance: plan.BalanceAdjustment{
+				AppliesToday:         true,
+				TargetAdjustmentSecs: 3 * 60 * 60,
+				AdjustedTargetSecs:   11.5 * 60 * 60,
+				Capped:               true,
+			},
+			alternative: "21:00",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := RecalculatePlanner("2026-06-09", 8.5*60*60, &tt.balance, "08:00", "12:00", "13:30")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.Out2 != "18:00" || got.AlternativeOut2 != tt.alternative {
+				t.Fatalf("clockouts: %#v", got)
+			}
+			if got.TotalSpanSecs != 8.5*60*60 || got.OvertimeSecs != 0 {
+				t.Fatalf("normal totals changed by alternative: %#v", got)
+			}
+		})
+	}
+}
+
+func TestRecalculatePlannerHidesNonTodayAlternative(t *testing.T) {
+	balance := plan.BalanceAdjustment{
+		AppliesToday:         false,
+		TargetAdjustmentSecs: -3600,
+		AdjustedTargetSecs:   7.5 * 60 * 60,
+	}
+	got, err := RecalculatePlanner("2026-06-08", 8.5*60*60, &balance, "08:00", "12:00", "13:30")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Out2 != "18:00" || got.AlternativeOut2 != "" {
+		t.Fatalf("non-today clockouts: %#v", got)
 	}
 }
 
