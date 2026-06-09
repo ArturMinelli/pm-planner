@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   defaultReminderSettings,
+  formatReminderLead,
   normalizeReminderSettings,
-  reminderLeadPreset,
 } from './reminderSettings'
 
 describe('reminderSettings', () => {
@@ -20,18 +20,20 @@ describe('reminderSettings', () => {
       normalizeReminderSettings({
         enabled: true,
         autostart: true,
-        lead_minutes: [5, 15, 5, -1],
+        lead_minutes: [5, 15, 5, -1, 241],
+        native_notifications: false,
       }),
     ).toMatchObject({
       enabled: true,
       autostart: true,
       lead_minutes: [15, 5],
+      native_notifications: true,
     })
   })
 
-  it('detects supported lead presets', () => {
-    expect(reminderLeadPreset([2, 10])).toBe('10-2')
-    expect(reminderLeadPreset([5])).toBe('5')
-    expect(reminderLeadPreset([20])).toBe('15-5')
+  it('formats lead times for display', () => {
+    expect(formatReminderLead(15)).toBe('15 min')
+    expect(formatReminderLead(60)).toBe('1 hora')
+    expect(formatReminderLead(120)).toBe('2 horas')
   })
 })

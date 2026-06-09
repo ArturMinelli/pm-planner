@@ -1,48 +1,57 @@
-import type { ReminderSettings, ReminderStatus } from '../../types'
+import { useState } from 'react'
+import type { ReminderSettings } from '../../types'
 import { Button, Card, Field } from '../../components/ui'
 import {
+  formatReminderLead,
+  MAX_REMINDER_LEAD_MINUTES,
   normalizeReminderSettings,
-  reminderLeadPreset,
 } from '../../util/reminderSettings'
 
 type ReminderSettingsFormProps = {
   settings: ReminderSettings
-  status: ReminderStatus | null
   busy: boolean
   canUseRuntime: boolean
   onSettingsChange: (settings: ReminderSettings) => void
   onSave: () => void
-  onRequestPermission: () => void
   onTest: () => void
 }
 
-const LEAD_PRESETS = [
-  { id: '15-5', label: '15 e 5 min', leads: [15, 5] },
-  { id: '10-2', label: '10 e 2 min', leads: [10, 2] },
-  { id: '5', label: '5 min', leads: [5] },
-] as const
+type ReminderLeadUnit = 'minutes' | 'hours'
 
 export default function ReminderSettingsForm({
   settings,
-  status,
   busy,
   canUseRuntime,
   onSettingsChange,
   onSave,
-  onRequestPermission,
   onTest,
 }: ReminderSettingsFormProps) {
+  const [leadAmount, setLeadAmount] = useState('')
+  const [leadUnit, setLeadUnit] = useState<ReminderLeadUnit>('minutes')
   const normalized = normalizeReminderSettings(settings)
-  const leadPreset = reminderLeadPreset(normalized.lead_minutes ?? [])
+  const leadMinutes = normalized.lead_minutes ?? []
+  const parsedLeadAmount = Number(leadAmount)
+  const candidateLeadMinutes =
+    Number.isInteger(parsedLeadAmount) && parsedLeadAmount > 0
+      ? parsedLeadAmount * (leadUnit === 'hours' ? 60 : 1)
+      : null
+  const canAddLead =
+    candidateLeadMinutes !== null &&
+    candidateLeadMinutes <= MAX_REMINDER_LEAD_MINUTES &&
+    !leadMinutes.includes(candidateLeadMinutes)
+
   const update = (patch: Partial<ReminderSettings>) => {
     onSettingsChange(normalizeReminderSettings({ ...normalized, ...patch }))
   }
-  const daemonText =
-    status?.daemonRunning ? 'Daemon ativo' : 'Daemon parado'
-  const notificationText =
-    status?.notificationAuthorized ? 'Notificações autorizadas' : (
-      'Notificações pendentes'
-    )
+  const addLead = () => {
+    if (!canAddLead || candidateLeadMinutes === null) return
+    update({ lead_minutes: [...leadMinutes, candidateLeadMinutes] })
+    setLeadAmount('')
+  }
+  const removeLead = (lead: number) => {
+    if (leadMinutes.length <= 1) return
+    update({ lead_minutes: leadMinutes.filter((value) => value !== lead) })
+  }
 
   return (
     <Card title="Lembretes de Jornada">
@@ -76,43 +85,73 @@ export default function ReminderSettingsForm({
             />
             <span>Iniciar com o sistema</span>
           </label>
-          <label className="check-row">
-            <input
-              type="checkbox"
-              checked={Boolean(normalized.native_notifications)}
-              onChange={(event) =>
-                update({ native_notifications: event.target.checked })
-              }
-            />
-            <span>Notificação nativa</span>
-          </label>
         </div>
 
-        <Field id="settings-reminder-leads" label="Avisar antes">
-          <div
-            id="settings-reminder-leads"
-            className="segmented"
-            role="radiogroup"
-          >
-            {LEAD_PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                className={leadPreset === preset.id ? 'selected' : undefined}
-                aria-pressed={leadPreset === preset.id}
-                onClick={() => update({ lead_minutes: [...preset.leads] })}
+        <Field
+          id="settings-reminder-lead-amount"
+          label="Avisar antes"
+          hint="Adicione quantos avisos quiser, de 1 minuto até 4 horas antes. Mantenha pelo menos um."
+        >
+          <div className="reminder-lead-builder">
+            <div className="reminder-lead-add">
+              <input
+                id="settings-reminder-lead-amount"
+                name="reminder_lead_amount"
+                type="number"
+                min="1"
+                max={leadUnit === 'hours' ? 4 : MAX_REMINDER_LEAD_MINUTES}
+                step="1"
+                inputMode="numeric"
+                placeholder={leadUnit === 'hours' ? 'Ex.: 2' : 'Ex.: 30'}
+                value={leadAmount}
+                onChange={(event) => setLeadAmount(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') return
+                  event.preventDefault()
+                  addLead()
+                }}
+              />
+              <select
+                aria-label="Unidade do aviso"
+                value={leadUnit}
+                onChange={(event) =>
+                  setLeadUnit(event.target.value as ReminderLeadUnit)
+                }
               >
-                {preset.label}
-              </button>
-            ))}
+                <option value="minutes">minutos</option>
+                <option value="hours">horas</option>
+              </select>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!canAddLead}
+                onClick={addLead}
+              >
+                Adicionar
+              </Button>
+            </div>
+            <div className="reminder-lead-list" aria-label="Avisos configurados">
+              {leadMinutes.map((lead) => (
+                <span className="reminder-lead-chip" key={lead}>
+                  {formatReminderLead(lead)}
+                  <button
+                    type="button"
+                    disabled={leadMinutes.length <= 1}
+                    aria-label={`Remover aviso de ${formatReminderLead(lead)}`}
+                    title={
+                      leadMinutes.length <= 1
+                        ? 'Adicione outro aviso antes de remover este'
+                        : 'Remover aviso'
+                    }
+                    onClick={() => removeLead(lead)}
+                  >
+                    x
+                  </button>
+                </span>
+              ))}
+            </div>
           </div>
         </Field>
-
-        <div className="status-strip">
-          <span>{daemonText}</span>
-          <span>{notificationText}</span>
-          {status?.autostartEnabled ? <span>Autostart ativo</span> : null}
-        </div>
 
         <div className="btn-row">
           <Button
@@ -122,14 +161,6 @@ export default function ReminderSettingsForm({
             aria-busy={busy}
           >
             {busy ? 'Salvando...' : 'Salvar Lembretes'}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={busy || !canUseRuntime}
-            onClick={onRequestPermission}
-          >
-            Permitir Notificações
           </Button>
           <Button
             type="button"

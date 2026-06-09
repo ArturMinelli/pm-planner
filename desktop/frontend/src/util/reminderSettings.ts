@@ -1,6 +1,7 @@
 import type { ReminderSettings } from '../types'
 
 export const DEFAULT_REMINDER_LEADS = [15, 5] as const
+export const MAX_REMINDER_LEAD_MINUTES = 4 * 60
 
 export function defaultReminderSettings(): ReminderSettings {
   return {
@@ -16,7 +17,12 @@ export function normalizeReminderSettings(
 ): ReminderSettings {
   const defaults = defaultReminderSettings()
   const leadMinutes =
-    settings?.lead_minutes?.filter((value) => Number.isFinite(value) && value > 0)
+    settings?.lead_minutes?.filter(
+      (value) =>
+        Number.isFinite(value) &&
+        value > 0 &&
+        value <= MAX_REMINDER_LEAD_MINUTES,
+    )
 
   const enabled = Boolean(settings?.enabled)
 
@@ -28,15 +34,14 @@ export function normalizeReminderSettings(
           (a, b) => b - a,
         )
       : defaults.lead_minutes,
-    native_notifications:
-      settings?.native_notifications ?? defaults.native_notifications,
+    native_notifications: true,
   }
 }
 
-export function reminderLeadPreset(leads: number[]): '15-5' | '10-2' | '5' {
-  const normalized = normalizeReminderSettings({ lead_minutes: leads }).lead_minutes
-  const key = normalized?.join('-')
-  if (key === '10-2') return '10-2'
-  if (key === '5') return '5'
-  return '15-5'
+export function formatReminderLead(minutes: number): string {
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60
+    return `${hours} ${hours === 1 ? 'hora' : 'horas'}`
+  }
+  return `${minutes} min`
 }

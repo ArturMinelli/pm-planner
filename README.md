@@ -412,7 +412,6 @@ reminders:
   enabled: true
   autostart: true
   lead_minutes: [15, 5]
-  native_notifications: true
 ```
 
 | Campo | Descrição |
@@ -421,7 +420,7 @@ reminders:
 | `cache_ttl_hours` | Horas em que o cache de sessão local permanece válido quando a API não fornece uma data de expiração. Padrão: 8. |
 | `max_daily_extra_minutes` | Limite de trabalho extra usado para calcular a saída alternativa de quitação de saldo negativo. Padrão: 180 minutos. |
 | `planner.in1/out1/in2/out2` | Horários âncora padrão para os quatro campos de ponto. Usados tanto pelo `pm plan` quanto pelo planner do app desktop como sugestão inicial para o dia. |
-| `reminders.*` | Lembretes opt-in do app desktop. Quando ativados, `pm-desktop --daemon` verifica os horários recomendados e dispara notificações nativas. |
+| `reminders.*` | Lembretes opt-in do app desktop. Quando ativados, `pm-desktop --daemon` verifica os horários recomendados e dispara notificações nativas. `lead_minutes` aceita vários avisos personalizados entre 1 e 240 minutos. |
 
 Os headers de autenticação são armazenados em cache como `session.json` no mesmo diretório e reutilizados até expirarem. O identificador do colaborador descoberto automaticamente pela API também é guardado nesse arquivo protegido; se ficar inválido, o PM Planner o descobre novamente.
 
@@ -541,9 +540,9 @@ Clique no ícone de configurações na barra lateral para configurar o app.
 **Lembretes de Jornada:**
 
 - Ative os lembretes para iniciar o daemon em segundo plano e avisar antes de Entrada 1, Saída 1, Entrada 2 e Saída 2.
-- Escolha o aviso em `15 e 5 min`, `10 e 2 min` ou `5 min`.
+- Adicione e remova quantos avisos personalizados quiser, entre 1 minuto e 4 horas antes.
 - Quando **Iniciar com o sistema** estiver ativo, o app cria um LaunchAgent no macOS, uma entrada XDG autostart no Linux, ou um atalho Startup no Windows.
-- Use **Permitir Notificações** e **Testar Lembrete** para validar o canal nativo.
+- Use **Testar Lembrete** para validar o canal nativo, que permanece sempre ativo.
 
 ---
 

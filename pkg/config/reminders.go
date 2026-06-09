@@ -39,9 +39,6 @@ func ResolveReminders(f *File) (Reminders, error) {
 		if len(raw.LeadMinutes) > 0 {
 			out.LeadMinutes = append([]int(nil), raw.LeadMinutes...)
 		}
-		if raw.NativeNotifications != nil {
-			out.NativeNotifications = boolPtr(*raw.NativeNotifications)
-		}
 	}
 	normalizeReminderLeads(out.LeadMinutes)
 	if !out.Enabled {
@@ -72,12 +69,9 @@ func ValidateReminders(r Reminders) error {
 		}
 		seen[lead] = true
 	}
-	if r.Enabled && (r.NativeNotifications == nil || !*r.NativeNotifications) {
-		return fmt.Errorf("enable native notifications")
-	}
 	return nil
 }
 
-func ReminderNativeEnabled(r Reminders) bool {
-	return r.NativeNotifications != nil && *r.NativeNotifications
+func ReminderNativeEnabled(Reminders) bool {
+	return true
 }

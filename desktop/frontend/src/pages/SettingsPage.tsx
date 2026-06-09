@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as backend from '../services/backend'
-import type { ReminderSettings, ReminderStatus } from '../types'
+import type { ReminderSettings } from '../types'
 import {
   builtinPlannerAnchors,
   DEFAULT_MAX_DAILY_EXTRA_MINUTES,
@@ -33,7 +33,6 @@ export default function SettingsPage() {
   const [reminders, setReminders] = useState<ReminderSettings>(
     defaultReminderSettings,
   )
-  const [reminderStatus, setReminderStatus] = useState<ReminderStatus | null>(null)
   const [toast, setToast] = useState<SettingsToast | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -87,7 +86,6 @@ export default function SettingsPage() {
         setReminders(normalizeReminderSettings(c.reminders))
         if (backend.hasWailsRuntime()) {
           const status = await backend.getReminderStatus()
-          setReminderStatus(status)
           setReminders(status.settings)
         }
       } catch (e) {
@@ -171,10 +169,9 @@ export default function SettingsPage() {
     }
   }
 
-  const refreshReminderStatus = async () => {
+  const refreshReminderSettings = async () => {
     if (!backend.hasWailsRuntime()) return
     const status = await backend.getReminderStatus()
-    setReminderStatus(status)
     setReminders(status.settings)
   }
 
@@ -187,37 +184,11 @@ export default function SettingsPage() {
       return
     }
     const normalized = normalizeReminderSettings(reminders)
-    if (normalized.enabled && !normalized.native_notifications) {
-      showError('Ative notificações nativas para usar lembretes.')
-      return
-    }
     setBusy(true)
     try {
       await backend.saveReminderSettings(normalized)
-      await refreshReminderStatus()
+      await refreshReminderSettings()
       showSuccess('Lembretes salvos e daemon sincronizado.')
-    } catch (e) {
-      showError(e)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const requestReminderPermission = async () => {
-    dismissToast()
-    if (!backend.hasWailsRuntime()) {
-      showError('Permissão de notificações só funciona dentro do desktop.')
-      return
-    }
-    setBusy(true)
-    try {
-      const status = await backend.requestNotificationPermission()
-      await refreshReminderStatus()
-      if (status.authorized) {
-        showSuccess('Notificações autorizadas.')
-      } else {
-        showError(status.detail || 'Notificações ainda não autorizadas.')
-      }
     } catch (e) {
       showError(e)
     } finally {
@@ -310,12 +281,10 @@ export default function SettingsPage() {
 
       <ReminderSettingsForm
         settings={reminders}
-        status={reminderStatus}
         busy={busy}
         canUseRuntime={backend.hasWailsRuntime()}
         onSettingsChange={setReminders}
         onSave={() => void saveReminders()}
-        onRequestPermission={() => void requestReminderPermission()}
         onTest={() => void testReminder()}
       />
 

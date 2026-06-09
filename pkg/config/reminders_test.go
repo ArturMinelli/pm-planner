@@ -52,17 +52,20 @@ func TestResolveRemindersClearsAutostartWhenDisabled(t *testing.T) {
 	}
 }
 
-func TestResolveReminders_rejectsDisabledNativeNotificationsWhenEnabled(t *testing.T) {
+func TestResolveReminders_alwaysEnablesNativeNotifications(t *testing.T) {
 	off := false
-	_, err := ResolveReminders(&File{
+	got, err := ResolveReminders(&File{
 		Reminders: &Reminders{
 			Enabled:             true,
 			LeadMinutes:         []int{15, 5},
 			NativeNotifications: &off,
 		},
 	})
-	if err == nil || !strings.Contains(err.Error(), "native notifications") {
-		t.Fatalf("expected native notification validation error, got %v", err)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ReminderNativeEnabled(got) || got.NativeNotifications == nil || !*got.NativeNotifications {
+		t.Fatalf("native notifications should always be enabled: %#v", got)
 	}
 }
 
