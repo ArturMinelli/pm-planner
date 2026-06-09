@@ -43,7 +43,7 @@ func (e *RateLimitError) Error() string {
 }
 
 func (c *Client) FetchWorkDay(ctx context.Context, date string) (*WorkDay, error) {
-	url := fmt.Sprintf("%s/time_card_control/current/work_days/%s", BaseURL, date)
+	url := fmt.Sprintf("%s/time_card_control/current/work_days/%s", c.baseURL(), date)
 	req, err := c.NewAuthenticatedRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err

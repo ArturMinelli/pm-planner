@@ -99,3 +99,62 @@ func TestVerifyCredentials_acceptsAndCaches(t *testing.T) {
 		t.Fatalf("token: got %q", got.Token)
 	}
 }
+
+func TestCacheEmployeeIDStoresOnValidSession(t *testing.T) {
+	setupAuthTestHome(t)
+	valid := session{
+		Token:    "cached-token",
+		Uid:      "user@example.com",
+		Client:   "client-id",
+		CachedAt: time.Now(),
+	}
+	if err := writeCachedSession(&valid); err != nil {
+		t.Fatal(err)
+	}
+	if err := CacheEmployeeID("2751858"); err != nil {
+		t.Fatal(err)
+	}
+	if got := GetCachedEmployeeID(); got != "2751858" {
+		t.Fatalf("employee ID: got %q", got)
+	}
+}
+
+func TestVerifyCredentialsClearsEmployeeIDForNewSession(t *testing.T) {
+	setupAuthTestHome(t)
+	old := session{
+		Token:      "cached-token",
+		Uid:        "old@example.com",
+		Client:     "client-id",
+		EmployeeID: "old-employee",
+		CachedAt:   time.Now(),
+	}
+	if err := writeCachedSession(&old); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"token":     "new-token",
+			"client_id": "client-2",
+			"data":      map[string]any{"login": "new@example.com"},
+		})
+	}))
+	defer srv.Close()
+	oldURL := signInURL
+	signInURL = srv.URL
+	t.Cleanup(func() { signInURL = oldURL })
+
+	if err := VerifyCredentials("new@example.com", "secret"); err != nil {
+		t.Fatal(err)
+	}
+	if got := GetCachedEmployeeID(); got != "" {
+		t.Fatalf("new session should not retain employee ID, got %q", got)
+	}
+}
+
+func setupAuthTestHome(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, ".config"))
+}

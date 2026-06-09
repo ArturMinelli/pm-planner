@@ -15,23 +15,47 @@ const defaultPlannerTarget = 8*time.Hour + 30*time.Minute
 
 // PlannerPayload is JSON-friendly state after loading work day data (desktop + shared logic).
 type PlannerPayload struct {
-	Date             string   `json:"date"`
-	TargetSecs       int64    `json:"targetSecs"`
-	OriginalTimes    []string `json:"originalTimes"`
-	In1              string   `json:"in1"`
-	Out1             string   `json:"out1"`
-	In2              string   `json:"in2"`
-	Out2             string   `json:"out2"`
-	OriginalsLine    string   `json:"originalsLine"`
+	Date             string                  `json:"date"`
+	BaseTargetSecs   int64                   `json:"baseTargetSecs"`
+	TargetSecs       int64                   `json:"targetSecs"`
+	Balance          *plan.BalanceAdjustment `json:"balance,omitempty"`
+	BalanceUpdatedAt string                  `json:"balanceUpdatedAt,omitempty"`
+	BalanceError     string                  `json:"balanceError,omitempty"`
+	OriginalTimes    []string                `json:"originalTimes"`
+	In1              string                  `json:"in1"`
+	Out1             string                  `json:"out1"`
+	In2              string                  `json:"in2"`
+	Out2             string                  `json:"out2"`
+	OriginalsLine    string                  `json:"originalsLine"`
 }
 
 // PlannerSummary is returned when recalculating from editable clock strings.
 type PlannerSummary struct {
-	Out2            string `json:"out2"`
-	FirstSpanSecs   int64  `json:"firstSpanSecs"`
-	SecondSpanSecs  int64  `json:"secondSpanSecs"`
-	TotalSpanSecs   int64  `json:"totalSpanSecs"`
-	OvertimeSecs    int64  `json:"overtimeSecs"`
+	Out2           string `json:"out2"`
+	FirstSpanSecs  int64  `json:"firstSpanSecs"`
+	SecondSpanSecs int64  `json:"secondSpanSecs"`
+	TotalSpanSecs  int64  `json:"totalSpanSecs"`
+	OvertimeSecs   int64  `json:"overtimeSecs"`
+}
+
+// BalancePayload is the independently refreshable current time-bank balance.
+type BalancePayload struct {
+	EmployeeID  string `json:"employeeId"`
+	BalanceSecs int64  `json:"balanceSecs"`
+	UpdatedAt   string `json:"updatedAt,omitempty"`
+}
+
+// FetchBalancePayload loads the current employee time bank.
+func FetchBalancePayload(ctx context.Context, client *api.Client) (*BalancePayload, error) {
+	balance, err := client.FetchEmployeeBalance(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &BalancePayload{
+		EmployeeID:  balance.EmployeeID,
+		BalanceSecs: balance.TimeBalanceSecs,
+		UpdatedAt:   balance.UpdatedAt,
+	}, nil
 }
 
 // FetchPlannerPayload loads the work day and builds suggestion fields (same pipeline as CLI `pm plan`).
@@ -68,9 +92,21 @@ func FetchPlannerPayload(ctx context.Context, client *api.Client, dateStr string
 		}
 	}
 
-	target := defaultPlannerTarget
+	baseTarget := defaultPlannerTarget
 	if wd.ShiftTime > 0 {
-		target = time.Duration(wd.ShiftTime * float64(time.Second))
+		baseTarget = time.Duration(wd.ShiftTime * float64(time.Second))
+	}
+	target := baseTarget
+	var balanceAdjustment *plan.BalanceAdjustment
+	var balanceUpdatedAt string
+	var balanceErr string
+	if balance, err := client.FetchEmployeeBalance(ctx); err != nil {
+		balanceErr = err.Error()
+	} else {
+		adjustment := plan.CalculateBalanceAdjustment(baseTarget, balance.TimeBalanceSecs, date, time.Now().In(loc))
+		balanceAdjustment = &adjustment
+		balanceUpdatedAt = balance.UpdatedAt
+		target = time.Duration(adjustment.AdjustedTargetSecs) * time.Second
 	}
 
 	anchors := plan.BuiltinAnchors()
@@ -96,37 +132,45 @@ func FetchPlannerPayload(ctx context.Context, client *api.Client, dateStr string
 	orig := FormatOriginalStamps(stamps)
 
 	return &PlannerPayload{
-		Date:          dateStr,
-		TargetSecs:    int64(target.Seconds()),
-		OriginalTimes: OriginalStampStrings(stamps),
-		In1:           in1Str,
-		Out1:          out1Str,
-		In2:           in2Str,
-		Out2:          out2Str,
-		OriginalsLine: orig,
+		Date:             dateStr,
+		BaseTargetSecs:   int64(baseTarget.Seconds()),
+		TargetSecs:       int64(target.Seconds()),
+		Balance:          balanceAdjustment,
+		BalanceUpdatedAt: balanceUpdatedAt,
+		BalanceError:     balanceErr,
+		OriginalTimes:    OriginalStampStrings(stamps),
+		In1:              in1Str,
+		Out1:             out1Str,
+		In2:              in2Str,
+		Out2:             out2Str,
+		OriginalsLine:    orig,
 	}, nil
 }
 
 // RecalculatePlanner updates out2 and segment summaries from edited HH:mm inputs.
-func RecalculatePlanner(dateStr string, targetSecs int64, in1, out1, in2 string) (*PlannerSummary, error) {
+func RecalculatePlanner(dateStr string, baseTargetSecs, targetSecs int64, in1, out1, in2 string) (*PlannerSummary, error) {
 	loc := time.Now().Location()
 	date, err := time.ParseInLocation("2006-01-02", dateStr, loc)
 	if err != nil {
 		return nil, fmt.Errorf("date: %w", err)
 	}
 	target := time.Duration(targetSecs) * time.Second
-	if target <= 0 {
+	if targetSecs < 0 || (targetSecs == 0 && baseTargetSecs <= 0) {
 		target = defaultPlannerTarget
+	}
+	baseTarget := time.Duration(baseTargetSecs) * time.Second
+	if baseTarget <= 0 {
+		baseTarget = target
 	}
 	out2 := plan.ComputeOut2(in1, out1, in2, target, date)
 
-	first, second, total, extra := plan.SegmentDurations(in1, out1, in2, out2, target, date)
+	first, second, total, extra := plan.SegmentDurations(in1, out1, in2, out2, baseTarget, date)
 	return &PlannerSummary{
 		Out2:           out2,
-		FirstSpanSecs:   int64(first.Seconds()),
-		SecondSpanSecs:  int64(second.Seconds()),
-		TotalSpanSecs:   int64(total.Seconds()),
-		OvertimeSecs:    int64(extra.Seconds()),
+		FirstSpanSecs:  int64(first.Seconds()),
+		SecondSpanSecs: int64(second.Seconds()),
+		TotalSpanSecs:  int64(total.Seconds()),
+		OvertimeSecs:   int64(extra.Seconds()),
 	}, nil
 }
 

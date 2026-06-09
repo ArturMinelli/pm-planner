@@ -421,7 +421,7 @@ reminders:
 | `planner.in1/out1/in2/out2` | Horários âncora padrão para os quatro campos de ponto. Usados tanto pelo `pm plan` quanto pelo planner do app desktop como sugestão inicial para o dia. |
 | `reminders.*` | Lembretes opt-in do app desktop. Quando ativados, `pm-desktop --daemon` verifica os horários recomendados e dispara notificações nativas. |
 
-Os headers de autenticação são armazenados em cache como `session.json` no mesmo diretório e reutilizados até expirarem.
+Os headers de autenticação são armazenados em cache como `session.json` no mesmo diretório e reutilizados até expirarem. O identificador do colaborador descoberto automaticamente pela API também é guardado nesse arquivo protegido; se ficar inválido, o PM Planner o descobre novamente.
 
 > **Segurança:** não faça commit de `config.yaml` ou `session.json` no controle de versão. Se as credenciais foram expostas, troque-as fora deste repositório.
 
@@ -455,8 +455,13 @@ pm plan --live=false           # usa o formulário huh mais simples em vez do TU
 O planner:
 1. Busca o dia de trabalho na API.
 2. Mapeia os registros de ponto existentes para **Entrada 1**, **Saída 1**, **Entrada 2** e **Saída 2** usando os horários âncora configurados.
-3. Permite editar os três primeiros campos; **Saída 2 é calculada** a partir das horas-meta do dia e das três entradas fornecidas.
-4. Exibe um resumo: 1ª jornada, 2ª jornada, total trabalhado e horas extras.
+3. Busca o saldo atual do banco de horas e, somente para hoje, ajusta automaticamente a meta planejada.
+4. Permite editar os três primeiros campos; **Saída 2 é calculada** a partir da meta planejada e das três entradas fornecidas.
+5. Exibe um resumo: meta contratual, ajuste do banco, meta planejada, jornadas, total trabalhado e horas extras.
+
+Quando o saldo é negativo, cada minuto extra trabalhado gera `1,5x` de crédito no banco. Por exemplo, uma dívida de `01:30` exige `01:00` de trabalho extra. O planner limita esse trabalho extra a no máximo `03:00` por dia. Saldo positivo é usado na proporção `1:1` para encerrar mais cedo. Para datas passadas ou futuras, o saldo atual é apenas informativo e não altera os horários.
+
+Se a consulta do banco falhar, o planejamento normal continua usando a meta contratual.
 
 Os horários âncora padrão (`08:00`, `12:00`, `13:30`, `18:00`) são os valores iniciais quando não há ponto correspondente. Altere-os no `config.yaml` ou pela página de Configurações do app desktop.
 
@@ -496,17 +501,22 @@ Esta é a tela principal, equivalente ao `pm plan` no terminal.
 
 1. **Selecione uma data** usando o seletor de datas no topo. Por padrão, é o dia atual.
 2. Clique em **Carregar Dia** para buscar os dados do dia de trabalho na API do PontoMais.
-3. O card **Marcações Sugeridas** exibe os quatro campos de horário de ponto:
+3. O card **Banco de Horas** carrega automaticamente o saldo atual e permite atualizá-lo manualmente. Ao planejar hoje, ele explica o ajuste aplicado, o crédito estimado em `1,5x`, o saldo restante e eventual limite saudável de `03:00`.
+4. O card **Marcações Sugeridas** exibe os quatro campos de horário de ponto:
    - **Entrada 1**, **Saída 1** e **Entrada 2** são editáveis. Use os botões de passo (▲/▼) para ajustar em incrementos de 15 minutos, ou digite o horário diretamente.
    - **Saída 2 Calculada** é somente leitura e atualiza automaticamente conforme os outros três campos são alterados.
-4. O card **Resumo** atualiza em tempo real enquanto você edita, exibindo:
-   - **Meta do Dia** — horas necessárias para o dia
+5. O card **Resumo** atualiza em tempo real enquanto você edita, exibindo:
+   - **Meta Contratual** — jornada normal informada pelo PontoMais
+   - **Ajuste do Banco** — tempo adicionado ou removido do plano de hoje
+   - **Meta Planejada** — jornada usada para calcular a saída
    - **1ª Jornada** — duração do primeiro turno (Entrada 1 → Saída 1)
    - **2ª Jornada** — duração do segundo turno (Entrada 2 → Saída 2)
    - **Total** — tempo total trabalhado
-   - **Hora Extra** — horas extras (negativo se houver déficit)
+   - **Hora Extra** — horas acima da meta contratual
 
 O planner exibe a linha de ponto bruta da API acima dos campos de entrada para que você possa comparar os horários sugeridos com os registros reais.
+
+Os lembretes nativos continuam usando a meta contratual normal e não são alterados pelo saldo do banco.
 
 ### Página de Configurações
 

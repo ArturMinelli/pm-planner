@@ -1,6 +1,6 @@
 import { Card, StatRow } from '../../components/ui'
 import type { PlannerPayload, PlannerSummary } from '../../types'
-import { formatDurationSecs } from '../../util/timeFormat'
+import { formatDurationSecs, formatSignedDurationSecs } from '../../util/timeFormat'
 
 type PlannerSummaryPanelProps = {
   loaded: PlannerPayload | null
@@ -18,8 +18,19 @@ export default function PlannerSummaryPanel({
       ) : (
         <div className="stat-list" aria-live="polite">
           <StatRow
-            label="Meta do Dia"
+            label="Meta Contratual"
+            value={formatDurationSecs(loaded.baseTargetSecs)}
+          />
+          <StatRow
+            label="Ajuste do Banco"
+            value={formatSignedDurationSecs(
+              loaded.targetSecs - loaded.baseTargetSecs,
+            )}
+          />
+          <StatRow
+            label="Meta Planejada"
             value={formatDurationSecs(loaded.targetSecs)}
+            accent={loaded.targetSecs !== loaded.baseTargetSecs}
           />
           <StatRow
             label="1ª Jornada"

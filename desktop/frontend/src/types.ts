@@ -18,7 +18,11 @@ export interface PmConfig {
 /** Mirrors pkg/app payloads */
 export interface PlannerPayload {
   date: string
+  baseTargetSecs: number
   targetSecs: number
+  balance?: BalanceAdjustment
+  balanceUpdatedAt?: string
+  balanceError?: string
   originalTimes: string[]
   in1: string
   out1: string
@@ -33,6 +37,23 @@ export interface PlannerSummary {
   secondSpanSecs: number
   totalSpanSecs: number
   overtimeSecs: number
+}
+
+export interface BalanceAdjustment {
+  balanceSecs: number
+  appliesToday: boolean
+  targetAdjustmentSecs: number
+  adjustedTargetSecs: number
+  estimatedBalanceChangeSecs: number
+  remainingBalanceSecs: number
+  multiplier: number
+  capped: boolean
+}
+
+export interface BalancePayload {
+  employeeId: string
+  balanceSecs: number
+  updatedAt?: string
 }
 
 export interface ReminderSettings {

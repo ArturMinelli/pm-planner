@@ -10,6 +10,15 @@ export function formatDurationSecs(totalSecs: number): string {
   return `${pad(h)}:${pad(m)}:${pad(sec)}`
 }
 
+export function formatSignedDurationSecs(totalSecs: number): string {
+  const seconds =
+    typeof totalSecs === 'number' && Number.isFinite(totalSecs)
+      ? Math.trunc(totalSecs)
+      : 0
+  if (seconds === 0) return formatDurationSecs(0)
+  return `${seconds > 0 ? '+' : '-'}${formatDurationSecs(Math.abs(seconds))}`
+}
+
 export function localDateYYYYMMDD(d = new Date()): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')

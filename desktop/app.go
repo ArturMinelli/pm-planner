@@ -59,3 +59,14 @@ func (a *App) LoadPlanner(date string) (*app.PlannerPayload, error) {
 	defer cancel()
 	return app.FetchPlannerPayload(ctx, cl, date)
 }
+
+// LoadBalance fetches the current employee time-bank balance independently from a work day.
+func (a *App) LoadBalance() (*app.BalancePayload, error) {
+	if a.ctx == nil {
+		a.ctx = context.Background()
+	}
+	cl := api.New()
+	ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)
+	defer cancel()
+	return app.FetchBalancePayload(ctx, cl)
+}

@@ -639,6 +639,58 @@ input[readonly] {
   color: var(--warning);
 }
 
+.balance-card-header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.balance-value {
+  margin: 0;
+  font-size: 1.85rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  font-weight: 820;
+}
+
+.balance-value.positive {
+  color: var(--ok);
+}
+
+.balance-value.negative {
+  color: var(--danger);
+}
+
+.balance-state,
+.balance-guidance p,
+.balance-message,
+.balance-updated {
+  margin: 0.35rem 0 0;
+}
+
+.balance-guidance {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.balance-message {
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+
+.balance-message.error {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.balance-message.warning {
+  color: var(--warning);
+  background: var(--panel-soft);
+}
+
 .planner-date-picker-field {
   position: relative;
   width: 100%;
@@ -796,6 +848,10 @@ input[readonly] {
 
   .btn {
     width: 100%;
+  }
+
+  .balance-card-header {
+    display: grid;
   }
 
   .planner-datepicker-popover {

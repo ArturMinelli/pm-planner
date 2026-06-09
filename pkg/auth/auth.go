@@ -22,6 +22,7 @@ type session struct {
 	Token       string    `json:"token"`
 	Uid         string    `json:"uid"`
 	Client      string    `json:"client"`
+	EmployeeID  string    `json:"employee_id,omitempty"`
 	CachedAt    time.Time `json:"cached_at"`
 	Expiry      int64     `json:"expiry"` // optional epoch seconds if provided by API
 }
@@ -61,6 +62,38 @@ func writeCachedSession(s *session) error {
 		return err
 	}
 	return os.WriteFile(path, b, 0600)
+}
+
+// GetCachedEmployeeID returns the employee ID associated with the current valid session.
+func GetCachedEmployeeID() string {
+	s, err := readCachedSession()
+	if err != nil || !isSessionValid(s) {
+		return ""
+	}
+	return s.EmployeeID
+}
+
+// CacheEmployeeID stores the employee ID alongside the current authenticated session.
+func CacheEmployeeID(employeeID string) error {
+	s, err := readCachedSession()
+	if err != nil {
+		return err
+	}
+	if !isSessionValid(s) {
+		return errors.New("cannot cache employee ID without a valid session")
+	}
+	s.EmployeeID = employeeID
+	return writeCachedSession(s)
+}
+
+// ClearCachedEmployeeID removes a stale employee ID without discarding authentication.
+func ClearCachedEmployeeID() error {
+	s, err := readCachedSession()
+	if err != nil {
+		return err
+	}
+	s.EmployeeID = ""
+	return writeCachedSession(s)
 }
 
 func isSessionValid(s *session) bool {
