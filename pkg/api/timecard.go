@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"strconv"
 	"time"
+
+	"pm-cli/pkg/auth"
 )
 
 const registerAppVersion = "0.10.32"
@@ -137,7 +139,7 @@ type registerRequest struct {
 	TimeCard registerTimeCard `json:"time_card"`
 	Path     string          `json:"_path"`
 	AppVer   string          `json:"_appVersion"`
-	Device   registerDevice  `json:"_device"`
+	Device   map[string]any  `json:"_device"`
 }
 
 type registerTimeCard struct {
@@ -152,12 +154,6 @@ type registerTimeCard struct {
 	AccuracyMethod   any     `json:"accuracy_method"`
 	Image            any     `json:"image"`
 	Info             any     `json:"info"`
-}
-
-type registerDevice struct {
-	Manufacturer string `json:"manufacturer"`
-	Model        string `json:"model"`
-	Version      string `json:"version"`
 }
 
 type registerResponse struct {
@@ -182,6 +178,10 @@ func (c *Client) registerTimeCard(ctx context.Context, location TimeCardLocation
 	if err != nil {
 		return nil, err
 	}
+	device, err := auth.BuildRegisterDevice()
+	if err != nil {
+		return nil, err
+	}
 
 	payload := registerRequest{
 		Image:    nil,
@@ -201,11 +201,7 @@ func (c *Client) registerTimeCard(ctx context.Context, location TimeCardLocation
 		},
 		Path:   "/registrar-ponto",
 		AppVer: registerAppVersion,
-		Device: registerDevice{
-			Manufacturer: "null",
-			Model:        "null",
-			Version:      "null",
-		},
+		Device: device,
 	}
 
 	endpoint := c.baseURL() + "/time_cards/register"
@@ -213,6 +209,8 @@ func (c *Client) registerTimeCard(ctx context.Context, location TimeCardLocation
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("Origin", "https://app2.pontomais.com.br")
+	req.Header.Set("Referer", "https://app2.pontomais.com.br/")
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		return nil, err

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,14 +21,19 @@ import (
 var signInURL = "https://api.pontomais.com.br/api/auth/sign_in"
 
 type session struct {
-	AccessToken string    `json:"access_token"`
-	Token       string    `json:"token"`
-	Uid         string    `json:"uid"`
-	Client      string    `json:"client"`
-	UUID        string    `json:"uuid,omitempty"`
-	EmployeeID  string    `json:"employee_id,omitempty"`
-	CachedAt    time.Time `json:"cached_at"`
-	Expiry      int64     `json:"expiry"` // optional epoch seconds if provided by API
+	AccessToken  string    `json:"access_token"`
+	Token        string    `json:"token"`
+	Uid          string    `json:"uid"`
+	Client       string    `json:"client"`
+	TokenType    string    `json:"token_type,omitempty"`
+	UUID         string    `json:"uuid,omitempty"`
+	EmployeeID   string    `json:"employee_id,omitempty"`
+	SignInSuccess string   `json:"sign_in_success,omitempty"`
+	SignInCount  int       `json:"sign_in_count,omitempty"`
+	LastSignInIP string    `json:"last_sign_in_ip,omitempty"`
+	LastSignInAt int64     `json:"last_sign_in_at,omitempty"`
+	CachedAt     time.Time `json:"cached_at"`
+	Expiry       int64     `json:"expiry"` // epoch seconds from API Expiry header
 }
 
 func cachePath() (string, error) {
@@ -123,12 +129,16 @@ func ensureSessionUUID(s *session) string {
 	return s.UUID
 }
 
+func hasCompleteAuth(s *session) bool {
+	return s != nil && s.TokenType != "" && s.Expiry > 0
+}
+
 func sessionToHeaders(s *session) map[string]string {
 	access := s.Token
 	if s.AccessToken != "" {
 		access = s.AccessToken
 	}
-	return map[string]string{
+	headers := map[string]string{
 		"Access-Token": access,
 		"Token":        s.Token,
 		"Uid":          s.Uid,
@@ -136,6 +146,13 @@ func sessionToHeaders(s *session) map[string]string {
 		"Api-Version":  "2",
 		"uuid":         ensureSessionUUID(s),
 	}
+	if s.TokenType != "" {
+		headers["Token-Type"] = s.TokenType
+	}
+	if s.Expiry > 0 {
+		headers["Expiry"] = strconv.FormatInt(s.Expiry, 10)
+	}
+	return headers
 }
 
 func signIn(loginID, password string) (*session, error) {
@@ -176,14 +193,27 @@ func signIn(loginID, password string) (*session, error) {
 	}
 
 	s := &session{
-		AccessToken: lr.Token,
-		Token:       lr.Token,
-		Uid:         lr.Data.Login,
-		Client:      lr.ClientID,
-		CachedAt:    time.Now(),
+		AccessToken:   lr.Token,
+		Token:         lr.Token,
+		Uid:           lr.Data.Login,
+		Client:        lr.ClientID,
+		TokenType:     resp.Header.Get("Token-Type"),
+		SignInSuccess: lr.Success,
+		SignInCount:   lr.Data.SignInCount,
+		LastSignInIP:  lr.Data.LastSignInIP,
+		LastSignInAt:  lr.Data.LastSignInAt,
+		CachedAt:      time.Now(),
+	}
+	if expiry := strings.TrimSpace(resp.Header.Get("Expiry")); expiry != "" {
+		if parsed, err := strconv.ParseInt(expiry, 10, 64); err == nil {
+			s.Expiry = parsed
+		}
 	}
 	if s.Token == "" || s.Uid == "" || s.Client == "" {
 		return nil, errors.New("login succeeded but required fields missing in response")
+	}
+	if !hasCompleteAuth(s) {
+		return nil, errors.New("login succeeded but token metadata missing from PontoMais response")
 	}
 	return s, nil
 }
@@ -208,7 +238,7 @@ func configLogin() string {
 
 // GetAuthHeaders ensures we have valid headers, logging in if needed.
 func GetAuthHeaders() (map[string]string, error) {
-	if s, err := readCachedSession(); err == nil && isSessionValid(s) {
+	if s, err := readCachedSession(); err == nil && isSessionValid(s) && hasCompleteAuth(s) {
 		headers := sessionToHeaders(s)
 		if s.UUID == "" {
 			_ = writeCachedSession(s)

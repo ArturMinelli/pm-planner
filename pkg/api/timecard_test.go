@@ -6,8 +6,13 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"pm-cli/pkg/config"
 )
 
 func TestFetchClockInStatusReturnsLatestPunch(t *testing.T) {
@@ -30,6 +35,7 @@ func TestFetchClockInStatusReturnsLatestPunch(t *testing.T) {
 }
 
 func TestRegisterTimeCardBuildsPayloadAndParsesResponse(t *testing.T) {
+	setupTimecardSession(t)
 	const (
 		testLat = -27.123456
 		testLng = -48.654321
@@ -43,8 +49,11 @@ func TestRegisterTimeCardBuildsPayloadAndParsesResponse(t *testing.T) {
 			if r.Header.Get("Api-Version") != "2" {
 				t.Errorf("Api-Version header: got %q", r.Header.Get("Api-Version"))
 			}
-			if r.Header.Get("uuid") != "device-uuid-1" {
-				t.Errorf("uuid header: got %q", r.Header.Get("uuid"))
+			if r.Header.Get("Token-Type") != "Bearer" {
+				t.Errorf("Token-Type header: got %q", r.Header.Get("Token-Type"))
+			}
+			if r.Header.Get("Expiry") == "" {
+				t.Error("Expiry header missing")
 			}
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
@@ -88,9 +97,18 @@ func TestRegisterTimeCardBuildsPayloadAndParsesResponse(t *testing.T) {
 	if gotPayload["_path"] != "/registrar-ponto" {
 		t.Fatalf("_path: %#v", gotPayload["_path"])
 	}
+	device, ok := gotPayload["_device"].(map[string]any)
+	if !ok {
+		t.Fatal("_device missing")
+	}
+	uuidObj, ok := device["uuid"].(map[string]any)
+	if !ok || uuidObj["token"] == nil {
+		t.Fatalf("_device.uuid: %#v", device["uuid"])
+	}
 }
 
 func TestRegisterTimeCardRejectsNonSuccess(t *testing.T) {
+	setupTimecardSession(t)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/employees/current":
@@ -153,7 +171,40 @@ func timecardTestClient(baseURL string) *Client {
 				"Client":       "client",
 				"Api-Version":  "2",
 				"uuid":         "device-uuid-1",
+				"Token-Type":   "Bearer",
+				"Expiry":       "2000000000",
 			}, nil
 		},
+	}
+}
+
+func setupTimecardSession(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, ".config"))
+	path, err := config.DefaultDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(path, 0700); err != nil {
+		t.Fatal(err)
+	}
+	session := map[string]any{
+		"token":            "test",
+		"uid":              "user@example.com",
+		"client":           "client",
+		"token_type":       "Bearer",
+		"expiry":           int64(2000000000),
+		"uuid":             "device-uuid-1",
+		"sign_in_success":  "ok",
+		"sign_in_count":    1,
+		"last_sign_in_ip":  "127.0.0.1",
+		"last_sign_in_at":  1,
+		"cached_at":        time.Now(),
+	}
+	b, _ := json.Marshal(session)
+	if err := os.WriteFile(filepath.Join(path, "session.json"), b, 0600); err != nil {
+		t.Fatal(err)
 	}
 }
