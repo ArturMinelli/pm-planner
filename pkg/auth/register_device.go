@@ -2,6 +2,12 @@ package auth
 
 import "errors"
 
+// EnsureRegisterSession refreshes authentication metadata required for clock-in.
+func EnsureRegisterSession() error {
+	_, err := GetAuthHeaders()
+	return err
+}
+
 // BuildRegisterDevice returns the _device payload expected by time_cards/register.
 func BuildRegisterDevice() (map[string]any, error) {
 	s, err := readCachedSession()

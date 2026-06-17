@@ -25,6 +25,7 @@ func NewApp() *App {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	_ = config.Init("")
+	_, _ = auth.GetAuthHeaders()
 }
 
 // GetConfig reads the YAML file on disk used by pm CLI (~/.config/pm/config.yaml).

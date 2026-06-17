@@ -174,6 +174,9 @@ func (c *Client) RegisterTimeCard(ctx context.Context, location TimeCardLocation
 }
 
 func (c *Client) registerTimeCard(ctx context.Context, location TimeCardLocation) (*RegisterTimeCardResult, error) {
+	if err := auth.EnsureRegisterSession(); err != nil {
+		return nil, err
+	}
 	employee, err := c.FetchEmployeeForRegister(ctx)
 	if err != nil {
 		return nil, err
