@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -104,10 +105,30 @@ func (c *Client) FetchClockInStatus(ctx context.Context) (*ClockInStatus, error)
 	return status, nil
 }
 
-// FetchEmployeeForRegister loads the employee profile required by register.
+// FetchEmployeeForRegister loads the full employee profile required by register.
 func (c *Client) FetchEmployeeForRegister(ctx context.Context) (json.RawMessage, error) {
-	employee, _, err := c.fetchMyTimeBreak(ctx)
-	return employee, err
+	req, err := c.NewAuthenticatedRequest(ctx, http.MethodGet, c.baseURL()+"/employees/current", nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, statusError(resp)
+	}
+	var env struct {
+		Employee json.RawMessage `json:"employee"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&env); err != nil {
+		return nil, err
+	}
+	if len(env.Employee) == 0 {
+		return nil, fmt.Errorf("employee missing from PontoMais response")
+	}
+	return env.Employee, nil
 }
 
 type registerRequest struct {
@@ -149,6 +170,14 @@ type registerResponse struct {
 
 // RegisterTimeCard records a punch with the given location.
 func (c *Client) RegisterTimeCard(ctx context.Context, location TimeCardLocation) (*RegisterTimeCardResult, error) {
+	result, err := c.registerTimeCard(ctx, location)
+	if err != nil {
+		return nil, errors.New(UserFacingError(err))
+	}
+	return result, nil
+}
+
+func (c *Client) registerTimeCard(ctx context.Context, location TimeCardLocation) (*RegisterTimeCardResult, error) {
 	employee, err := c.FetchEmployeeForRegister(ctx)
 	if err != nil {
 		return nil, err

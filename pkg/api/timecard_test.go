@@ -37,7 +37,7 @@ func TestRegisterTimeCardBuildsPayloadAndParsesResponse(t *testing.T) {
 	var gotPayload map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/employees/my_time_break":
+		case "/employees/current":
 			_, _ = w.Write([]byte(`{"employee":{"id":99,"login":"user@example.com","name":"Test User"}}`))
 		case "/time_cards/register":
 			if r.Header.Get("Api-Version") != "2" {
@@ -93,7 +93,7 @@ func TestRegisterTimeCardBuildsPayloadAndParsesResponse(t *testing.T) {
 func TestRegisterTimeCardRejectsNonSuccess(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/employees/my_time_break":
+		case "/employees/current":
 			_, _ = w.Write([]byte(`{"employee":{"id":99}}`))
 		case "/time_cards/register":
 			http.Error(w, "forbidden", http.StatusForbidden)
@@ -109,9 +109,8 @@ func TestRegisterTimeCardRejectsNonSuccess(t *testing.T) {
 		Address:   "Rua A",
 		Accuracy:  10,
 	})
-	statusErr, ok := err.(*HTTPStatusError)
-	if !ok || statusErr.StatusCode != http.StatusForbidden {
-		t.Fatalf("error: %#v", err)
+	if err == nil {
+		t.Fatal("expected register error")
 	}
 }
 

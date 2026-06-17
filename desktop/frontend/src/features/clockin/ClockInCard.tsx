@@ -5,6 +5,7 @@ import {
   resolveClockInLocation,
   type GeolocationResult,
 } from '../../util/geolocation'
+import { formatError } from '../../util/formatError'
 import { Banner, Button, Card, Toast } from '../../components/ui'
 
 type ClockInPhase = 'idle' | 'confirming' | 'locating' | 'registering'
@@ -89,9 +90,7 @@ export default function ClockInCard({
       const next = await backend.getClockInStatus()
       setStatus(next)
     } catch (error) {
-      setStatusError(
-        error instanceof Error ? error.message : 'Falha ao carregar último ponto.',
-      )
+      setStatusError(formatError(error, 'Falha ao carregar último ponto.'))
     }
   }, [hasRuntime])
 
@@ -132,23 +131,28 @@ export default function ClockInCard({
     setActionError(null)
     setSuccess(null)
     setOfferFallback(false)
-    setPhase('locating')
+
+    let location: GeolocationResult
     try {
-      const location = await resolveClockInLocation()
-      await submitRegister(location)
+      setPhase('locating')
+      location = await resolveClockInLocation()
     } catch (error) {
       if (hasFallbackLocation(status)) {
         setOfferFallback(true)
         setActionError(
-          error instanceof Error
-            ? `${error.message} Você pode usar o local do último ponto registrado.`
-            : 'Não foi possível obter a localização. Você pode usar o local do último ponto registrado.',
+          `${formatError(error, 'Não foi possível obter a localização.')} Você pode usar o local do último ponto registrado.`,
         )
       } else {
-        setActionError(
-          error instanceof Error ? error.message : 'Falha ao registrar ponto.',
-        )
+        setActionError(formatError(error, 'Não foi possível obter a localização.'))
       }
+      setPhase('idle')
+      return
+    }
+
+    try {
+      await submitRegister(location)
+    } catch (error) {
+      setActionError(formatError(error, 'Falha ao registrar ponto.'))
       setPhase('idle')
     }
   }
@@ -164,9 +168,7 @@ export default function ClockInCard({
     try {
       await submitRegister(fallbackLocation(status))
     } catch (error) {
-      setActionError(
-        error instanceof Error ? error.message : 'Falha ao registrar ponto.',
-      )
+      setActionError(formatError(error, 'Falha ao registrar ponto.'))
       setPhase('idle')
     }
   }
