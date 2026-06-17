@@ -8,7 +8,7 @@ export interface PlannerAnchorsConfig {
 
 /** Mirrors pm-cli pkg/config.File */
 export interface PmConfig {
-  email: string
+  login: string
   password: string
   cache_ttl_hours?: number
   max_daily_extra_minutes?: number

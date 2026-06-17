@@ -15,7 +15,7 @@ import { defaultReminderSettings, normalizeReminderSettings } from '../util/remi
 interface GoPmApp {
   GetConfig(): Promise<PmConfig>
   SaveConfig(c: PmConfig): Promise<void>
-  TestAuth(email: string, password: string): Promise<string>
+  TestAuth(login: string, password: string): Promise<string>
   LoadPlanner(date: string): Promise<PlannerPayload>
   GetReminderStatus(): Promise<ReminderStatus>
   SaveReminderSettings(settings: ReminderSettings): Promise<void>
@@ -55,7 +55,7 @@ function normalizePlanner(
 export async function getConfig(): Promise<PmConfig> {
   if (!hasWailsRuntime()) {
     return {
-      email: '',
+      login: '',
       password: '',
       cache_ttl_hours: undefined,
       max_daily_extra_minutes: DEFAULT_MAX_DAILY_EXTRA_MINUTES,
@@ -73,7 +73,7 @@ export async function getConfig(): Promise<PmConfig> {
 
 export async function saveConfig(c: PmConfig): Promise<void> {
   const payload: PmConfig = {
-    email: c.email,
+    login: c.login,
     password: c.password,
   }
   if (
@@ -112,10 +112,10 @@ export async function mergeAndSave(patch: Partial<PmConfig>): Promise<void> {
 
 /** Empty string means success */
 export async function testAuth(
-  email: string,
+  login: string,
   password: string,
 ): Promise<string> {
-  return requireRuntime().TestAuth(email, password)
+  return requireRuntime().TestAuth(login, password)
 }
 
 export async function loadPlanner(date: string): Promise<PlannerPayload> {
