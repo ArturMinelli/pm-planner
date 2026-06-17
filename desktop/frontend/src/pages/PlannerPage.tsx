@@ -12,6 +12,7 @@ import { Banner, Page, PageHeader, Stack } from '../components/ui'
 import PlannerLoadCard from '../features/planner/PlannerLoadCard'
 import PlannerSummaryPanel from '../features/planner/PlannerSummaryPanel'
 import PlannerTimeFields from '../features/planner/PlannerTimeFields'
+import ClockInCard from '../features/clockin/ClockInCard'
 import { calculatePlannerSummary } from '../features/planner/plannerSummary'
 
 export default function PlannerPage() {
@@ -96,6 +97,12 @@ export default function PlannerPage() {
     }
   }
 
+  const reloadTodayIfLoaded = () => {
+    if (date === localDateYYYYMMDD() && loaded) {
+      void load()
+    }
+  }
+
   const originals = useMemo(
     () => loaded?.originalsLine ?? '(carregue o dia primeiro)',
     [loaded?.originalsLine],
@@ -122,6 +129,8 @@ export default function PlannerPage() {
             Modo navegador: use o app desktop para carregar dados reais da API.
           </Banner>
         ) : null}
+
+        <ClockInCard onRegistered={reloadTodayIfLoaded} />
 
         <PlannerLoadCard
           date={date}

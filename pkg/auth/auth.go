@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/spf13/viper"
 	"pm-cli/pkg/config"
 )
@@ -23,6 +24,7 @@ type session struct {
 	Token       string    `json:"token"`
 	Uid         string    `json:"uid"`
 	Client      string    `json:"client"`
+	UUID        string    `json:"uuid,omitempty"`
 	EmployeeID  string    `json:"employee_id,omitempty"`
 	CachedAt    time.Time `json:"cached_at"`
 	Expiry      int64     `json:"expiry"` // optional epoch seconds if provided by API
@@ -113,6 +115,14 @@ func isSessionValid(s *session) bool {
 	return time.Since(s.CachedAt) < time.Duration(ttlHours)*time.Hour
 }
 
+func ensureSessionUUID(s *session) string {
+	if s.UUID != "" {
+		return s.UUID
+	}
+	s.UUID = uuid.NewString()
+	return s.UUID
+}
+
 func sessionToHeaders(s *session) map[string]string {
 	access := s.Token
 	if s.AccessToken != "" {
@@ -123,6 +133,8 @@ func sessionToHeaders(s *session) map[string]string {
 		"Token":        s.Token,
 		"Uid":          s.Uid,
 		"Client":       s.Client,
+		"Api-Version":  "2",
+		"uuid":         ensureSessionUUID(s),
 	}
 }
 
@@ -183,6 +195,7 @@ func VerifyCredentials(loginID, password string) error {
 	if err != nil {
 		return err
 	}
+	ensureSessionUUID(s)
 	return writeCachedSession(s)
 }
 
@@ -196,7 +209,11 @@ func configLogin() string {
 // GetAuthHeaders ensures we have valid headers, logging in if needed.
 func GetAuthHeaders() (map[string]string, error) {
 	if s, err := readCachedSession(); err == nil && isSessionValid(s) {
-		return sessionToHeaders(s), nil
+		headers := sessionToHeaders(s)
+		if s.UUID == "" {
+			_ = writeCachedSession(s)
+		}
+		return headers, nil
 	}
 
 	loginID := configLogin()
@@ -213,6 +230,7 @@ func GetAuthHeaders() (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	ensureSessionUUID(s)
 	_ = writeCachedSession(s)
 	return sessionToHeaders(s), nil
 }

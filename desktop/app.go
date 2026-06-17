@@ -59,3 +59,30 @@ func (a *App) LoadPlanner(date string) (*app.PlannerPayload, error) {
 	defer cancel()
 	return app.FetchPlannerPayload(ctx, cl, date)
 }
+
+// GetClockInStatus returns the most recent cached punch from PontoMais.
+func (a *App) GetClockInStatus() (*api.ClockInStatus, error) {
+	if a.ctx == nil {
+		a.ctx = context.Background()
+	}
+	cl := api.New()
+	ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)
+	defer cancel()
+	return cl.FetchClockInStatus(ctx)
+}
+
+// RegisterTimeCard records a punch with the given geolocation.
+func (a *App) RegisterTimeCard(latitude, longitude, accuracy float64, address string) (*api.RegisterTimeCardResult, error) {
+	if a.ctx == nil {
+		a.ctx = context.Background()
+	}
+	cl := api.New()
+	ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)
+	defer cancel()
+	return cl.RegisterTimeCard(ctx, api.TimeCardLocation{
+		Latitude:  latitude,
+		Longitude: longitude,
+		Address:   strings.TrimSpace(address),
+		Accuracy:  accuracy,
+	})
+}

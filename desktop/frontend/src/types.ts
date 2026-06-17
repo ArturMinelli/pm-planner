@@ -71,3 +71,16 @@ export interface NotificationPermissionStatus {
   authorized: boolean
   detail?: string
 }
+
+export interface ClockInStatus {
+  date: string
+  time: string
+  address?: string
+  hasRecent: boolean
+}
+
+export interface RegisterTimeCardResult {
+  time: string
+  date: string
+  address: string
+}

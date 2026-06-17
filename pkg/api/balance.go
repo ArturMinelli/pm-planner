@@ -79,37 +79,6 @@ func (v *signedSeconds) setWholeSeconds(value string) error {
 	return nil
 }
 
-func (c *Client) discoverEmployeeID(ctx context.Context) (string, error) {
-	req, err := c.NewAuthenticatedRequest(ctx, http.MethodGet, c.baseURL()+"/employees/my_time_break", nil)
-	if err != nil {
-		return "", err
-	}
-	resp, err := c.HTTP.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", statusError(resp)
-	}
-	var env struct {
-		Employee struct {
-			ID stringID `json:"id"`
-		} `json:"employee"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&env); err != nil {
-		return "", err
-	}
-	employeeID := string(env.Employee.ID)
-	if employeeID == "" {
-		return "", fmt.Errorf("employee ID missing from PontoMais response")
-	}
-	if err := auth.CacheEmployeeID(employeeID); err != nil {
-		return "", err
-	}
-	return employeeID, nil
-}
-
 func (c *Client) fetchEmployeeBalance(ctx context.Context, employeeID string) (*EmployeeBalance, error) {
 	url := fmt.Sprintf("%s/employees/statuses/%s", c.baseURL(), employeeID)
 	req, err := c.NewAuthenticatedRequest(ctx, http.MethodGet, url, nil)
