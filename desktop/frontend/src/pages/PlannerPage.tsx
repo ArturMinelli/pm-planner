@@ -130,14 +130,19 @@ export default function PlannerPage() {
           </Banner>
         ) : null}
 
-        <ClockInCard onRegistered={reloadTodayIfLoaded} />
-
-        <PlannerLoadCard
-          date={date}
-          busy={busy}
-          onDateChange={setDate}
-          onLoad={() => void load()}
-        />
+        <section className="card planner-toolbar" aria-label="Ações do dia">
+          <div className="planner-toolbar-inner">
+            <PlannerLoadCard
+              embedded
+              date={date}
+              busy={busy}
+              onDateChange={setDate}
+              onLoad={() => void load()}
+            />
+            <div className="planner-toolbar-divider" aria-hidden="true" />
+            <ClockInCard embedded onRegistered={reloadTodayIfLoaded} />
+          </div>
+        </section>
 
         {err ? <Banner tone="error">{err}</Banner> : null}
 
