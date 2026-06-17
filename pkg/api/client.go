@@ -1,7 +1,10 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"time"
 
@@ -32,7 +35,15 @@ func (c *Client) baseURL() string {
 }
 
 func (c *Client) NewAuthenticatedRequest(ctx context.Context, method, url string, body any) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, method, url, nil)
+	var bodyReader io.Reader
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		bodyReader = bytes.NewReader(b)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, url, bodyReader)
 	if err != nil {
 		return nil, err
 	}
@@ -46,6 +57,9 @@ func (c *Client) NewAuthenticatedRequest(ctx context.Context, method, url string
 	}
 	for k, v := range headers {
 		req.Header.Set(k, v)
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
 	}
 	return req, nil
 }

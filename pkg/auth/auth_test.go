@@ -65,10 +65,18 @@ func TestVerifyCredentials_rejectsUnauthorized(t *testing.T) {
 
 func TestVerifyCredentials_acceptsAndCaches(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Token-Type", "Bearer")
+		w.Header().Set("Expiry", "2000000000")
 		_ = json.NewEncoder(w).Encode(map[string]any{
+			"success":   "Login efetuado com sucesso!",
 			"token":     "new-token",
 			"client_id": "client-1",
-			"data":      map[string]any{"login": "user@example.com"},
+			"data": map[string]any{
+				"login":              "user@example.com",
+				"sign_in_count":      1,
+				"last_sign_in_ip":    "127.0.0.1",
+				"last_sign_in_at":    1,
+			},
 		})
 	}))
 	defer srv.Close()
@@ -97,6 +105,9 @@ func TestVerifyCredentials_acceptsAndCaches(t *testing.T) {
 	}
 	if got.Token != "new-token" {
 		t.Fatalf("token: got %q", got.Token)
+	}
+	if got.TokenType != "Bearer" || got.Expiry != 2000000000 {
+		t.Fatalf("token metadata: %#v", got)
 	}
 }
 
@@ -133,7 +144,10 @@ func TestVerifyCredentialsClearsEmployeeIDForNewSession(t *testing.T) {
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Token-Type", "Bearer")
+		w.Header().Set("Expiry", "2000000000")
 		_ = json.NewEncoder(w).Encode(map[string]any{
+			"success":   "Login efetuado com sucesso!",
 			"token":     "new-token",
 			"client_id": "client-2",
 			"data":      map[string]any{"login": "new@example.com"},
