@@ -399,7 +399,7 @@ A CLI e o app desktop compartilham um único arquivo `config.yaml` em um diretó
 Exemplo de `config.yaml`:
 
 ```yaml
-email: "voce@empresa.com"
+login: "voce@empresa.com"
 password: "sua-senha"
 cache_ttl_hours: 8
 max_daily_extra_minutes: 180
@@ -416,7 +416,7 @@ reminders:
 
 | Campo | Descrição |
 | --- | --- |
-| `email` / `password` | Credenciais de login do PontoMais |
+| `login` / `password` | Credenciais de login do PontoMais (e-mail ou CPF). O campo legado `email` ainda é lido se `login` estiver ausente. |
 | `cache_ttl_hours` | Horas em que o cache de sessão local permanece válido quando a API não fornece uma data de expiração. Padrão: 8. |
 | `max_daily_extra_minutes` | Limite de trabalho extra usado para calcular a saída alternativa de quitação de saldo negativo. Padrão: 180 minutos. |
 | `planner.in1/out1/in2/out2` | Horários âncora padrão para os quatro campos de ponto. Usados tanto pelo `pm plan` quanto pelo planner do app desktop como sugestão inicial para o dia. |
@@ -524,7 +524,7 @@ Clique no ícone de configurações na barra lateral para configurar o app.
 
 **Conta e Sessão:**
 
-- Insira seu **e-mail** e **senha** do PontoMais.
+- Insira seu **login** (e-mail ou CPF) e **senha** do PontoMais.
 - Opcionalmente, defina o **Cache TTL em Horas** — quantas horas o cache de sessão local permanece válido quando a API não fornece data de expiração.
 - Clique em **Salvar Conta** para gravar no `config.yaml` compartilhado.
 - Clique em **Testar Login** para verificar as credenciais contra a API antes de salvar.
@@ -589,6 +589,6 @@ bin/pm project clean
 | `linux/386` tenta linkar contra GTK/WebKit 64 bits | Use `pm project build desktop`; o comando força `GOARCH=amd64` no Linux x86\_64, a menos que `--force-go-host` seja passado |
 | Assets do frontend ausentes em tempo de execução | Execute `pm project build desktop` sem `--skip-frontend` |
 | App desktop exibe banner "Modo navegador" | O frontend foi aberto em um navegador comum em vez de pelo `pm-desktop`; chamadas reais à API só funcionam dentro do shell Wails |
-| Erro de autenticação no `pm plan` ou `pm list` | Verifique o `config.yaml` com e-mail e senha corretos; use Configurações → **Testar Login** no app desktop para verificar |
+| Erro de autenticação no `pm plan` ou `pm list` | Verifique o `config.yaml` com login (e-mail ou CPF) e senha corretos; use Configurações → **Testar Login** no app desktop para verificar |
 | `gcc` não encontrado no Windows | Instale o [TDM-GCC](https://jmeubank.github.io/tdm-gcc/) e certifique-se de que está no `PATH` |
 | WebView2 não encontrado no Windows | Baixe e instale o [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2) da Microsoft |

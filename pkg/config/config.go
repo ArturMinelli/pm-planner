@@ -23,12 +23,29 @@ type PlannerAnchors struct {
 
 // File mirrors ~/.config/pm/config.yaml keys used by pm-cli.
 type File struct {
-	Email                string          `json:"email" yaml:"email"`
+	Login                string          `json:"login" yaml:"login"`
 	Password             string          `json:"password" yaml:"password"`
 	CacheTTLHours        int             `json:"cache_ttl_hours,omitempty" yaml:"cache_ttl_hours,omitempty"`
 	MaxDailyExtraMinutes int             `json:"max_daily_extra_minutes,omitempty" yaml:"max_daily_extra_minutes,omitempty"`
 	Planner              *PlannerAnchors `json:"planner,omitempty" yaml:"planner,omitempty"`
 	Reminders            *Reminders      `json:"reminders,omitempty" yaml:"reminders,omitempty"`
+}
+
+type fileRaw struct {
+	Login                string          `yaml:"login"`
+	Email                string          `yaml:"email"`
+	Password             string          `yaml:"password"`
+	CacheTTLHours        int             `yaml:"cache_ttl_hours,omitempty"`
+	MaxDailyExtraMinutes int             `yaml:"max_daily_extra_minutes,omitempty"`
+	Planner              *PlannerAnchors `yaml:"planner,omitempty"`
+	Reminders            *Reminders      `yaml:"reminders,omitempty"`
+}
+
+func resolveLogin(login, legacyEmail string) string {
+	if strings.TrimSpace(login) != "" {
+		return strings.TrimSpace(login)
+	}
+	return strings.TrimSpace(legacyEmail)
 }
 
 // DefaultDir returns the platform-native config directory for PM.
@@ -94,13 +111,21 @@ func Read(cfgFileOverride string) (*File, error) {
 		}
 		return nil, err
 	}
-	var f File
+	var raw fileRaw
 	if len(b) > 0 {
-		if err := yaml.Unmarshal(b, &f); err != nil {
+		if err := yaml.Unmarshal(b, &raw); err != nil {
 			return nil, fmt.Errorf("parse config: %w", err)
 		}
 	}
-	return &f, nil
+	f := &File{
+		Login:                resolveLogin(raw.Login, raw.Email),
+		Password:             raw.Password,
+		CacheTTLHours:        raw.CacheTTLHours,
+		MaxDailyExtraMinutes: raw.MaxDailyExtraMinutes,
+		Planner:              raw.Planner,
+		Reminders:            raw.Reminders,
+	}
+	return f, nil
 }
 
 // Save writes YAML atomically with tight permissions when credentials are stored.

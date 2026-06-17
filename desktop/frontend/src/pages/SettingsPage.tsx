@@ -10,6 +10,10 @@ import {
   type PlannerAnchorTimes,
   validatePlannerAnchors,
 } from '../util/plannerTimes'
+import {
+  normalizeLoginCredential,
+  validateLoginCredential,
+} from '../util/loginCredential'
 import { defaultReminderSettings, normalizeReminderSettings } from '../util/reminderSettings'
 import { Banner, Page, PageHeader, Toast } from '../components/ui'
 import AccountSettingsForm from '../features/settings/AccountSettingsForm'
@@ -23,7 +27,7 @@ type SettingsToast = {
 
 const TOAST_AUTO_DISMISS_MS = 4200
 export default function SettingsPage() {
-  const [email, setEmail] = useState('')
+  const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [ttl, setTTL] = useState<string>('')
   const [maxDailyExtraHours, setMaxDailyExtraHours] = useState(
@@ -65,7 +69,7 @@ export default function SettingsPage() {
       try {
         const c = await backend.getConfig()
         const builtins = builtinPlannerAnchors()
-        setEmail(c.email ?? '')
+        setLogin(c.login ?? '')
         setPassword(c.password ?? '')
         if (c.cache_ttl_hours && c.cache_ttl_hours > 0) {
           setTTL(String(c.cache_ttl_hours))
@@ -106,8 +110,9 @@ export default function SettingsPage() {
       )
       return
     }
-    if (!email.trim()) {
-      showError('Informe o e-mail.')
+    const loginError = validateLoginCredential(login)
+    if (loginError) {
+      showError(loginError)
       return
     }
     const cache_ttl_hours = ttl.trim() === '' ? undefined : Number(ttl)
@@ -121,7 +126,7 @@ export default function SettingsPage() {
     setBusy(true)
     try {
       await backend.mergeAndSave({
-        email,
+        login: normalizeLoginCredential(login),
         password,
         cache_ttl_hours,
       })
@@ -219,13 +224,21 @@ export default function SettingsPage() {
       showError('Autenticação só funciona dentro do desktop.')
       return
     }
-    if (!email.trim() || !password) {
-      showError('Informe e-mail e senha para testar.')
+    if (!login.trim() || !password) {
+      showError('Informe login (e-mail ou CPF) e senha para testar.')
+      return
+    }
+    const loginError = validateLoginCredential(login)
+    if (loginError) {
+      showError(loginError)
       return
     }
     setBusy(true)
     try {
-      const problem = await backend.testAuth(email, password)
+      const problem = await backend.testAuth(
+        normalizeLoginCredential(login),
+        password,
+      )
       if (problem) showError(problem)
       else showSuccess('Credenciais válidas.')
     } catch (e) {
@@ -258,12 +271,12 @@ export default function SettingsPage() {
       {devHint ? <Banner>{devHint}</Banner> : null}
 
       <AccountSettingsForm
-        email={email}
+        login={login}
         password={password}
         ttl={ttl}
         busy={busy}
         canTest={backend.hasWailsRuntime()}
-        onEmailChange={setEmail}
+        onLoginChange={setLogin}
         onPasswordChange={setPassword}
         onTTLChange={setTTL}
         onSave={() => void saveAccount()}

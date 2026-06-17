@@ -1,12 +1,13 @@
 import { Button, Card, Field, Stack } from '../../components/ui'
+import { loginCredentialFieldMeta } from '../../util/loginCredential'
 
 type AccountSettingsFormProps = {
-  email: string
+  login: string
   password: string
   ttl: string
   busy: boolean
   canTest: boolean
-  onEmailChange: (value: string) => void
+  onLoginChange: (value: string) => void
   onPasswordChange: (value: string) => void
   onTTLChange: (value: string) => void
   onSave: () => void
@@ -14,17 +15,19 @@ type AccountSettingsFormProps = {
 }
 
 export default function AccountSettingsForm({
-  email,
+  login,
   password,
   ttl,
   busy,
   canTest,
-  onEmailChange,
+  onLoginChange,
   onPasswordChange,
   onTTLChange,
   onSave,
   onTest,
 }: AccountSettingsFormProps) {
+  const loginMeta = loginCredentialFieldMeta(login)
+
   return (
     <Card title="Conta e Sessão">
       <form
@@ -35,15 +38,20 @@ export default function AccountSettingsForm({
         }}
       >
         <Stack>
-          <Field id="settings-email" label="E-mail de Login">
+          <Field
+            id="settings-login"
+            label="Login (e-mail ou CPF)"
+            hint={loginMeta.hint}
+          >
             <input
-              id="settings-email"
-              name="email"
-              type="email"
-              autoComplete="username email"
+              id="settings-login"
+              name="login"
+              type="text"
+              inputMode={loginMeta.inputMode}
+              autoComplete="username"
               spellCheck={false}
-              value={email}
-              onChange={(event) => onEmailChange(event.target.value)}
+              value={login}
+              onChange={(event) => onLoginChange(event.target.value)}
             />
           </Field>
           <Field id="settings-password" label="Senha">

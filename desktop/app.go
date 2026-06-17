@@ -36,14 +36,14 @@ func (a *App) SaveConfig(f *config.File) error {
 	return config.Save("", f)
 }
 
-// TestAuth validates email/password with a fresh sign-in (ignores cached session).
+// TestAuth validates login/password with a fresh sign-in (ignores cached session).
 // Returns an empty string on success, or a user-facing error message.
-func (a *App) TestAuth(email, password string) string {
-	email = strings.TrimSpace(email)
-	if email == "" || password == "" {
-		return "informe e-mail e senha"
+func (a *App) TestAuth(login, password string) string {
+	login = strings.TrimSpace(login)
+	if login == "" || password == "" {
+		return "informe login (e-mail ou CPF) e senha"
 	}
-	if err := auth.VerifyCredentials(email, password); err != nil {
+	if err := auth.VerifyCredentials(login, password); err != nil {
 		return err.Error()
 	}
 	return ""

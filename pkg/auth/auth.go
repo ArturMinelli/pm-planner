@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -125,9 +126,9 @@ func sessionToHeaders(s *session) map[string]string {
 	}
 }
 
-func login(email, password string) (*session, error) {
+func signIn(loginID, password string) (*session, error) {
 	body := map[string]string{
-		"login":    email,
+		"login":    loginID,
 		"password": password,
 	}
 	b, _ := json.Marshal(body)
@@ -177,12 +178,19 @@ func login(email, password string) (*session, error) {
 
 // VerifyCredentials performs a fresh sign-in with the given credentials, ignoring any cached session.
 // On success it updates session.json; on failure the existing cache is left unchanged.
-func VerifyCredentials(email, password string) error {
-	s, err := login(email, password)
+func VerifyCredentials(loginID, password string) error {
+	s, err := signIn(loginID, password)
 	if err != nil {
 		return err
 	}
 	return writeCachedSession(s)
+}
+
+func configLogin() string {
+	if login := strings.TrimSpace(viper.GetString("login")); login != "" {
+		return login
+	}
+	return strings.TrimSpace(viper.GetString("email"))
 }
 
 // GetAuthHeaders ensures we have valid headers, logging in if needed.
@@ -191,17 +199,17 @@ func GetAuthHeaders() (map[string]string, error) {
 		return sessionToHeaders(s), nil
 	}
 
-	email := viper.GetString("email")
+	loginID := configLogin()
 	password := viper.GetString("password")
-	if email == "" || password == "" {
+	if loginID == "" || password == "" {
 		path, err := config.DefaultPath()
 		if err != nil {
-			return nil, errors.New("missing credentials: set 'email' and 'password' in the PM config file")
+			return nil, errors.New("missing credentials: set 'login' and 'password' in the PM config file")
 		}
-		return nil, fmt.Errorf("missing credentials: set 'email' and 'password' in %s", path)
+		return nil, fmt.Errorf("missing credentials: set 'login' and 'password' in %s", path)
 	}
 
-	s, err := login(email, password)
+	s, err := signIn(loginID, password)
 	if err != nil {
 		return nil, err
 	}
