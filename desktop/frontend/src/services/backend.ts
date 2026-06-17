@@ -1,5 +1,6 @@
 import type {
   ClockInStatus,
+  DeviceLocation,
   NotificationPermissionStatus,
   PmConfig,
   PlannerAnchorsConfig,
@@ -26,6 +27,7 @@ interface GoPmApp {
     accuracy: number,
     address: string,
   ): Promise<RegisterTimeCardResult>
+  GetDeviceLocation(): Promise<DeviceLocation>
   GetReminderStatus(): Promise<ReminderStatus>
   SaveReminderSettings(settings: ReminderSettings): Promise<void>
   RequestNotificationPermission(): Promise<NotificationPermissionStatus>
@@ -147,6 +149,10 @@ export async function registerTimeCard(
     accuracy,
     address,
   )
+}
+
+export async function getDeviceLocation(): Promise<DeviceLocation> {
+  return requireRuntime().GetDeviceLocation()
 }
 
 export async function getReminderStatus(): Promise<ReminderStatus> {

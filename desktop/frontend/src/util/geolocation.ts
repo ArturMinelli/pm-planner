@@ -1,3 +1,5 @@
+import * as backend from '../services/backend'
+
 export type GeolocationResult = {
   latitude: number
   longitude: number
@@ -63,7 +65,7 @@ export async function reverseGeocode(
   return address
 }
 
-export async function resolveClockInLocation(): Promise<GeolocationResult> {
+async function resolveBrowserLocation(): Promise<GeolocationResult> {
   let position: GeolocationPosition
   try {
     position = await getCurrentPosition()
@@ -85,4 +87,27 @@ export async function resolveClockInLocation(): Promise<GeolocationResult> {
   }
 
   return { latitude, longitude, accuracy, address }
+}
+
+async function resolveDesktopLocation(): Promise<GeolocationResult> {
+  const location = await backend.getDeviceLocation()
+  let address = ''
+  try {
+    address = await reverseGeocode(location.latitude, location.longitude)
+  } catch {
+    address = `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
+  }
+  return {
+    latitude: location.latitude,
+    longitude: location.longitude,
+    accuracy: location.accuracy,
+    address,
+  }
+}
+
+export async function resolveClockInLocation(): Promise<GeolocationResult> {
+  if (backend.hasWailsRuntime()) {
+    return resolveDesktopLocation()
+  }
+  return resolveBrowserLocation()
 }

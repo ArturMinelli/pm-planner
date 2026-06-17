@@ -77,10 +77,19 @@ export interface ClockInStatus {
   time: string
   address?: string
   hasRecent: boolean
+  latitude?: number
+  longitude?: number
+  accuracy?: number
 }
 
 export interface RegisterTimeCardResult {
   time: string
   date: string
   address: string
+}
+
+export interface DeviceLocation {
+  latitude: number
+  longitude: number
+  accuracy: number
 }

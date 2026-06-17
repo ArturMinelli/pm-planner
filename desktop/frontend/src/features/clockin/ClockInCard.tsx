@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ClockInStatus, RegisterTimeCardResult } from '../../types'
 import * as backend from '../../services/backend'
-import { resolveClockInLocation } from '../../util/geolocation'
+import {
+  resolveClockInLocation,
+  type GeolocationResult,
+} from '../../util/geolocation'
 import { Banner, Button, Card, Toast } from '../../components/ui'
 
 type ClockInPhase = 'idle' | 'confirming' | 'locating' | 'registering'
@@ -17,6 +20,28 @@ function formatPunchDate(date: string): string {
     return date
   }
   return `${day}/${month}`
+}
+
+function hasFallbackLocation(status: ClockInStatus | null): status is ClockInStatus & {
+  latitude: number
+  longitude: number
+} {
+  return (
+    status != null &&
+    typeof status.latitude === 'number' &&
+    typeof status.longitude === 'number'
+  )
+}
+
+function fallbackLocation(status: ClockInStatus): GeolocationResult {
+  return {
+    latitude: status.latitude!,
+    longitude: status.longitude!,
+    accuracy: status.accuracy ?? 1100,
+    address:
+      status.address?.trim() ||
+      `${status.latitude!.toFixed(6)}, ${status.longitude!.toFixed(6)}`,
+  }
 }
 
 function LastPunchMeta({ status }: { status: ClockInStatus | null }) {
@@ -49,6 +74,7 @@ export default function ClockInCard({
   const [statusError, setStatusError] = useState<string | null>(null)
   const [phase, setPhase] = useState<ClockInPhase>('idle')
   const [actionError, setActionError] = useState<string | null>(null)
+  const [offerFallback, setOfferFallback] = useState(false)
   const [success, setSuccess] = useState<RegisterTimeCardResult | null>(null)
 
   const busy = phase === 'locating' || phase === 'registering'
@@ -76,30 +102,67 @@ export default function ClockInCard({
   const resetActionState = () => {
     setPhase('idle')
     setActionError(null)
+    setOfferFallback(false)
+  }
+
+  const submitRegister = async (location: GeolocationResult) => {
+    setPhase('registering')
+    const result = await backend.registerTimeCard(
+      location.latitude,
+      location.longitude,
+      location.accuracy,
+      location.address,
+    )
+    setSuccess(result)
+    setStatus({
+      date: result.date,
+      time: result.time,
+      address: result.address,
+      hasRecent: true,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      accuracy: location.accuracy,
+    })
+    onRegistered?.(result)
+    setPhase('idle')
+    setOfferFallback(false)
   }
 
   const handleRegister = async () => {
     setActionError(null)
     setSuccess(null)
+    setOfferFallback(false)
     setPhase('locating')
     try {
       const location = await resolveClockInLocation()
-      setPhase('registering')
-      const result = await backend.registerTimeCard(
-        location.latitude,
-        location.longitude,
-        location.accuracy,
-        location.address,
-      )
-      setSuccess(result)
-      setStatus({
-        date: result.date,
-        time: result.time,
-        address: result.address,
-        hasRecent: true,
-      })
-      onRegistered?.(result)
+      await submitRegister(location)
+    } catch (error) {
+      if (hasFallbackLocation(status)) {
+        setOfferFallback(true)
+        setActionError(
+          error instanceof Error
+            ? `${error.message} Você pode usar o local do último ponto registrado.`
+            : 'Não foi possível obter a localização. Você pode usar o local do último ponto registrado.',
+        )
+      } else {
+        setActionError(
+          error instanceof Error ? error.message : 'Falha ao registrar ponto.',
+        )
+      }
       setPhase('idle')
+    }
+  }
+
+  const handleFallbackRegister = async () => {
+    if (!hasFallbackLocation(status)) {
+      return
+    }
+    setActionError(null)
+    setSuccess(null)
+    setOfferFallback(false)
+    setPhase('registering')
+    try {
+      await submitRegister(fallbackLocation(status))
     } catch (error) {
       setActionError(
         error instanceof Error ? error.message : 'Falha ao registrar ponto.',
@@ -113,7 +176,7 @@ export default function ClockInCard({
       case 'confirming':
         return 'Confirmar'
       case 'locating':
-        return 'Localizando...'
+        return 'Obtendo localização...'
       case 'registering':
         return 'Registrando...'
       default:
@@ -148,23 +211,40 @@ export default function ClockInCard({
             Cancelar
           </Button>
         ) : null}
-        <Button
-          variant="primary"
-          className="clockin-primary"
-          disabled={!hasRuntime || busy}
-          aria-busy={busy}
-          onClick={() => {
-            if (confirming) {
-              void handleRegister()
-              return
-            }
-            setActionError(null)
-            setSuccess(null)
-            setPhase('confirming')
-          }}
-        >
-          {primaryLabel}
-        </Button>
+        {offerFallback && hasFallbackLocation(status) ? (
+          <>
+            <Button variant="secondary" onClick={resetActionState} disabled={busy}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              disabled={busy}
+              onClick={() => void handleFallbackRegister()}
+            >
+              Usar último local
+            </Button>
+          </>
+        ) : null}
+        {!offerFallback ? (
+          <Button
+            variant="primary"
+            className="clockin-primary"
+            disabled={!hasRuntime || busy}
+            aria-busy={busy}
+            onClick={() => {
+              if (confirming) {
+                void handleRegister()
+                return
+              }
+              setActionError(null)
+              setSuccess(null)
+              setOfferFallback(false)
+              setPhase('confirming')
+            }}
+          >
+            {primaryLabel}
+          </Button>
+        ) : null}
       </div>
 
       {!hasRuntime ? (
@@ -178,7 +258,7 @@ export default function ClockInCard({
   }
 
   return (
-    <Card title="Registrar ponto" intro="Usa sua localização atual.">
+    <Card title="Registrar ponto" intro="Usa a localização do sistema.">
       {panel}
     </Card>
   )

@@ -25,10 +25,13 @@ type CachedTimeCard struct {
 
 // ClockInStatus summarizes the most recent punch for display.
 type ClockInStatus struct {
-	Date      string `json:"date"`
-	Time      string `json:"time"`
-	Address   string `json:"address,omitempty"`
-	HasRecent bool   `json:"hasRecent"`
+	Date      string   `json:"date"`
+	Time      string   `json:"time"`
+	Address   string   `json:"address,omitempty"`
+	HasRecent bool     `json:"hasRecent"`
+	Latitude  *float64 `json:"latitude,omitempty"`
+	Longitude *float64 `json:"longitude,omitempty"`
+	Accuracy  *float64 `json:"accuracy,omitempty"`
 }
 
 // TimeCardLocation is the geolocation payload for clock-in.
@@ -88,6 +91,15 @@ func (c *Client) FetchClockInStatus(ctx context.Context) (*ClockInStatus, error)
 	}
 	if latest.Address != nil {
 		status.Address = *latest.Address
+	}
+	for _, card := range cards {
+		if card.Latitude != nil && card.Longitude != nil {
+			status.Latitude = card.Latitude
+			status.Longitude = card.Longitude
+			accuracy := 1100.0
+			status.Accuracy = &accuracy
+			break
+		}
 	}
 	return status, nil
 }

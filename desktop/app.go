@@ -9,6 +9,7 @@ import (
 	"pm-cli/pkg/app"
 	"pm-cli/pkg/auth"
 	"pm-cli/pkg/config"
+	"pm-cli/pkg/location"
 )
 
 // App is the Wails bind target; methods are exposed to the React frontend.
@@ -85,4 +86,14 @@ func (a *App) RegisterTimeCard(latitude, longitude, accuracy float64, address st
 		Address:   strings.TrimSpace(address),
 		Accuracy:  accuracy,
 	})
+}
+
+// GetDeviceLocation returns coordinates from the host OS (GeoClue on Linux).
+func (a *App) GetDeviceLocation() (*location.DeviceLocation, error) {
+	if a.ctx == nil {
+		a.ctx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(a.ctx, 20*time.Second)
+	defer cancel()
+	return location.GetDeviceLocation(ctx)
 }
