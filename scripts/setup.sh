@@ -12,6 +12,8 @@ readonly DEFAULT_INSTALL_DIR="$HOME/pm-planner"
 readonly PATH_MARKER="# pm-planner setup"
 
 CHECK_ONLY=0
+AUTOUPDATE=0
+NO_AUTOUPDATE=0
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -32,23 +34,28 @@ Uso: setup.sh [opções]
 Instala dependências, compila e instala a CLI (pm) e o app desktop do PM Planner.
 
 Opções:
-  --check-only  Apenas verifica dependências, sem instalar nem compilar
-  --help        Exibe esta ajuda
+  --check-only    Apenas verifica dependências, sem instalar nem compilar
+  --autoupdate    Registra auto-atualização diária via scheduler do OS após o setup
+  --no-autoupdate Remove o registro de auto-atualização do OS
+  --help          Exibe esta ajuda
 
 Exemplos:
   curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.sh | bash
   git clone https://github.com/ArturMinelli/pm-planner.git && cd pm-planner
   ./scripts/setup.sh
+  ./scripts/setup.sh --autoupdate
 EOF
 }
 
 parse_args() {
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-			--build)      shift ;; # obsoleto: compilação é o comportamento padrão
-			--check-only) CHECK_ONLY=1; shift ;;
-			--help|-h)    usage; exit 0 ;;
-			*)            die "Opção desconhecida: $1 (use --help)" ;;
+			--build)         shift ;; # obsoleto: compilação é o comportamento padrão
+			--check-only)    CHECK_ONLY=1; shift ;;
+			--autoupdate)    AUTOUPDATE=1; shift ;;
+			--no-autoupdate) NO_AUTOUPDATE=1; shift ;;
+			--help|-h)       usage; exit 0 ;;
+			*)               die "Opção desconhecida: $1 (use --help)" ;;
 		esac
 	done
 }
@@ -485,6 +492,95 @@ build_and_install_apps() {
 	ok "CLI e app desktop instalados com sucesso!"
 }
 
+_autoupdate_desktop_file() {
+	echo "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/pm-planner-autoupdate.desktop"
+}
+
+_autoupdate_plist_file() {
+	echo "$HOME/Library/LaunchAgents/com.pm-planner.autoupdate.plist"
+}
+
+install_autoupdate() {
+	local root="$1"
+	local wrapper="$root/scripts/auto-update.sh"
+
+	chmod +x "$wrapper" 2>/dev/null || true
+
+	case "$(detect_os)" in
+		linux)
+			local autostart_dir="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
+			local desktop_file="$autostart_dir/pm-planner-autoupdate.desktop"
+			mkdir -p "$autostart_dir"
+			cat > "$desktop_file" <<EOF
+[Desktop Entry]
+Type=Application
+Name=PM Planner Auto Update
+Comment=Atualiza o PM Planner automaticamente uma vez por dia ao fazer login
+Exec=bash "$wrapper"
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+EOF
+			ok "Auto-atualização registrada: $desktop_file"
+			;;
+		darwin)
+			local agents_dir="$HOME/Library/LaunchAgents"
+			local plist_file="$agents_dir/com.pm-planner.autoupdate.plist"
+			mkdir -p "$agents_dir"
+			cat > "$plist_file" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.pm-planner.autoupdate</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>$wrapper</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/dev/null</string>
+	<key>StandardErrorPath</key>
+	<string>/dev/null</string>
+</dict>
+</plist>
+EOF
+			launchctl load "$plist_file" 2>/dev/null || true
+			ok "Auto-atualização registrada: $plist_file"
+			;;
+	esac
+	info "Log de auto-atualização: ${XDG_CACHE_HOME:-$HOME/.cache}/pm/autoupdate.log"
+}
+
+uninstall_autoupdate() {
+	case "$(detect_os)" in
+		linux)
+			local desktop_file
+			desktop_file="$(_autoupdate_desktop_file)"
+			if [[ -f "$desktop_file" ]]; then
+				rm -f "$desktop_file"
+				ok "Auto-atualização removida ($desktop_file)"
+			else
+				warn "Auto-atualização não estava registrada"
+			fi
+			;;
+		darwin)
+			local plist_file
+			plist_file="$(_autoupdate_plist_file)"
+			if [[ -f "$plist_file" ]]; then
+				launchctl unload "$plist_file" 2>/dev/null || true
+				rm -f "$plist_file"
+				ok "Auto-atualização removida ($plist_file)"
+			else
+				warn "Auto-atualização não estava registrada"
+			fi
+			;;
+	esac
+}
+
 print_next_steps() {
 	local root=""
 	if root="$(find_project_root 2>/dev/null)"; then
@@ -540,6 +636,21 @@ main() {
 	fi
 
 	run_doctor || true
+
+	if [[ "$AUTOUPDATE" -eq 1 ]]; then
+		local au_root=""
+		au_root="$(find_project_root 2>/dev/null)" || true
+		if [[ -z "$au_root" ]] && is_project_root "$DEFAULT_INSTALL_DIR"; then
+			au_root="$DEFAULT_INSTALL_DIR"
+		fi
+		if [[ -n "$au_root" ]]; then
+			install_autoupdate "$au_root"
+		else
+			warn "Não foi possível localizar o diretório do projeto para registrar a auto-atualização"
+		fi
+	elif [[ "$NO_AUTOUPDATE" -eq 1 ]]; then
+		uninstall_autoupdate
+	fi
 
 	print_next_steps
 	echo ""

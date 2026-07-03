@@ -3,6 +3,8 @@
 
 [CmdletBinding()]
 param(
+    [switch]$Autoupdate,
+    [switch]$NoAutoupdate,
     [switch]$Help
 )
 
@@ -28,11 +30,14 @@ Atualiza uma instalação existente do PM Planner: baixa código novo e
 recompila/reinstala a CLI (pm) e o app desktop.
 
 Opções:
-  -Help  Exibe esta ajuda
+  -Autoupdate    Registra auto-atualização diária via Agendador de Tarefas
+  -NoAutoupdate  Remove o registro de auto-atualização do Agendador de Tarefas
+  -Help          Exibe esta ajuda
 
 Exemplos:
   irm https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.ps1 | iex
   cd $DefaultInstallDir; .\scripts\update.ps1
+  cd $DefaultInstallDir; .\scripts\update.ps1 -Autoupdate
 "@
 }
 
@@ -321,6 +326,48 @@ function Show-NextSteps {
     Write-Host "  App desktop: Menu Iniciar (PM Planner)"
 }
 
+$AutoupdateTaskName = "PM Planner Auto Update"
+
+function Install-Autoupdate {
+    param([string]$Root)
+
+    $wrapper = Join-Path $Root "scripts\auto-update.ps1"
+    if (-not (Test-Path $wrapper)) {
+        Write-Warn "auto-update.ps1 não encontrado em $wrapper"
+        return
+    }
+
+    $action   = New-ScheduledTaskAction `
+                    -Execute "powershell.exe" `
+                    -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -NonInteractive -File `"$wrapper`""
+    $trigger  = New-ScheduledTaskTrigger -AtLogOn
+    $settings = New-ScheduledTaskSettingsSet `
+                    -ExecutionTimeLimit (New-TimeSpan -Hours 1) `
+                    -StartWhenAvailable
+
+    Register-ScheduledTask `
+        -TaskName $AutoupdateTaskName `
+        -Action $action `
+        -Trigger $trigger `
+        -Settings $settings `
+        -RunLevel Limited `
+        -Force | Out-Null
+
+    Write-Ok "Auto-atualização registrada no Agendador de Tarefas ('$AutoupdateTaskName')"
+    $logFile = Join-Path $env:LOCALAPPDATA "pm\autoupdate.log"
+    Write-Info "Log de auto-atualização: $logFile"
+}
+
+function Uninstall-Autoupdate {
+    $task = Get-ScheduledTask -TaskName $AutoupdateTaskName -ErrorAction SilentlyContinue
+    if ($null -ne $task) {
+        Unregister-ScheduledTask -TaskName $AutoupdateTaskName -Confirm:$false
+        Write-Ok "Auto-atualização removida do Agendador de Tarefas"
+    } else {
+        Write-Warn "Auto-atualização não estava registrada"
+    }
+}
+
 # --- main ---
 Write-Host ""
 Write-Info "PM Planner — update (windows)"
@@ -355,6 +402,12 @@ if (Get-Command go -ErrorAction SilentlyContinue) {
     } finally {
         Pop-Location
     }
+}
+
+if ($Autoupdate) {
+    Install-Autoupdate $root
+} elseif ($NoAutoupdate) {
+    Uninstall-Autoupdate
 }
 
 Show-NextSteps $root

@@ -10,6 +10,8 @@ readonly DEFAULT_INSTALL_DIR="$HOME/pm-planner"
 readonly SETUP_URL="https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.sh"
 
 daemon_was_running=false
+autoupdate_flag=0
+no_autoupdate_flag=0
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -31,19 +33,24 @@ Atualiza uma instalação existente do PM Planner: baixa código novo e
 recompila/reinstala a CLI (pm) e o app desktop.
 
 Opções:
-  --help  Exibe esta ajuda
+  --autoupdate    Registra auto-atualização diária via scheduler do OS
+  --no-autoupdate Remove o registro de auto-atualização do OS
+  --help          Exibe esta ajuda
 
 Exemplos:
   curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.sh | bash
   cd ~/pm-planner && ./scripts/update.sh
+  cd ~/pm-planner && ./scripts/update.sh --autoupdate
 EOF
 }
 
 parse_args() {
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-			--help|-h) usage; exit 0 ;;
-			*)           die "Opção desconhecida: $1 (use --help)" ;;
+			--autoupdate)    autoupdate_flag=1; shift ;;
+			--no-autoupdate) no_autoupdate_flag=1; shift ;;
+			--help|-h)       usage; exit 0 ;;
+			*)               die "Opção desconhecida: $1 (use --help)" ;;
 		esac
 	done
 }
@@ -334,6 +341,95 @@ rebuild_and_install() {
 	ok "CLI e app desktop reinstalados com sucesso!"
 }
 
+_autoupdate_desktop_file() {
+	echo "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/pm-planner-autoupdate.desktop"
+}
+
+_autoupdate_plist_file() {
+	echo "$HOME/Library/LaunchAgents/com.pm-planner.autoupdate.plist"
+}
+
+install_autoupdate() {
+	local root="$1"
+	local wrapper="$root/scripts/auto-update.sh"
+
+	chmod +x "$wrapper" 2>/dev/null || true
+
+	case "$(detect_os)" in
+		linux)
+			local autostart_dir="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
+			local desktop_file="$autostart_dir/pm-planner-autoupdate.desktop"
+			mkdir -p "$autostart_dir"
+			cat > "$desktop_file" <<EOF
+[Desktop Entry]
+Type=Application
+Name=PM Planner Auto Update
+Comment=Atualiza o PM Planner automaticamente uma vez por dia ao fazer login
+Exec=bash "$wrapper"
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+EOF
+			ok "Auto-atualização registrada: $desktop_file"
+			;;
+		darwin)
+			local agents_dir="$HOME/Library/LaunchAgents"
+			local plist_file="$agents_dir/com.pm-planner.autoupdate.plist"
+			mkdir -p "$agents_dir"
+			cat > "$plist_file" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.pm-planner.autoupdate</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>$wrapper</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/dev/null</string>
+	<key>StandardErrorPath</key>
+	<string>/dev/null</string>
+</dict>
+</plist>
+EOF
+			launchctl load "$plist_file" 2>/dev/null || true
+			ok "Auto-atualização registrada: $plist_file"
+			;;
+	esac
+	info "Log de auto-atualização: ${XDG_CACHE_HOME:-$HOME/.cache}/pm/autoupdate.log"
+}
+
+uninstall_autoupdate() {
+	case "$(detect_os)" in
+		linux)
+			local desktop_file
+			desktop_file="$(_autoupdate_desktop_file)"
+			if [[ -f "$desktop_file" ]]; then
+				rm -f "$desktop_file"
+				ok "Auto-atualização removida ($desktop_file)"
+			else
+				warn "Auto-atualização não estava registrada"
+			fi
+			;;
+		darwin)
+			local plist_file
+			plist_file="$(_autoupdate_plist_file)"
+			if [[ -f "$plist_file" ]]; then
+				launchctl unload "$plist_file" 2>/dev/null || true
+				rm -f "$plist_file"
+				ok "Auto-atualização removida ($plist_file)"
+			else
+				warn "Auto-atualização não estava registrada"
+			fi
+			;;
+	esac
+}
+
 print_next_steps() {
 	local root="$1"
 	echo ""
@@ -374,6 +470,12 @@ Ou, se já clonou manualmente, execute este script de dentro de pm-planner/."
 	if command -v go >/dev/null 2>&1; then
 		info "Verificando ambiente (project doctor)..."
 		(cd "$root" && go run ./cmd/pm project doctor) || warn "Verificação do projeto reportou problemas (veja acima)"
+	fi
+
+	if [[ "$autoupdate_flag" -eq 1 ]]; then
+		install_autoupdate "$root"
+	elif [[ "$no_autoupdate_flag" -eq 1 ]]; then
+		uninstall_autoupdate
 	fi
 
 	print_next_steps "$root"
