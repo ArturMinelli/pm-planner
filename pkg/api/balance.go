@@ -84,7 +84,7 @@ func (c *Client) discoverEmployeeID(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	resp, err := c.HTTP.Do(req)
+	resp, err := c.DoAuthenticated(req)
 	if err != nil {
 		return "", err
 	}
@@ -116,7 +116,7 @@ func (c *Client) fetchEmployeeBalance(ctx context.Context, employeeID string) (*
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.HTTP.Do(req)
+	resp, err := c.DoAuthenticated(req)
 	if err != nil {
 		return nil, err
 	}

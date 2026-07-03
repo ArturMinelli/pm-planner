@@ -48,7 +48,7 @@ func (c *Client) FetchWorkDay(ctx context.Context, date string) (*WorkDay, error
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.HTTP.Do(req)
+	resp, err := c.DoAuthenticated(req)
 	if err != nil {
 		return nil, err
 	}
