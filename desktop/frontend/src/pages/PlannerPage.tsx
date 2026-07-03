@@ -12,7 +12,6 @@ import { Banner, Page, PageHeader, Stack } from '../components/ui'
 import PlannerLoadCard from '../features/planner/PlannerLoadCard'
 import PlannerSummaryPanel from '../features/planner/PlannerSummaryPanel'
 import PlannerTimeFields from '../features/planner/PlannerTimeFields'
-import ClockInCard from '../features/clockin/ClockInCard'
 import { calculatePlannerSummary } from '../features/planner/plannerSummary'
 
 export default function PlannerPage() {
@@ -97,12 +96,6 @@ export default function PlannerPage() {
     }
   }
 
-  const reloadTodayIfLoaded = () => {
-    if (date === localDateYYYYMMDD() && loaded) {
-      void load()
-    }
-  }
-
   const originals = useMemo(
     () => loaded?.originalsLine ?? '(carregue o dia primeiro)',
     [loaded?.originalsLine],
@@ -130,19 +123,12 @@ export default function PlannerPage() {
           </Banner>
         ) : null}
 
-        <section className="card planner-toolbar" aria-label="Ações do dia">
-          <div className="planner-toolbar-inner">
-            <PlannerLoadCard
-              embedded
-              date={date}
-              busy={busy}
-              onDateChange={setDate}
-              onLoad={() => void load()}
-            />
-            <div className="planner-toolbar-divider" aria-hidden="true" />
-            <ClockInCard embedded onRegistered={reloadTodayIfLoaded} />
-          </div>
-        </section>
+        <PlannerLoadCard
+          date={date}
+          busy={busy}
+          onDateChange={setDate}
+          onLoad={() => void load()}
+        />
 
         {err ? <Banner tone="error">{err}</Banner> : null}
 
