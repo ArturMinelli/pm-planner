@@ -42,11 +42,24 @@ Opções:
   --no-autoupdate Remove o registro de auto-atualização do OS
   --help          Exibe esta ajuda
 
+Variáveis de ambiente (úteis com curl | bash, sem passar flags no final):
+  PM_AUTOUPDATE=1     Registra auto-atualização (equivalente a --autoupdate)
+  PM_NO_AUTOUPDATE=1  Remove auto-atualização (equivalente a --no-autoupdate)
+
 Exemplos:
   curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.sh | bash
-  cd ~/pm-planner && ./scripts/update.sh
-  cd ~/pm-planner && ./scripts/update.sh --autoupdate
+  curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.sh | PM_AUTOUPDATE=1 bash
+  cd ~/.local/share/pm-planner && ./scripts/update.sh --autoupdate
 EOF
+}
+
+apply_env_flags() {
+	case "${PM_AUTOUPDATE:-}" in
+		1|true|yes|TRUE|YES|True) autoupdate_flag=1 ;;
+	esac
+	case "${PM_NO_AUTOUPDATE:-}" in
+		1|true|yes|TRUE|YES|True) no_autoupdate_flag=1 ;;
+	esac
 }
 
 parse_args() {
@@ -500,6 +513,7 @@ print_next_steps() {
 }
 
 main() {
+	apply_env_flags
 	parse_args "$@"
 
 	echo ""
