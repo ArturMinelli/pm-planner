@@ -15,7 +15,6 @@ readonly LEGACY_INSTALL_DIR="$HOME/pm-planner"
 readonly SETUP_URL="https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.sh"
 
 daemon_was_running=false
-autoupdate_flag=0
 no_autoupdate_flag=0
 
 RED='\033[0;31m'
@@ -38,25 +37,20 @@ Atualiza uma instalação existente do PM Planner: baixa código novo e
 recompila/reinstala a CLI (pm) e o app desktop.
 
 Opções:
-  --autoupdate    Registra auto-atualização diária via scheduler do OS
-  --no-autoupdate Remove o registro de auto-atualização do OS
+  --no-autoupdate Remove o registro de auto-atualização do OS (padrão: registrar)
   --help          Exibe esta ajuda
 
-Variáveis de ambiente (úteis com curl | bash, sem passar flags no final):
-  PM_AUTOUPDATE=1     Registra auto-atualização (equivalente a --autoupdate)
-  PM_NO_AUTOUPDATE=1  Remove auto-atualização (equivalente a --no-autoupdate)
+Variáveis de ambiente (úteis com curl | bash):
+  PM_NO_AUTOUPDATE=1  Equivalente a --no-autoupdate
 
 Exemplos:
   curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.sh | bash
-  curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.sh | PM_AUTOUPDATE=1 bash
-  cd ~/.local/share/pm-planner && ./scripts/update.sh --autoupdate
+  cd ~/.local/share/pm-planner && ./scripts/update.sh
+  cd ~/.local/share/pm-planner && ./scripts/update.sh --no-autoupdate
 EOF
 }
 
 apply_env_flags() {
-	case "${PM_AUTOUPDATE:-}" in
-		1|true|yes|TRUE|YES|True) autoupdate_flag=1 ;;
-	esac
 	case "${PM_NO_AUTOUPDATE:-}" in
 		1|true|yes|TRUE|YES|True) no_autoupdate_flag=1 ;;
 	esac
@@ -65,7 +59,7 @@ apply_env_flags() {
 parse_args() {
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-			--autoupdate)    autoupdate_flag=1; shift ;;
+			--autoupdate)    shift ;; # obsoleto: auto-atualização já é o padrão
 			--no-autoupdate) no_autoupdate_flag=1; shift ;;
 			--help|-h)       usage; exit 0 ;;
 			*)               die "Opção desconhecida: $1 (use --help)" ;;
@@ -543,10 +537,10 @@ Ou, se já clonou manualmente, execute este script de dentro de pm-planner/."
 		(cd "$root" && go run ./cmd/pm project doctor) || warn "Verificação do projeto reportou problemas (veja acima)"
 	fi
 
-	if [[ "$autoupdate_flag" -eq 1 ]]; then
-		install_autoupdate "$root"
-	elif [[ "$no_autoupdate_flag" -eq 1 ]]; then
+	if [[ "$no_autoupdate_flag" -eq 1 ]]; then
 		uninstall_autoupdate
+	else
+		install_autoupdate "$root"
 	fi
 
 	print_next_steps "$root"
