@@ -8,7 +8,11 @@ readonly GO_VERSION="1.23.3"
 readonly WAILS_PKG="github.com/wailsapp/wails/v2/cmd/wails@latest"
 readonly REPO_URL="https://github.com/ArturMinelli/pm-planner.git"
 readonly REPO_TARBALL_URL="https://github.com/ArturMinelli/pm-planner/archive/refs/heads/main.tar.gz"
-readonly DEFAULT_INSTALL_DIR="$HOME/pm-planner"
+case "$(uname -s)" in
+	Darwin) DEFAULT_INSTALL_DIR="$HOME/Library/Application Support/pm-planner" ;;
+	*)      DEFAULT_INSTALL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/pm-planner" ;;
+esac
+readonly DEFAULT_INSTALL_DIR
 readonly PATH_MARKER="# pm-planner setup"
 
 CHECK_ONLY=0
