@@ -80,11 +80,8 @@ func (v *signedSeconds) setWholeSeconds(value string) error {
 }
 
 func (c *Client) discoverEmployeeID(ctx context.Context) (string, error) {
-	req, err := c.NewAuthenticatedRequest(ctx, http.MethodGet, c.baseURL()+"/employees/my_time_break", nil)
-	if err != nil {
-		return "", err
-	}
-	resp, err := c.HTTP.Do(req)
+	url := c.baseURL() + "/employees/my_time_break"
+	resp, err := c.DoAuthenticated(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", err
 	}
@@ -112,11 +109,7 @@ func (c *Client) discoverEmployeeID(ctx context.Context) (string, error) {
 
 func (c *Client) fetchEmployeeBalance(ctx context.Context, employeeID string) (*EmployeeBalance, error) {
 	url := fmt.Sprintf("%s/employees/statuses/%s", c.baseURL(), employeeID)
-	req, err := c.NewAuthenticatedRequest(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := c.HTTP.Do(req)
+	resp, err := c.DoAuthenticated(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
