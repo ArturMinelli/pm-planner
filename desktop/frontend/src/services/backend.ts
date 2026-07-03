@@ -21,7 +21,6 @@ interface GoPmApp {
   GetReminderStatus(): Promise<ReminderStatus>
   SaveReminderSettings(settings: ReminderSettings): Promise<void>
   RequestNotificationPermission(): Promise<NotificationPermissionStatus>
-  SendTestReminder(): Promise<void>
 }
 
 function goApp(): GoPmApp | undefined {
@@ -159,8 +158,4 @@ export async function saveReminderSettings(
 
 export async function requestNotificationPermission(): Promise<NotificationPermissionStatus> {
   return requireRuntime().RequestNotificationPermission()
-}
-
-export async function sendTestReminder(): Promise<void> {
-  return requireRuntime().SendTestReminder()
 }

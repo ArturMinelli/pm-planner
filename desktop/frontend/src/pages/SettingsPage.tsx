@@ -214,23 +214,6 @@ export default function SettingsPage() {
     }
   }
 
-  const testReminder = async () => {
-    dismissToast()
-    if (!backend.hasWailsRuntime()) {
-      showError('Teste de lembrete só funciona dentro do desktop.')
-      return
-    }
-    setBusy(true)
-    try {
-      await backend.sendTestReminder()
-      showSuccess('Lembrete de teste enviado.')
-    } catch (e) {
-      showError(e)
-    } finally {
-      setBusy(false)
-    }
-  }
-
   const test = async () => {
     dismissToast()
     if (!backend.hasWailsRuntime()) {
@@ -313,7 +296,6 @@ export default function SettingsPage() {
         canUseRuntime={backend.hasWailsRuntime()}
         onSettingsChange={setReminders}
         onSave={() => void saveReminders()}
-        onTest={() => void testReminder()}
       />
 
       {toast ? (
