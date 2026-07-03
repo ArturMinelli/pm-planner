@@ -3,8 +3,10 @@
 
 [CmdletBinding()]
 param(
-    [switch]$Build,     # obsoleto: compilação é o comportamento padrão
+    [switch]$Build,        # obsoleto: compilação é o comportamento padrão
     [switch]$CheckOnly,
+    [switch]$Autoupdate,
+    [switch]$NoAutoupdate,
     [switch]$Help
 )
 
@@ -29,13 +31,16 @@ Uso: setup.ps1 [opções]
 Instala dependências, compila e instala a CLI (pm) e o app desktop do PM Planner.
 
 Opções:
-  -CheckOnly   Apenas verifica dependências, sem instalar nem compilar
-  -Help        Exibe esta ajuda
+  -CheckOnly     Apenas verifica dependências, sem instalar nem compilar
+  -Autoupdate    Registra auto-atualização diária via Agendador de Tarefas após o setup
+  -NoAutoupdate  Remove o registro de auto-atualização do Agendador de Tarefas
+  -Help          Exibe esta ajuda
 
 Exemplos:
   irm https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.ps1 | iex
   git clone https://github.com/ArturMinelli/pm-planner.git; cd pm-planner
   .\scripts\setup.ps1
+  .\scripts\setup.ps1 -Autoupdate
 
 Nota: revise o script antes de executar com irm | iex.
 "@
@@ -366,6 +371,48 @@ function Show-NextSteps {
     Write-Host "  App desktop: Menu Iniciar (PM Planner)"
 }
 
+$AutoupdateTaskName = "PM Planner Auto Update"
+
+function Install-Autoupdate {
+    param([string]$Root)
+
+    $wrapper = Join-Path $Root "scripts\auto-update.ps1"
+    if (-not (Test-Path $wrapper)) {
+        Write-Warn "auto-update.ps1 não encontrado em $wrapper"
+        return
+    }
+
+    $action   = New-ScheduledTaskAction `
+                    -Execute "powershell.exe" `
+                    -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -NonInteractive -File `"$wrapper`""
+    $trigger  = New-ScheduledTaskTrigger -AtLogOn
+    $settings = New-ScheduledTaskSettingsSet `
+                    -ExecutionTimeLimit (New-TimeSpan -Hours 1) `
+                    -StartWhenAvailable
+
+    Register-ScheduledTask `
+        -TaskName $AutoupdateTaskName `
+        -Action $action `
+        -Trigger $trigger `
+        -Settings $settings `
+        -RunLevel Limited `
+        -Force | Out-Null
+
+    Write-Ok "Auto-atualização registrada no Agendador de Tarefas ('$AutoupdateTaskName')"
+    $logFile = Join-Path $env:LOCALAPPDATA "pm\autoupdate.log"
+    Write-Info "Log de auto-atualização: $logFile"
+}
+
+function Uninstall-Autoupdate {
+    $task = Get-ScheduledTask -TaskName $AutoupdateTaskName -ErrorAction SilentlyContinue
+    if ($null -ne $task) {
+        Unregister-ScheduledTask -TaskName $AutoupdateTaskName -Confirm:$false
+        Write-Ok "Auto-atualização removida do Agendador de Tarefas"
+    } else {
+        Write-Warn "Auto-atualização não estava registrada"
+    }
+}
+
 # --- main ---
 Write-Host ""
 Write-Info "PM Planner — setup (windows)"
@@ -397,6 +444,18 @@ try {
     Invoke-Doctor
 } catch {
     Write-Warn "Verificação do projeto falhou: $_"
+}
+
+if ($Autoupdate) {
+    $root = Find-ProjectRoot
+    if (-not $root -and (Test-ProjectRoot $DefaultInstallDir)) { $root = $DefaultInstallDir }
+    if ($root) {
+        Install-Autoupdate $root
+    } else {
+        Write-Warn "Não foi possível localizar o diretório do projeto para registrar a auto-atualização"
+    }
+} elseif ($NoAutoupdate) {
+    Uninstall-Autoupdate
 }
 
 Show-NextSteps
