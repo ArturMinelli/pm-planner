@@ -97,6 +97,25 @@ func ClearCachedEmployeeID() error {
 	return writeCachedSession(s)
 }
 
+// InvalidateSession removes the cached session so the next auth call performs a fresh sign-in.
+func InvalidateSession() error {
+	path, err := cachePath()
+	if err != nil {
+		return err
+	}
+	err = os.Remove(path)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+// RefreshAuth discards the cached session and signs in again with configured credentials.
+func RefreshAuth() (map[string]string, error) {
+	_ = InvalidateSession()
+	return GetAuthHeaders()
+}
+
 func isSessionValid(s *session) bool {
 	if s == nil || s.Token == "" || s.Uid == "" || s.Client == "" {
 		return false
