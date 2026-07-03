@@ -35,7 +35,7 @@ var listCmd = &cobra.Command{
 			return err
 		}
 
-		resp, err := client.HTTP.Do(req)
+		resp, err := client.DoAuthenticated(req)
 		if err != nil {
 			return err
 		}

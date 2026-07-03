@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,8 +16,9 @@ import (
 	"pm-cli/pkg/config"
 )
 
-// signInURL is the login endpoint; tests may override it.
-var signInURL = "https://api.pontomais.com.br/api/auth/sign_in"
+// SignInURL is the login endpoint; tests (in this package and others, e.g. pkg/api) may
+// override it to point at an httptest server.
+var SignInURL = "https://api.pontomais.com.br/api/auth/sign_in"
 
 type session struct {
 	AccessToken string    `json:"access_token"`
@@ -116,6 +118,44 @@ func RefreshAuth() (map[string]string, error) {
 	return GetAuthHeaders()
 }
 
+// ApplyRotatedHeaders updates the cached session with any rotated auth headers present
+// on an API response. PontoMais's Devise Token Auth backend issues a new access-token
+// (and sometimes uid/client) on every authenticated request and rejects the previous
+// one outside a short batch-request grace window. Callers must invoke this after every
+// authenticated call, or the cached session will stop working after the very first
+// real request even though sign-in itself keeps succeeding.
+//
+// This is a no-op when there is no cached session yet, or when the response carries no
+// rotation headers (e.g. plain test servers, or the sign_in response itself).
+func ApplyRotatedHeaders(header http.Header) {
+	if header == nil {
+		return
+	}
+	access := strings.TrimSpace(header.Get("access-token"))
+	if access == "" {
+		return
+	}
+	s, err := readCachedSession()
+	if err != nil || s == nil {
+		return
+	}
+	s.AccessToken = access
+	s.Token = access
+	if v := strings.TrimSpace(header.Get("client")); v != "" {
+		s.Client = v
+	}
+	if v := strings.TrimSpace(header.Get("uid")); v != "" {
+		s.Uid = v
+	}
+	if v := strings.TrimSpace(header.Get("expiry")); v != "" {
+		if parsed, parseErr := strconv.ParseInt(v, 10, 64); parseErr == nil {
+			s.Expiry = parsed
+		}
+	}
+	s.CachedAt = time.Now()
+	_ = writeCachedSession(s)
+}
+
 func isSessionValid(s *session) bool {
 	if s == nil || s.Token == "" || s.Uid == "" || s.Client == "" {
 		return false
@@ -151,7 +191,7 @@ func signIn(loginID, password string) (*session, error) {
 		"password": password,
 	}
 	b, _ := json.Marshal(body)
-	req, err := http.NewRequest(http.MethodPost, signInURL, bytes.NewReader(b))
+	req, err := http.NewRequest(http.MethodPost, SignInURL, bytes.NewReader(b))
 	if err != nil {
 		return nil, err
 	}
@@ -182,12 +222,33 @@ func signIn(loginID, password string) (*session, error) {
 		return nil, fmt.Errorf("failed to decode login response: %w", err)
 	}
 
+	// PontoMais (Devise Token Auth) carries the canonical auth identity in response
+	// headers; the JSON body fields are a convenience mirror that can diverge for some
+	// accounts. Prefer headers when present, falling back to the body otherwise.
+	token := lr.Token
+	if v := strings.TrimSpace(resp.Header.Get("access-token")); v != "" {
+		token = v
+	}
+	uid := lr.Data.Login
+	if v := strings.TrimSpace(resp.Header.Get("uid")); v != "" {
+		uid = v
+	}
+	clientID := lr.ClientID
+	if v := strings.TrimSpace(resp.Header.Get("client")); v != "" {
+		clientID = v
+	}
+
 	s := &session{
-		AccessToken: lr.Token,
-		Token:       lr.Token,
-		Uid:         lr.Data.Login,
-		Client:      lr.ClientID,
+		AccessToken: token,
+		Token:       token,
+		Uid:         uid,
+		Client:      clientID,
 		CachedAt:    time.Now(),
+	}
+	if v := strings.TrimSpace(resp.Header.Get("expiry")); v != "" {
+		if parsed, parseErr := strconv.ParseInt(v, 10, 64); parseErr == nil {
+			s.Expiry = parsed
+		}
 	}
 	if s.Token == "" || s.Uid == "" || s.Client == "" {
 		return nil, errors.New("login succeeded but required fields missing in response")

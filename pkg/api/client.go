@@ -34,12 +34,18 @@ func (c *Client) baseURL() string {
 
 // DoAuthenticated executes req and retries once with a fresh session on 401/403.
 // Callers should use NewAuthenticatedRequest to build req.
+//
+// PontoMais rotates the auth token (and sometimes uid/client) on every authenticated
+// request and rejects the previous one outside a short batch-request grace window, so
+// every response that carries rotation headers is persisted back to session.json —
+// otherwise the cached session would stop working after this very call.
 func (c *Client) DoAuthenticated(req *http.Request) (*http.Response, error) {
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusUnauthorized && resp.StatusCode != http.StatusForbidden {
+		auth.ApplyRotatedHeaders(resp.Header)
 		return resp, nil
 	}
 	// Stale/invalid session — discard cached token, re-login, and retry once.
@@ -54,7 +60,11 @@ func (c *Client) DoAuthenticated(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.HTTP.Do(retryReq)
+	retryResp, err := c.HTTP.Do(retryReq)
+	if err == nil {
+		auth.ApplyRotatedHeaders(retryResp.Header)
+	}
+	return retryResp, err
 }
 
 type authError struct {
@@ -83,4 +93,13 @@ func (c *Client) NewAuthenticatedRequest(ctx context.Context, method, url string
 		req.Header.Set(k, v)
 	}
 	return req, nil
+}
+
+// VerifyAccess performs a lightweight authenticated request to confirm the current
+// session is actually accepted by the API — not just that sign-in succeeded. A
+// successful sign-in alone does not guarantee the resulting session headers are valid
+// for subsequent calls (see DoAuthenticated).
+func (c *Client) VerifyAccess(ctx context.Context) error {
+	_, err := c.FetchWorkDay(ctx, time.Now().Format("2006-01-02"))
+	return err
 }

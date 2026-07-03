@@ -36,7 +36,11 @@ func (a *App) SaveConfig(f *config.File) error {
 	return config.Save("", f)
 }
 
-// TestAuth validates login/password with a fresh sign-in (ignores cached session).
+// TestAuth validates login/password with a fresh sign-in (ignores cached session), then
+// confirms the resulting session is actually accepted by the API. A successful sign-in
+// alone is not sufficient: PontoMais can accept credentials at /auth/sign_in while still
+// rejecting the very next authenticated request if the session headers it issued aren't
+// the ones the app ends up using (see pkg/api.Client.DoAuthenticated).
 // Returns an empty string on success, or a user-facing error message.
 func (a *App) TestAuth(login, password string) string {
 	login = strings.TrimSpace(login)
@@ -44,6 +48,16 @@ func (a *App) TestAuth(login, password string) string {
 		return "informe login (e-mail ou CPF) e senha"
 	}
 	if err := auth.VerifyCredentials(login, password); err != nil {
+		return err.Error()
+	}
+
+	ctx := a.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	if err := api.New().VerifyAccess(reqCtx); err != nil {
 		return err.Error()
 	}
 	return ""
