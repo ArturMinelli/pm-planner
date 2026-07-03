@@ -8,6 +8,7 @@ import type {
 } from '../types'
 import {
   builtinPlannerAnchors,
+  DEFAULT_BALANCE_CREDIT_MULTIPLIER,
   DEFAULT_MAX_DAILY_EXTRA_MINUTES,
 } from '../util/plannerDefaults'
 import { defaultReminderSettings, normalizeReminderSettings } from '../util/reminderSettings'
@@ -59,6 +60,7 @@ export async function getConfig(): Promise<PmConfig> {
       password: '',
       cache_ttl_hours: undefined,
       max_daily_extra_minutes: DEFAULT_MAX_DAILY_EXTRA_MINUTES,
+      balance_credit_multiplier: DEFAULT_BALANCE_CREDIT_MULTIPLIER,
       planner: builtinPlannerAnchors(),
       reminders: defaultReminderSettings(),
     }
@@ -89,6 +91,13 @@ export async function saveConfig(c: PmConfig): Promise<void> {
     c.max_daily_extra_minutes > 0
   ) {
     payload.max_daily_extra_minutes = Math.trunc(c.max_daily_extra_minutes)
+  }
+  if (
+    typeof c.balance_credit_multiplier === 'number' &&
+    Number.isFinite(c.balance_credit_multiplier) &&
+    c.balance_credit_multiplier > 0
+  ) {
+    payload.balance_credit_multiplier = c.balance_credit_multiplier
   }
   if (c.planner) {
     payload.planner = {
