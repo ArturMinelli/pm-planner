@@ -16,7 +16,6 @@ readonly DEFAULT_INSTALL_DIR
 readonly PATH_MARKER="# pm-planner setup"
 
 CHECK_ONLY=0
-AUTOUPDATE=0
 NO_AUTOUPDATE=0
 
 RED='\033[0;31m'
@@ -39,16 +38,24 @@ Instala dependências, compila e instala a CLI (pm) e o app desktop do PM Planne
 
 Opções:
   --check-only    Apenas verifica dependências, sem instalar nem compilar
-  --autoupdate    Registra auto-atualização diária via scheduler do OS após o setup
-  --no-autoupdate Remove o registro de auto-atualização do OS
+  --no-autoupdate Remove o registro de auto-atualização do OS (padrão: registrar)
   --help          Exibe esta ajuda
+
+Variáveis de ambiente (úteis com curl | bash):
+  PM_NO_AUTOUPDATE=1  Equivalente a --no-autoupdate
 
 Exemplos:
   curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.sh | bash
   git clone https://github.com/ArturMinelli/pm-planner.git && cd pm-planner
   ./scripts/setup.sh
-  ./scripts/setup.sh --autoupdate
+  ./scripts/setup.sh --no-autoupdate
 EOF
+}
+
+apply_env_flags() {
+	case "${PM_NO_AUTOUPDATE:-}" in
+		1|true|yes|TRUE|YES|True) NO_AUTOUPDATE=1 ;;
+	esac
 }
 
 parse_args() {
@@ -56,7 +63,7 @@ parse_args() {
 		case "$1" in
 			--build)         shift ;; # obsoleto: compilação é o comportamento padrão
 			--check-only)    CHECK_ONLY=1; shift ;;
-			--autoupdate)    AUTOUPDATE=1; shift ;;
+			--autoupdate)    shift ;; # obsoleto: auto-atualização já é o padrão
 			--no-autoupdate) NO_AUTOUPDATE=1; shift ;;
 			--help|-h)       usage; exit 0 ;;
 			*)               die "Opção desconhecida: $1 (use --help)" ;;
@@ -614,6 +621,7 @@ print_next_steps() {
 }
 
 main() {
+	apply_env_flags
 	parse_args "$@"
 
 	echo ""
@@ -641,7 +649,9 @@ main() {
 
 	run_doctor || true
 
-	if [[ "$AUTOUPDATE" -eq 1 ]]; then
+	if [[ "$NO_AUTOUPDATE" -eq 1 ]]; then
+		uninstall_autoupdate
+	elif [[ "$CHECK_ONLY" -eq 0 ]]; then
 		local au_root=""
 		au_root="$(find_project_root 2>/dev/null)" || true
 		if [[ -z "$au_root" ]] && is_project_root "$DEFAULT_INSTALL_DIR"; then
@@ -652,8 +662,6 @@ main() {
 		else
 			warn "Não foi possível localizar o diretório do projeto para registrar a auto-atualização"
 		fi
-	elif [[ "$NO_AUTOUPDATE" -eq 1 ]]; then
-		uninstall_autoupdate
 	fi
 
 	print_next_steps
