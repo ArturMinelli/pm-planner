@@ -195,9 +195,10 @@ func signIn(loginID, password string) (*session, error) {
 	return s, nil
 }
 
-// VerifyCredentials performs a fresh sign-in with the given credentials, ignoring any cached session.
-// On success it updates session.json; on failure the existing cache is left unchanged.
+// VerifyCredentials clears session.json, performs a fresh sign-in with the given credentials,
+// and writes a new session on success. On failure the cache remains cleared.
 func VerifyCredentials(loginID, password string) error {
+	_ = InvalidateSession()
 	s, err := signIn(loginID, password)
 	if err != nil {
 		return err
