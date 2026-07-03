@@ -32,15 +32,14 @@ Instala dependências, compila e instala a CLI (pm) e o app desktop do PM Planne
 
 Opções:
   -CheckOnly     Apenas verifica dependências, sem instalar nem compilar
-  -Autoupdate    Registra auto-atualização diária via Agendador de Tarefas após o setup
-  -NoAutoupdate  Remove o registro de auto-atualização do Agendador de Tarefas
+  -NoAutoupdate  Remove o registro de auto-atualização do Agendador de Tarefas (padrão: registrar)
   -Help          Exibe esta ajuda
 
 Exemplos:
   irm https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.ps1 | iex
   git clone https://github.com/ArturMinelli/pm-planner.git; cd pm-planner
   .\scripts\setup.ps1
-  .\scripts\setup.ps1 -Autoupdate
+  .\scripts\setup.ps1 -NoAutoupdate
 
 Nota: revise o script antes de executar com irm | iex.
 "@
@@ -446,7 +445,9 @@ try {
     Write-Warn "Verificação do projeto falhou: $_"
 }
 
-if ($Autoupdate) {
+if ($NoAutoupdate) {
+    Uninstall-Autoupdate
+} elseif (-not $CheckOnly) {
     $root = Find-ProjectRoot
     if (-not $root -and (Test-ProjectRoot $DefaultInstallDir)) { $root = $DefaultInstallDir }
     if ($root) {
@@ -454,8 +455,6 @@ if ($Autoupdate) {
     } else {
         Write-Warn "Não foi possível localizar o diretório do projeto para registrar a auto-atualização"
     }
-} elseif ($NoAutoupdate) {
-    Uninstall-Autoupdate
 }
 
 Show-NextSteps

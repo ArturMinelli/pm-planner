@@ -30,14 +30,13 @@ Atualiza uma instalação existente do PM Planner: baixa código novo e
 recompila/reinstala a CLI (pm) e o app desktop.
 
 Opções:
-  -Autoupdate    Registra auto-atualização diária via Agendador de Tarefas
-  -NoAutoupdate  Remove o registro de auto-atualização do Agendador de Tarefas
+  -NoAutoupdate  Remove o registro de auto-atualização do Agendador de Tarefas (padrão: registrar)
   -Help          Exibe esta ajuda
 
 Exemplos:
   irm https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.ps1 | iex
   cd $DefaultInstallDir; .\scripts\update.ps1
-  cd $DefaultInstallDir; .\scripts\update.ps1 -Autoupdate
+  cd $DefaultInstallDir; .\scripts\update.ps1 -NoAutoupdate
 "@
 }
 
@@ -404,10 +403,10 @@ if (Get-Command go -ErrorAction SilentlyContinue) {
     }
 }
 
-if ($Autoupdate) {
-    Install-Autoupdate $root
-} elseif ($NoAutoupdate) {
+if ($NoAutoupdate) {
     Uninstall-Autoupdate
+} else {
+    Install-Autoupdate $root
 }
 
 Show-NextSteps $root
