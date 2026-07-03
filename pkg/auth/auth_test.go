@@ -6,9 +6,17 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
+
+	"pm-cli/pkg/config"
 )
+
+func writeSignInHeaders(w http.ResponseWriter) {
+	w.Header().Set("Token-Type", "Bearer")
+	w.Header().Set("Expiry", strconv.FormatInt(time.Now().Add(8*time.Hour).Unix(), 10))
+}
 
 func TestVerifyCredentials_rejectsUnauthorized(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -65,6 +73,7 @@ func TestVerifyCredentials_rejectsUnauthorized(t *testing.T) {
 
 func TestVerifyCredentials_acceptsAndCaches(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeSignInHeaders(w)
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"token":     "new-token",
 			"client_id": "client-1",
@@ -97,6 +106,91 @@ func TestVerifyCredentials_acceptsAndCaches(t *testing.T) {
 	}
 	if got.Token != "new-token" {
 		t.Fatalf("token: got %q", got.Token)
+	}
+	if got.TokenType != "Bearer" || got.Expiry == 0 || got.UUID == "" {
+		t.Fatalf("expected complete auth metadata, got %#v", got)
+	}
+}
+
+func TestGetAuthHeadersIncludesAPIVersionAndUUID(t *testing.T) {
+	setupAuthTestHome(t)
+	valid := session{
+		Token:     "cached-token",
+		Uid:       "user@example.com",
+		Client:    "client-id",
+		TokenType: "Bearer",
+		UUID:      "device-uuid",
+		Expiry:    time.Now().Add(8 * time.Hour).Unix(),
+		CachedAt:  time.Now(),
+	}
+	if err := writeCachedSession(&valid); err != nil {
+		t.Fatal(err)
+	}
+	headers, err := GetAuthHeaders()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if headers["Api-Version"] != "2" {
+		t.Fatalf("Api-Version: got %q", headers["Api-Version"])
+	}
+	if headers["uuid"] != "device-uuid" {
+		t.Fatalf("uuid: got %q", headers["uuid"])
+	}
+}
+
+func TestRefreshAuthReplacesCachedSession(t *testing.T) {
+	setupAuthTestHome(t)
+	dir, err := config.DefaultDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("login: user@example.com\npassword: secret\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	_ = config.Init("")
+
+	old := session{
+		Token:     "stale-token",
+		Uid:       "user@example.com",
+		Client:    "stale-client",
+		TokenType: "Bearer",
+		UUID:      "device-uuid",
+		Expiry:    time.Now().Add(8 * time.Hour).Unix(),
+		CachedAt:  time.Now(),
+	}
+	if err := writeCachedSession(&old); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeSignInHeaders(w)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"token":     "fresh-token",
+			"client_id": "fresh-client",
+			"data":      map[string]any{"login": "user@example.com"},
+		})
+	}))
+	defer srv.Close()
+	oldURL := signInURL
+	signInURL = srv.URL
+	t.Cleanup(func() { signInURL = oldURL })
+
+	headers, err := RefreshAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if headers["Access-Token"] != "fresh-token" {
+		t.Fatalf("headers token: got %q", headers["Access-Token"])
+	}
+	got, err := readCachedSession()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Token != "fresh-token" {
+		t.Fatalf("cached token: got %q", got.Token)
 	}
 }
 
@@ -133,6 +227,7 @@ func TestVerifyCredentialsClearsEmployeeIDForNewSession(t *testing.T) {
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeSignInHeaders(w)
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"token":     "new-token",
 			"client_id": "client-2",
