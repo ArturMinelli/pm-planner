@@ -13,7 +13,6 @@ type ReminderSettingsFormProps = {
   canUseRuntime: boolean
   onSettingsChange: (settings: ReminderSettings) => void
   onSave: () => void
-  onTest: () => void
 }
 
 type ReminderLeadUnit = 'minutes' | 'hours'
@@ -24,7 +23,6 @@ export default function ReminderSettingsForm({
   canUseRuntime,
   onSettingsChange,
   onSave,
-  onTest,
 }: ReminderSettingsFormProps) {
   const [leadAmount, setLeadAmount] = useState('')
   const [leadUnit, setLeadUnit] = useState<ReminderLeadUnit>('minutes')
@@ -161,14 +159,6 @@ export default function ReminderSettingsForm({
             aria-busy={busy}
           >
             {busy ? 'Salvando...' : 'Salvar Lembretes'}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={busy || !canUseRuntime}
-            onClick={onTest}
-          >
-            Testar Lembrete
           </Button>
         </div>
       </form>

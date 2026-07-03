@@ -542,7 +542,6 @@ Clique no ícone de configurações na barra lateral para configurar o app.
 - Ative os lembretes para iniciar o daemon em segundo plano e avisar antes de Entrada 1, Saída 1, Entrada 2 e Saída 2.
 - Adicione e remova quantos avisos personalizados quiser, entre 1 minuto e 4 horas antes.
 - Quando **Iniciar com o sistema** estiver ativo, o app cria um LaunchAgent no macOS, uma entrada XDG autostart no Linux, ou um atalho Startup no Windows.
-- Use **Testar Lembrete** para validar o canal nativo, que permanece sempre ativo.
 
 ---
 

@@ -16,7 +16,6 @@ describe('ReminderSettingsForm', () => {
         canUseRuntime
         onSettingsChange={() => undefined}
         onSave={() => undefined}
-        onTest={() => undefined}
       />,
     )
 

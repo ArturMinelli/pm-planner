@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"pm-cli/pkg/config"
 	"pm-cli/pkg/reminder"
@@ -134,30 +133,6 @@ func (a *App) RequestNotificationPermission() (*NotificationPermissionStatus, er
 		return nil, err
 	}
 	return &NotificationPermissionStatus{Available: available, Authorized: authorized}, nil
-}
-
-func (a *App) SendTestReminder() error {
-	f, err := config.Read("")
-	if err != nil {
-		return err
-	}
-	settings, err := config.ResolveReminders(f)
-	if err != nil {
-		return err
-	}
-	now := time.Now()
-	event := reminder.ScheduledReminder{
-		ID:          reminder.ReminderID(now.Format("2006-01-02"), reminder.SlotOut2, 5),
-		Date:        now.Format("2006-01-02"),
-		SlotKey:     reminder.SlotOut2,
-		SlotLabel:   "Saída 2",
-		SlotTime:    now.Add(5 * time.Minute),
-		LeadMinutes: 5,
-		FireAt:      now,
-	}
-	return desktopAlerter{
-		native: systemNotifier{},
-	}.SendReminder(context.Background(), event, settings)
 }
 
 func (a *App) notificationPermissionStatus() NotificationPermissionStatus {
