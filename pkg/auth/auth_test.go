@@ -54,12 +54,9 @@ func TestVerifyCredentials_rejectsUnauthorized(t *testing.T) {
 		t.Fatal("expected login error for wrong password")
 	}
 
-	got, readErr := readCachedSession()
-	if readErr != nil {
-		t.Fatal(readErr)
-	}
-	if got.Token != "cached-token" {
-		t.Fatalf("cache should be unchanged, got token %q", got.Token)
+	_, readErr := readCachedSession()
+	if readErr == nil {
+		t.Fatal("cache should be cleared after failed verify")
 	}
 }
 
@@ -86,6 +83,25 @@ func TestVerifyCredentials_acceptsAndCaches(t *testing.T) {
 		os.Setenv("HOME", oldHome)
 		os.Setenv("XDG_CONFIG_HOME", oldXDGConfigHome)
 	})
+
+	sessionPath, err := cachePath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pmDir := filepath.Dir(sessionPath)
+	if err := os.MkdirAll(pmDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	stale := session{
+		Token:    "stale-token",
+		Uid:      "old@example.com",
+		Client:   "old-client",
+		CachedAt: time.Now(),
+	}
+	b, _ := json.Marshal(stale)
+	if err := os.WriteFile(sessionPath, b, 0600); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := VerifyCredentials("user@example.com", "secret"); err != nil {
 		t.Fatal(err)
