@@ -1,8 +1,9 @@
 package plan
 
-import "time"
-
-const BalanceCreditMultiplier = 1.5
+import (
+	"math"
+	"time"
+)
 
 // BalanceAdjustment describes how the current time bank changes a selected day's target.
 type BalanceAdjustment struct {
@@ -17,18 +18,22 @@ type BalanceAdjustment struct {
 }
 
 // CalculateBalanceAdjustment applies the time bank only when the selected date is today.
-func CalculateBalanceAdjustment(baseTarget, maxDailyExtraWork time.Duration, balanceSecs int64, selectedDate, today time.Time) BalanceAdjustment {
+// multiplier is the credit rate for negative balance (e.g. 1.5 means 1h work = 1.5h credit).
+func CalculateBalanceAdjustment(baseTarget, maxDailyExtraWork time.Duration, balanceSecs int64, selectedDate, today time.Time, multiplier float64) BalanceAdjustment {
 	if baseTarget < 0 {
 		baseTarget = 0
 	}
 	if maxDailyExtraWork < 0 {
 		maxDailyExtraWork = 0
 	}
+	if multiplier <= 0 {
+		multiplier = 1.5
+	}
 	out := BalanceAdjustment{
 		BalanceSecs:          balanceSecs,
 		AdjustedTargetSecs:   int64(baseTarget.Seconds()),
 		RemainingBalanceSecs: balanceSecs,
-		Multiplier:           BalanceCreditMultiplier,
+		Multiplier:           multiplier,
 	}
 	if !sameCalendarDay(selectedDate, today) {
 		return out
@@ -38,13 +43,13 @@ func CalculateBalanceAdjustment(baseTarget, maxDailyExtraWork time.Duration, bal
 	switch {
 	case balanceSecs < 0:
 		debt := -balanceSecs
-		requiredWorkSecs := ceilToMinute(ceilDiv(debt*2, 3))
+		requiredWorkSecs := ceilToMinute(int64(math.Ceil(float64(debt) / multiplier)))
 		maxExtraSecs := int64(maxDailyExtraWork.Seconds())
 		if requiredWorkSecs > maxExtraSecs {
 			requiredWorkSecs = maxExtraSecs
 			out.Capped = true
 		}
-		creditSecs := requiredWorkSecs * 3 / 2
+		creditSecs := int64(math.Round(float64(requiredWorkSecs) * multiplier))
 		if creditSecs > debt {
 			creditSecs = debt
 		}

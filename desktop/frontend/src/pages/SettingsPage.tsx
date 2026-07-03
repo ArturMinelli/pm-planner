@@ -3,6 +3,7 @@ import * as backend from '../services/backend'
 import type { ReminderSettings } from '../types'
 import {
   builtinPlannerAnchors,
+  DEFAULT_BALANCE_CREDIT_MULTIPLIER,
   DEFAULT_MAX_DAILY_EXTRA_MINUTES,
 } from '../util/plannerDefaults'
 import {
@@ -32,6 +33,9 @@ export default function SettingsPage() {
   const [ttl, setTTL] = useState<string>('')
   const [maxDailyExtraHours, setMaxDailyExtraHours] = useState(
     String(DEFAULT_MAX_DAILY_EXTRA_MINUTES / 60),
+  )
+  const [balanceCreditMultiplier, setBalanceCreditMultiplier] = useState(
+    String(DEFAULT_BALANCE_CREDIT_MULTIPLIER),
   )
   const [anchors, setAnchors] = useState<PlannerAnchorTimes>(builtinPlannerAnchors)
   const [reminders, setReminders] = useState<ReminderSettings>(
@@ -78,6 +82,9 @@ export default function SettingsPage() {
           String(
             (c.max_daily_extra_minutes ?? DEFAULT_MAX_DAILY_EXTRA_MINUTES) / 60,
           ),
+        )
+        setBalanceCreditMultiplier(
+          String(c.balance_credit_multiplier ?? DEFAULT_BALANCE_CREDIT_MULTIPLIER),
         )
         if (c.planner) {
           setAnchors({
@@ -160,11 +167,17 @@ export default function SettingsPage() {
       showError('O limite diário deve estar entre 1 minuto e 24 horas.')
       return
     }
+    const multiplier = Number(balanceCreditMultiplier)
+    if (!Number.isFinite(multiplier) || multiplier < 1.0 || multiplier > 3.0) {
+      showError('O multiplicador de crédito deve estar entre 1,0 e 3,0.')
+      return
+    }
     setBusy(true)
     try {
       await backend.mergeAndSave({
         planner: { ...anchors },
         max_daily_extra_minutes: maxDailyExtraMinutes,
+        balance_credit_multiplier: multiplier,
       })
       showSuccess('Configurações do planner salvas no arquivo compartilhado.')
     } catch (e) {
@@ -286,9 +299,11 @@ export default function SettingsPage() {
       <PlannerDefaultsForm
         anchors={anchors}
         maxDailyExtraHours={maxDailyExtraHours}
+        balanceCreditMultiplier={balanceCreditMultiplier}
         busy={busy}
         onAnchorsChange={applyAnchors}
         onMaxDailyExtraHoursChange={setMaxDailyExtraHours}
+        onBalanceCreditMultiplierChange={setBalanceCreditMultiplier}
         onSave={() => void savePlanner()}
       />
 

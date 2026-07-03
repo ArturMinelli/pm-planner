@@ -80,12 +80,16 @@ func FetchPlannerPayload(ctx context.Context, client *api.Client, dateStr string
 	if err != nil {
 		maxDailyExtraWork = time.Duration(config.DefaultMaxDailyExtraMinutes) * time.Minute
 	}
+	balanceCreditMultiplier, err := config.ResolveBalanceCreditMultiplier(cfg)
+	if err != nil {
+		balanceCreditMultiplier = config.DefaultBalanceCreditMultiplier
+	}
 	var balanceAdjustment *plan.BalanceAdjustment
 	var balanceErr string
 	if balance, err := client.FetchEmployeeBalance(ctx); err != nil {
 		balanceErr = err.Error()
 	} else {
-		adjustment := plan.CalculateBalanceAdjustment(baseTarget, maxDailyExtraWork, balance.TimeBalanceSecs, date, time.Now().In(loc))
+		adjustment := plan.CalculateBalanceAdjustment(baseTarget, maxDailyExtraWork, balance.TimeBalanceSecs, date, time.Now().In(loc), balanceCreditMultiplier)
 		balanceAdjustment = &adjustment
 	}
 

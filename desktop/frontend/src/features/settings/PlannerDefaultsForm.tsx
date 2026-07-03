@@ -2,6 +2,7 @@ import PlannerTimeInput from '../../components/PlannerTimeInput'
 import { Button, Card, Field } from '../../components/ui'
 import {
   builtinPlannerAnchors,
+  DEFAULT_BALANCE_CREDIT_MULTIPLIER,
   DEFAULT_MAX_DAILY_EXTRA_MINUTES,
 } from '../../util/plannerDefaults'
 import {
@@ -14,9 +15,11 @@ type AnchorField = keyof PlannerAnchorTimes
 type PlannerDefaultsFormProps = {
   anchors: PlannerAnchorTimes
   maxDailyExtraHours: string
+  balanceCreditMultiplier: string
   busy: boolean
   onAnchorsChange: (anchors: PlannerAnchorTimes) => void
   onMaxDailyExtraHoursChange: (value: string) => void
+  onBalanceCreditMultiplierChange: (value: string) => void
   onSave: () => void
 }
 
@@ -30,9 +33,11 @@ const ANCHOR_FIELDS: Array<{ field: AnchorField; label: string }> = [
 export default function PlannerDefaultsForm({
   anchors,
   maxDailyExtraHours,
+  balanceCreditMultiplier,
   busy,
   onAnchorsChange,
   onMaxDailyExtraHoursChange,
+  onBalanceCreditMultiplierChange,
   onSave,
 }: PlannerDefaultsFormProps) {
   const builtins = builtinPlannerAnchors()
@@ -82,7 +87,7 @@ export default function PlannerDefaultsForm({
         <Field
           id="settings-max-daily-extra"
           label="Limite Diário de Trabalho Extra (Horas)"
-          hint="Limita apenas a saída alternativa para pagar saldo negativo. O padrão é 3 horas; o crédito continua sendo calculado em 1,5x."
+          hint="Limita apenas a saída alternativa para pagar saldo negativo. O padrão é 3 horas."
         >
           <input
             id="settings-max-daily-extra"
@@ -97,6 +102,24 @@ export default function PlannerDefaultsForm({
             onChange={(event) => onMaxDailyExtraHoursChange(event.target.value)}
           />
         </Field>
+        <Field
+          id="settings-balance-credit-multiplier"
+          label="Multiplicador de Crédito do Banco de Horas"
+          hint="Taxa de crédito para saldo negativo: 1 hora trabalhada extra gera este múltiplo em crédito. Padrão: 1,5x. Intervalo: 1,0 a 3,0."
+        >
+          <input
+            id="settings-balance-credit-multiplier"
+            name="balance_credit_multiplier"
+            type="number"
+            min="1"
+            max="3"
+            step="0.1"
+            inputMode="decimal"
+            autoComplete="off"
+            value={balanceCreditMultiplier}
+            onChange={(event) => onBalanceCreditMultiplierChange(event.target.value)}
+          />
+        </Field>
         <div className="btn-row">
           <Button
             type="button"
@@ -105,6 +128,9 @@ export default function PlannerDefaultsForm({
               onAnchorsChange(builtinPlannerAnchors())
               onMaxDailyExtraHoursChange(
                 String(DEFAULT_MAX_DAILY_EXTRA_MINUTES / 60),
+              )
+              onBalanceCreditMultiplierChange(
+                String(DEFAULT_BALANCE_CREDIT_MULTIPLIER),
               )
             }}
             disabled={busy}
