@@ -6,7 +6,12 @@ set -euo pipefail
 
 readonly REPO_URL="https://github.com/ArturMinelli/pm-planner.git"
 readonly REPO_TARBALL_URL="https://github.com/ArturMinelli/pm-planner/archive/refs/heads/main.tar.gz"
-readonly DEFAULT_INSTALL_DIR="$HOME/pm-planner"
+case "$(uname -s)" in
+	Darwin) DEFAULT_INSTALL_DIR="$HOME/Library/Application Support/pm-planner" ;;
+	*)      DEFAULT_INSTALL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/pm-planner" ;;
+esac
+readonly DEFAULT_INSTALL_DIR
+readonly LEGACY_INSTALL_DIR="$HOME/pm-planner"
 readonly SETUP_URL="https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.sh"
 
 daemon_was_running=false
@@ -101,7 +106,57 @@ find_existing_install() {
 		echo "$DEFAULT_INSTALL_DIR"
 		return 0
 	fi
+	if is_project_root "$LEGACY_INSTALL_DIR"; then
+		echo "$LEGACY_INSTALL_DIR"
+		return 0
+	fi
 	return 1
+}
+
+migrate_install_dir() {
+	if ! is_project_root "$LEGACY_INSTALL_DIR"; then
+		return 0
+	fi
+
+	local new_dir="$DEFAULT_INSTALL_DIR"
+
+	if [[ "$(cd "$LEGACY_INSTALL_DIR" && pwd)" == "$(cd "$new_dir" 2>/dev/null && pwd)" ]]; then
+		return 0
+	fi
+
+	if is_project_root "$new_dir"; then
+		warn "Destino $new_dir já contém uma instalação válida. Removendo diretório legado $LEGACY_INSTALL_DIR..."
+		rm -rf "$LEGACY_INSTALL_DIR"
+		ok "Diretório legado removido"
+		return 0
+	fi
+
+	info "Migrando instalação de $LEGACY_INSTALL_DIR → $new_dir ..."
+	mkdir -p "$(dirname "$new_dir")"
+	mv "$LEGACY_INSTALL_DIR" "$new_dir"
+	ok "Instalação migrada para $new_dir"
+
+	local new_wrapper="$new_dir/scripts/auto-update.sh"
+	case "$(detect_os)" in
+		linux)
+			local desktop_file
+			desktop_file="$(_autoupdate_desktop_file)"
+			if [[ -f "$desktop_file" ]]; then
+				sed -i "s|Exec=bash \"[^\"]*auto-update\.sh\"|Exec=bash \"$new_wrapper\"|" "$desktop_file"
+				ok "Autostart atualizado: $desktop_file"
+			fi
+			;;
+		darwin)
+			local plist_file
+			plist_file="$(_autoupdate_plist_file)"
+			if [[ -f "$plist_file" ]]; then
+				launchctl unload "$plist_file" 2>/dev/null || true
+				sed -i '' "s|<string>[^<]*auto-update\.sh</string>|<string>$new_wrapper</string>|" "$plist_file"
+				launchctl load "$plist_file" 2>/dev/null || true
+				ok "LaunchAgent atualizado: $plist_file"
+			fi
+			;;
+	esac
 }
 
 fetch_project_tarball() {
@@ -450,6 +505,8 @@ main() {
 	echo ""
 	info "PM Planner — update ($(detect_os))"
 	echo ""
+
+	migrate_install_dir
 
 	local root
 	if ! root="$(find_existing_install)"; then
