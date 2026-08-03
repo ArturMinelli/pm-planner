@@ -30,7 +30,6 @@ const TOAST_AUTO_DISMISS_MS = 4200
 export default function SettingsPage() {
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
-  const [ttl, setTTL] = useState<string>('')
   const [maxDailyExtraHours, setMaxDailyExtraHours] = useState(
     String(DEFAULT_MAX_DAILY_EXTRA_MINUTES / 60),
   )
@@ -75,9 +74,6 @@ export default function SettingsPage() {
         const builtins = builtinPlannerAnchors()
         setLogin(c.login ?? '')
         setPassword(c.password ?? '')
-        if (c.cache_ttl_hours && c.cache_ttl_hours > 0) {
-          setTTL(String(c.cache_ttl_hours))
-        }
         setMaxDailyExtraHours(
           String(
             (c.max_daily_extra_minutes ?? DEFAULT_MAX_DAILY_EXTRA_MINUTES) / 60,
@@ -122,20 +118,11 @@ export default function SettingsPage() {
       showError(loginError)
       return
     }
-    const cache_ttl_hours = ttl.trim() === '' ? undefined : Number(ttl)
-    if (
-      ttl.trim() !== '' &&
-      (!Number.isFinite(cache_ttl_hours) || Number(cache_ttl_hours) <= 0)
-    ) {
-      showError('TTL deve ser um número positivo em horas.')
-      return
-    }
     setBusy(true)
     try {
       await backend.mergeAndSave({
         login: normalizeLoginCredential(login),
         password,
-        cache_ttl_hours,
       })
       showSuccess('Conta salva no arquivo de configuração compartilhado.')
     } catch (e) {
@@ -269,12 +256,10 @@ export default function SettingsPage() {
       <AccountSettingsForm
         login={login}
         password={password}
-        ttl={ttl}
         busy={busy}
         canTest={backend.hasWailsRuntime()}
         onLoginChange={setLogin}
         onPasswordChange={setPassword}
-        onTTLChange={setTTL}
         onSave={() => void saveAccount()}
         onTest={() => void test()}
       />

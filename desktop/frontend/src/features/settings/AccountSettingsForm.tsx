@@ -4,12 +4,10 @@ import { loginCredentialFieldMeta } from '../../util/loginCredential'
 type AccountSettingsFormProps = {
   login: string
   password: string
-  ttl: string
   busy: boolean
   canTest: boolean
   onLoginChange: (value: string) => void
   onPasswordChange: (value: string) => void
-  onTTLChange: (value: string) => void
   onSave: () => void
   onTest: () => void
 }
@@ -17,12 +15,10 @@ type AccountSettingsFormProps = {
 export default function AccountSettingsForm({
   login,
   password,
-  ttl,
   busy,
   canTest,
   onLoginChange,
   onPasswordChange,
-  onTTLChange,
   onSave,
   onTest,
 }: AccountSettingsFormProps) {
@@ -62,32 +58,6 @@ export default function AccountSettingsForm({
               autoComplete="current-password"
               value={password}
               onChange={(event) => onPasswordChange(event.target.value)}
-            />
-          </Field>
-          <Field
-            id="settings-cache-ttl"
-            label="Cache TTL em Horas"
-            hint={
-              <>
-                Quando a API não envia validade da sessão, limita há quantas
-                horas o arquivo{' '}
-                <code className="pill" translate="no">
-                  session.json
-                </code>{' '}
-                é reutilizado.
-              </>
-            }
-          >
-            <input
-              id="settings-cache-ttl"
-              name="cache_ttl_hours"
-              type="number"
-              min="1"
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder="8..."
-              value={ttl}
-              onChange={(event) => onTTLChange(event.target.value)}
             />
           </Field>
         </Stack>

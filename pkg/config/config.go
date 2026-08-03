@@ -25,7 +25,6 @@ type PlannerAnchors struct {
 type File struct {
 	Login                  string          `json:"login" yaml:"login"`
 	Password               string          `json:"password" yaml:"password"`
-	CacheTTLHours          int             `json:"cache_ttl_hours,omitempty" yaml:"cache_ttl_hours,omitempty"`
 	MaxDailyExtraMinutes   int             `json:"max_daily_extra_minutes,omitempty" yaml:"max_daily_extra_minutes,omitempty"`
 	BalanceCreditMultiplier float64        `json:"balance_credit_multiplier,omitempty" yaml:"balance_credit_multiplier,omitempty"`
 	Planner                *PlannerAnchors `json:"planner,omitempty" yaml:"planner,omitempty"`
@@ -36,7 +35,6 @@ type fileRaw struct {
 	Login                  string          `yaml:"login"`
 	Email                  string          `yaml:"email"`
 	Password               string          `yaml:"password"`
-	CacheTTLHours          int             `yaml:"cache_ttl_hours,omitempty"`
 	MaxDailyExtraMinutes   int             `yaml:"max_daily_extra_minutes,omitempty"`
 	BalanceCreditMultiplier float64        `yaml:"balance_credit_multiplier,omitempty"`
 	Planner                *PlannerAnchors `yaml:"planner,omitempty"`
@@ -122,7 +120,6 @@ func Read(cfgFileOverride string) (*File, error) {
 	f := &File{
 		Login:                   resolveLogin(raw.Login, raw.Email),
 		Password:                raw.Password,
-		CacheTTLHours:           raw.CacheTTLHours,
 		MaxDailyExtraMinutes:    raw.MaxDailyExtraMinutes,
 		BalanceCreditMultiplier: raw.BalanceCreditMultiplier,
 		Planner:                 raw.Planner,

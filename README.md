@@ -401,7 +401,6 @@ Exemplo de `config.yaml`:
 ```yaml
 login: "voce@empresa.com"
 password: "sua-senha"
-cache_ttl_hours: 8
 max_daily_extra_minutes: 180
 planner:
   in1: "08:00"
@@ -417,7 +416,6 @@ reminders:
 | Campo | Descrição |
 | --- | --- |
 | `login` / `password` | Credenciais de login do PontoMais (e-mail ou CPF). O campo legado `email` ainda é lido se `login` estiver ausente. |
-| `cache_ttl_hours` | Horas em que o cache de sessão local permanece válido quando a API não fornece uma data de expiração. Padrão: 8. |
 | `max_daily_extra_minutes` | Limite de trabalho extra usado para calcular a saída alternativa de quitação de saldo negativo. Padrão: 180 minutos. |
 | `planner.in1/out1/in2/out2` | Horários âncora padrão para os quatro campos de ponto. Usados tanto pelo `pm plan` quanto pelo planner do app desktop como sugestão inicial para o dia. |
 | `reminders.*` | Lembretes opt-in do app desktop. Quando ativados, `pm-desktop --daemon` verifica os horários recomendados e dispara notificações nativas. `lead_minutes` aceita vários avisos personalizados entre 1 e 240 minutos. |
@@ -525,7 +523,6 @@ Clique no ícone de configurações na barra lateral para configurar o app.
 **Conta e Sessão:**
 
 - Insira seu **login** (e-mail ou CPF) e **senha** do PontoMais.
-- Opcionalmente, defina o **Cache TTL em Horas** — quantas horas o cache de sessão local permanece válido quando a API não fornece data de expiração.
 - Clique em **Salvar Conta** para gravar no `config.yaml` compartilhado.
 - Clique em **Testar Login** para verificar as credenciais contra a API antes de salvar.
 

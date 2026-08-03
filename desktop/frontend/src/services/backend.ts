@@ -57,7 +57,6 @@ export async function getConfig(): Promise<PmConfig> {
     return {
       login: '',
       password: '',
-      cache_ttl_hours: undefined,
       max_daily_extra_minutes: DEFAULT_MAX_DAILY_EXTRA_MINUTES,
       balance_credit_multiplier: DEFAULT_BALANCE_CREDIT_MULTIPLIER,
       planner: builtinPlannerAnchors(),
@@ -76,13 +75,6 @@ export async function saveConfig(c: PmConfig): Promise<void> {
   const payload: PmConfig = {
     login: c.login,
     password: c.password,
-  }
-  if (
-    typeof c.cache_ttl_hours === 'number' &&
-    Number.isFinite(c.cache_ttl_hours) &&
-    c.cache_ttl_hours > 0
-  ) {
-    payload.cache_ttl_hours = Math.trunc(c.cache_ttl_hours)
   }
   if (
     typeof c.max_daily_extra_minutes === 'number' &&

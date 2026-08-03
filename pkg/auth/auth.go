@@ -20,6 +20,8 @@ import (
 // override it to point at an httptest server.
 var SignInURL = "https://api.pontomais.com.br/api/auth/sign_in"
 
+const defaultCacheTTLHours = 8
+
 type session struct {
 	AccessToken string    `json:"access_token"`
 	Token       string    `json:"token"`
@@ -164,12 +166,7 @@ func isSessionValid(s *session) bool {
 	if s.Expiry > 0 {
 		return time.Now().Unix() < s.Expiry
 	}
-	// Fallback TTL (hours) from config, default 8h
-	ttlHours := viper.GetInt("cache_ttl_hours")
-	if ttlHours <= 0 {
-		ttlHours = 8
-	}
-	return time.Since(s.CachedAt) < time.Duration(ttlHours)*time.Hour
+	return time.Since(s.CachedAt) < time.Duration(defaultCacheTTLHours)*time.Hour
 }
 
 func sessionToHeaders(s *session) map[string]string {

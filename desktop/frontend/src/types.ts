@@ -10,7 +10,6 @@ export interface PlannerAnchorsConfig {
 export interface PmConfig {
   login: string
   password: string
-  cache_ttl_hours?: number
   max_daily_extra_minutes?: number
   balance_credit_multiplier?: number
   planner?: PlannerAnchorsConfig
