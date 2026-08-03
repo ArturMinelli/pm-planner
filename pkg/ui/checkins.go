@@ -8,53 +8,69 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"pm-cli/pkg/app"
 	"pm-cli/pkg/plan"
 )
 
+// PlanModel holds the TUI state for the interactive planner.
 type PlanModel struct {
-	in1                textinput.Model
-	out1               textinput.Model
-	in2                textinput.Model
-	first              time.Duration
-	second             time.Duration
-	total              time.Duration
-	extra              time.Duration
-	out2Str            string
-	alternativeOut2Str string
-	originals          []time.Time
-	baseTarget         time.Duration
-	balance            *plan.BalanceAdjustment
-	balanceError       string
-	date               time.Time
-	focus              int
+	journeys        []plan.Journey
+	solvedSlot      plan.SolvedSlot
+	entryInputs     []textinput.Model
+	exitInputs      []textinput.Model
+	journeySpanSecs []int64
+	totalSpanSecs   int64
+	overtimeSecs    int64
+	alternativeTime string
+	warnings        []string
+	originals       []string
+	baseTarget      time.Duration
+	balance         *plan.BalanceAdjustment
+	balanceError    string
+	date            time.Time
+	focusedSlot     int
 }
 
-func NewPlanModel(date time.Time, baseTarget time.Duration, originals []time.Time, in1, out1, in2 string, balance *plan.BalanceAdjustment, balanceError string) PlanModel {
-	mk := func(val string) textinput.Model {
-		t := textinput.New()
-		t.Prompt = ""
-		t.CharLimit = 5
-		t.Placeholder = "HH:MM"
-		t.SetValue(val)
-		t.CursorStyle = lipgloss.NewStyle().Foreground(colors.Cursor)
-		t.TextStyle = lipgloss.NewStyle().Foreground(colors.InputText)
-		t.PlaceholderStyle = lipgloss.NewStyle().Foreground(colors.Placeholder)
-		return t
-	}
+func NewPlanModel(
+	date time.Time,
+	baseTarget time.Duration,
+	originals []string,
+	journeys []plan.Journey,
+	solvedSlot plan.SolvedSlot,
+	balance *plan.BalanceAdjustment,
+	balanceError string,
+) PlanModel {
 	m := PlanModel{
-		in1:          mk(in1),
-		out1:         mk(out1),
-		in2:          mk(in2),
+		journeys:     journeys,
+		solvedSlot:   solvedSlot,
 		originals:    originals,
 		baseTarget:   baseTarget,
 		balance:      balance,
 		balanceError: balanceError,
 		date:         date,
-		focus:        0,
+		focusedSlot:  0,
 	}
-	m.in1.Focus()
+	m.entryInputs = make([]textinput.Model, len(journeys))
+	m.exitInputs = make([]textinput.Model, len(journeys))
+	for i, journey := range journeys {
+		m.entryInputs[i] = newTimeInput(journey.Entry.Time)
+		m.exitInputs[i] = newTimeInput(journey.Exit.Time)
+	}
 	m.recalc()
+	m.syncFocus()
 	return m
+}
+
+func newTimeInput(value string) textinput.Model {
+	t := textinput.New()
+	t.Prompt = ""
+	t.CharLimit = 5
+	t.Placeholder = "HH:MM"
+	t.SetValue(value)
+	t.CursorStyle = lipgloss.NewStyle().Foreground(colors.Cursor)
+	t.TextStyle = lipgloss.NewStyle().Foreground(colors.InputText)
+	t.PlaceholderStyle = lipgloss.NewStyle().Foreground(colors.Placeholder)
+	return t
 }
 
 func (m *PlanModel) parse(s string) time.Time {
@@ -65,39 +81,320 @@ func (m *PlanModel) parse(s string) time.Time {
 	return time.Date(m.date.Year(), m.date.Month(), m.date.Day(), t.Hour(), t.Minute(), 0, 0, m.date.Location())
 }
 
-func (m *PlanModel) recalc() {
-	in1 := m.parse(m.in1.Value())
-	out1 := m.parse(m.out1.Value())
-	in2 := m.parse(m.in2.Value())
-
-	m.first = durBetween(in1, out1)
-	need := m.baseTarget - m.first
-	if need < 0 {
-		need = 0
-	}
-	if !in2.IsZero() {
-		out2 := in2.Add(need)
-		m.second = durBetween(in2, out2)
-		m.out2Str = out2.Format("15:04")
-		m.alternativeOut2Str = ""
-		if m.balance != nil && m.balance.AppliesToday && m.balance.TargetAdjustmentSecs != 0 {
-			alternativeNeed := time.Duration(m.balance.AdjustedTargetSecs)*time.Second - m.first
-			if alternativeNeed < 0 {
-				alternativeNeed = 0
-			}
-			m.alternativeOut2Str = in2.Add(alternativeNeed).Format("15:04")
+func (m *PlanModel) buildJourneysFromInputs() []plan.Journey {
+	journeys := make([]plan.Journey, len(m.journeys))
+	for i := range journeys {
+		journeys[i] = plan.Journey{
+			Entry: plan.ClockSlot{
+				Time:       m.entryInputs[i].Value(),
+				Registered: m.journeys[i].Entry.Registered,
+			},
+			Exit: plan.ClockSlot{
+				Time:       m.exitInputs[i].Value(),
+				Registered: m.journeys[i].Exit.Registered,
+			},
 		}
-	} else {
-		m.second = 0
-		m.out2Str = "--:--"
-		m.alternativeOut2Str = ""
 	}
-	m.total = m.first + m.second
-	extra := m.total - m.baseTarget
-	if extra < 0 {
-		extra = 0
+	return journeys
+}
+
+func (m *PlanModel) isSolved(journeyIndex int, isEntry bool) bool {
+	return m.solvedSlot.Valid() && m.solvedSlot.JourneyIndex == journeyIndex && m.solvedSlot.IsEntry == isEntry
+}
+
+func (m *PlanModel) recalc() {
+	journeys := m.buildJourneysFromInputs()
+	summary, err := app.RecalculatePlanner(m.date, int64(m.baseTarget.Seconds()), m.balance, journeys, m.solvedSlot)
+	if err != nil {
+		return
 	}
-	m.extra = extra
+	m.journeys = summary.Journeys
+	m.journeySpanSecs = summary.JourneySpanSecs
+	m.totalSpanSecs = summary.TotalSpanSecs
+	m.overtimeSecs = summary.OvertimeSecs
+	m.alternativeTime = summary.AlternativeTime
+	m.warnings = summary.Warnings
+	if m.solvedSlot.Valid() && m.solvedSlot.JourneyIndex < len(m.journeys) {
+		if m.solvedSlot.IsEntry {
+			m.entryInputs[m.solvedSlot.JourneyIndex].SetValue(m.journeys[m.solvedSlot.JourneyIndex].Entry.Time)
+		} else {
+			m.exitInputs[m.solvedSlot.JourneyIndex].SetValue(m.journeys[m.solvedSlot.JourneyIndex].Exit.Time)
+		}
+	}
+}
+
+// focusableSlots returns flat slot indexes that can receive focus (solved slot excluded).
+func (m *PlanModel) focusableSlots() []int {
+	slots := make([]int, 0, len(m.journeys)*2)
+	for i := range m.journeys {
+		if !m.isSolved(i, true) {
+			slots = append(slots, i*2)
+		}
+		if !m.isSolved(i, false) {
+			slots = append(slots, i*2+1)
+		}
+	}
+	return slots
+}
+
+func (m *PlanModel) moveFocus(delta int) {
+	slots := m.focusableSlots()
+	if len(slots) == 0 {
+		return
+	}
+	currentPosition := 0
+	for index, slot := range slots {
+		if slot == m.focusedSlot {
+			currentPosition = index
+			break
+		}
+	}
+	newPosition := (currentPosition + delta + len(slots)) % len(slots)
+	m.focusedSlot = slots[newPosition]
+}
+
+func (m *PlanModel) syncFocus() {
+	for i := range m.entryInputs {
+		m.entryInputs[i].Blur()
+	}
+	for i := range m.exitInputs {
+		m.exitInputs[i].Blur()
+	}
+	journeyIndex := m.focusedSlot / 2
+	isExitSlot := m.focusedSlot%2 == 1
+	if journeyIndex >= len(m.journeys) {
+		return
+	}
+	if isExitSlot {
+		m.exitInputs[journeyIndex].Focus()
+		return
+	}
+	m.entryInputs[journeyIndex].Focus()
+}
+
+func (m *PlanModel) adjustFocused(delta time.Duration) {
+	journeyIndex := m.focusedSlot / 2
+	isExitSlot := m.focusedSlot%2 == 1
+	if journeyIndex >= len(m.journeys) {
+		return
+	}
+	if isExitSlot {
+		m.adjustInput(&m.exitInputs[journeyIndex], delta)
+		return
+	}
+	m.adjustInput(&m.entryInputs[journeyIndex], delta)
+}
+
+func (m *PlanModel) adjustInput(input *textinput.Model, delta time.Duration) {
+	base := m.parse(input.Value())
+	if base.IsZero() {
+		return
+	}
+	input.SetValue(base.Add(delta).Format("15:04"))
+}
+
+func (m *PlanModel) addJourney() {
+	entryTime := ""
+	if len(m.journeys) > 0 {
+		lastJourney := m.journeys[len(m.journeys)-1]
+		previousExitTime := m.parse(lastJourney.Exit.Time)
+		if !previousExitTime.IsZero() {
+			entryTime = previousExitTime.Add(time.Hour).Format("15:04")
+		}
+	}
+	newJourney := plan.Journey{
+		Entry: plan.ClockSlot{Time: entryTime},
+		Exit:  plan.ClockSlot{},
+	}
+	m.journeys = append(m.journeys, newJourney)
+	m.entryInputs = append(m.entryInputs, newTimeInput(entryTime))
+	m.exitInputs = append(m.exitInputs, newTimeInput(""))
+	m.solvedSlot = plan.SolvedSlot{JourneyIndex: len(m.journeys) - 1, IsEntry: false}
+	m.focusedSlot = (len(m.journeys) - 1) * 2
+}
+
+func (m *PlanModel) removeLastJourney() {
+	if len(m.journeys) <= 1 {
+		return
+	}
+	lastIndex := len(m.journeys) - 1
+	lastJourney := m.journeys[lastIndex]
+	if lastJourney.Entry.Registered || lastJourney.Exit.Registered {
+		return
+	}
+	m.journeys = m.journeys[:lastIndex]
+	m.entryInputs = m.entryInputs[:lastIndex]
+	m.exitInputs = m.exitInputs[:lastIndex]
+	if m.solvedSlot.Valid() && m.solvedSlot.JourneyIndex >= lastIndex {
+		m.solvedSlot = plan.SolvedSlot{JourneyIndex: lastIndex - 1, IsEntry: false}
+	}
+	maxFocusableSlot := (lastIndex-1)*2 + 1
+	if m.focusedSlot > maxFocusableSlot {
+		m.focusedSlot = lastIndex * 2
+	}
+}
+
+func (m *PlanModel) normalizeInputs() {
+	for i := range m.entryInputs {
+		if m.isSolved(i, true) {
+			continue
+		}
+		normalizeTimeInput(&m.entryInputs[i])
+	}
+	for i := range m.exitInputs {
+		if m.isSolved(i, false) {
+			continue
+		}
+		normalizeTimeInput(&m.exitInputs[i])
+	}
+}
+
+func normalizeTimeInput(input *textinput.Model) {
+	value := input.Value()
+	if len(value) == 0 {
+		return
+	}
+	if !containsColon(value) && countDigits(value) == 4 {
+		input.SetValue(formatDigitsToHHMM(value))
+	}
+	if len(value) > 5 {
+		input.SetValue(value[:5])
+	}
+}
+
+func (m PlanModel) Init() tea.Cmd { return textinput.Blink }
+
+func (m PlanModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	keyMsg, isKeyMsg := msg.(tea.KeyMsg)
+	if !isKeyMsg {
+		return m.updateInputs(msg)
+	}
+
+	switch keyMsg.String() {
+	case "up":
+		m.adjustFocused(15 * time.Minute)
+		m.recalc()
+		return m, nil
+	case "down":
+		m.adjustFocused(-15 * time.Minute)
+		m.recalc()
+		return m, nil
+	case "tab":
+		m.moveFocus(1)
+		m.syncFocus()
+		return m, nil
+	case "shift+tab":
+		m.moveFocus(-1)
+		m.syncFocus()
+		return m, nil
+	case "+", "ctrl+a":
+		m.addJourney()
+		m.recalc()
+		m.syncFocus()
+		return m, nil
+	case "-", "ctrl+d":
+		m.removeLastJourney()
+		m.recalc()
+		m.syncFocus()
+		return m, nil
+	}
+
+	if keyMsg.Type == tea.KeyCtrlC || keyMsg.Type == tea.KeyEsc || keyMsg.Type == tea.KeyEnter {
+		return m, tea.Quit
+	}
+
+	return m.updateInputs(msg)
+}
+
+func (m PlanModel) updateInputs(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+	var cmd tea.Cmd
+	for i := range m.entryInputs {
+		if m.isSolved(i, true) {
+			continue
+		}
+		m.entryInputs[i], cmd = m.entryInputs[i].Update(msg)
+		cmds = append(cmds, cmd)
+	}
+	for i := range m.exitInputs {
+		if m.isSolved(i, false) {
+			continue
+		}
+		m.exitInputs[i], cmd = m.exitInputs[i].Update(msg)
+		cmds = append(cmds, cmd)
+	}
+	m.normalizeInputs()
+	m.recalc()
+	return m, tea.Batch(cmds...)
+}
+
+func (m PlanModel) View() string {
+	header := styles.Title.Render("Ponto Planner")
+	sub := styles.Subtitle.Render(m.date.Format("2006-01-02") + "  •  Meta " + fmtDur(m.baseTarget))
+	orig := styles.Muted.Render(originalsLine(m.originals))
+
+	journeyLines := make([]string, 0, len(m.journeys)*3)
+	for i, journey := range m.journeys {
+		journeyLines = append(journeyLines, styles.Subtitle.Render(fmt.Sprintf("Jornada %d", i+1)))
+
+		entryLabel := fmt.Sprintf("  Entrada %d", i+1)
+		if journey.Entry.Registered {
+			entryLabel += " (registrada)"
+		}
+		if m.isSolved(i, true) {
+			solvedValue := styles.Calculated.Render(journey.Entry.Time) + " " + styles.Muted.Render("◆ (calculado)")
+			journeyLines = append(journeyLines, row(entryLabel, solvedValue))
+		} else {
+			journeyLines = append(journeyLines, row(entryLabel, m.entryInputs[i].View()))
+		}
+
+		exitLabel := fmt.Sprintf("  Saída %d", i+1)
+		if journey.Exit.Registered {
+			exitLabel += " (registrada)"
+		}
+		if m.isSolved(i, false) {
+			solvedValue := styles.Calculated.Render(journey.Exit.Time) + " " + styles.Muted.Render("◆ (calculado)")
+			journeyLines = append(journeyLines, row(exitLabel, solvedValue))
+		} else {
+			journeyLines = append(journeyLines, row(exitLabel, m.exitInputs[i].View()))
+		}
+	}
+
+	inputs := lipgloss.JoinVertical(lipgloss.Left, journeyLines...)
+	if m.alternativeTime != "" && m.balance != nil {
+		inputs = lipgloss.JoinVertical(lipgloss.Left, inputs,
+			styles.Muted.Render("Horário alternativo: "+m.alternativeTime+" (banco "+fmtSignedMinutes(m.balance.BalanceSecs)+")"),
+		)
+	} else if m.balanceError != "" {
+		inputs = lipgloss.JoinVertical(lipgloss.Left, inputs, styles.Muted.Render(m.balanceError))
+	}
+	inputs = styles.Panel.Render(inputs)
+
+	summaryLines := make([]string, 0, len(m.journeys)+3)
+	summaryLines = append(summaryLines, row("Meta do Dia", fmtDur(m.baseTarget)))
+	for i := range m.journeys {
+		journeyLabel := fmt.Sprintf("%dª Jornada", i+1)
+		if i < len(m.journeySpanSecs) {
+			spanDuration := time.Duration(m.journeySpanSecs[i]) * time.Second
+			summaryLines = append(summaryLines, row(journeyLabel, fmtDur(spanDuration)))
+		}
+	}
+	summaryLines = append(summaryLines,
+		row("Total", fmtDur(time.Duration(m.totalSpanSecs)*time.Second)),
+		row("Hora Extra", fmtDur(time.Duration(m.overtimeSecs)*time.Second)),
+	)
+	resume := styles.Panel.Render(lipgloss.JoinVertical(lipgloss.Left, summaryLines...))
+
+	content := lipgloss.JoinHorizontal(lipgloss.Top, inputs, styles.Spacer, resume)
+	keys := styles.Keys.Render("↑/↓ ±15min • Tab/Shift+Tab alternar • +/Ctrl+A adicionar • -/Ctrl+D remover • Enter/Esc sair")
+	return lipgloss.JoinVertical(lipgloss.Left, header, sub, orig, styles.Gap, content, styles.Gap, keys)
+}
+
+func originalsLine(originals []string) string {
+	if len(originals) == 0 {
+		return "Registros originais: (nenhum)"
+	}
+	return "Registros originais: " + app.FormatOriginalStampStrings(originals)
 }
 
 func durBetween(a, b time.Time) time.Duration {
@@ -107,201 +404,14 @@ func durBetween(a, b time.Time) time.Duration {
 	return b.Sub(a)
 }
 
-func (m PlanModel) Init() tea.Cmd { return textinput.Blink }
-
-func (m PlanModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch k := msg.(type) {
-	case tea.KeyMsg:
-		switch k.String() {
-		case "up":
-			m.adjustFocused(15 * time.Minute)
-			m.recalc()
-			return m, nil
-		case "down":
-			m.adjustFocused(-15 * time.Minute)
-			m.recalc()
-			return m, nil
-		case "tab":
-			m.focus = (m.focus + 1) % 3
-			m.syncFocus()
-			m.recalc()
-			return m, nil
-		case "shift+tab":
-			m.focus = (m.focus + 2) % 3
-			m.syncFocus()
-			m.recalc()
-			return m, nil
-		}
-		if k.Type == tea.KeyCtrlC || k.Type == tea.KeyEsc || k.Type == tea.KeyEnter {
-			return m, tea.Quit
-		}
-	}
-	var cmds []tea.Cmd
-	var cmd tea.Cmd
-	m.in1, cmd = m.in1.Update(msg)
-	cmds = append(cmds, cmd)
-	m.out1, cmd = m.out1.Update(msg)
-	cmds = append(cmds, cmd)
-	m.in2, cmd = m.in2.Update(msg)
-	cmds = append(cmds, cmd)
-	m.normalizeInputs()
-	m.recalc()
-	return m, tea.Batch(cmds...)
-}
-
-func (m *PlanModel) normalizeInputs() {
-	n := func(t *textinput.Model) {
-		v := t.Value()
-		if len(v) == 0 {
-			return
-		}
-		if !containsColon(v) {
-			d := countDigits(v)
-			if d == 4 {
-				t.SetValue(formatDigitsToHHMM(v))
-			}
-		}
-		if len(v) > 5 {
-			t.SetValue(v[:5])
-		}
-	}
-	n(&m.in1)
-	n(&m.out1)
-	n(&m.in2)
-}
-
-func containsColon(s string) bool {
-	for i := 0; i < len(s); i++ {
-		if s[i] == ':' {
-			return true
-		}
-	}
-	return false
-}
-
-func countDigits(s string) int {
-	c := 0
-	for i := 0; i < len(s); i++ {
-		if s[i] >= '0' && s[i] <= '9' {
-			c++
-		}
-	}
-	return c
-}
-
-func formatDigitsToHHMM(s string) string {
-	digits := make([]rune, 0, len(s))
-	for _, r := range s {
-		if r >= '0' && r <= '9' {
-			digits = append(digits, r)
-		}
-	}
-	if len(digits) >= 4 {
-		h, _ := strconv.Atoi(string(digits[:2]))
-		m, _ := strconv.Atoi(string(digits[2:4]))
-		return fmt.Sprintf("%02d:%02d", h%24, clampMinute(m))
-	}
-	return string(digits)
-}
-
-func clampMinute(m int) int {
-	if m < 0 {
-		return 0
-	}
-	if m > 59 {
-		return 59
-	}
-	return m
-}
-
-func (m *PlanModel) adjustFocused(delta time.Duration) {
-	apply := func(t *textinput.Model) {
-		base := m.parse(t.Value())
-		if base.IsZero() {
-			return
-		}
-		t.SetValue(base.Add(delta).Format("15:04"))
-	}
-	switch m.focus {
-	case 0:
-		apply(&m.in1)
-	case 1:
-		apply(&m.out1)
-	case 2:
-		apply(&m.in2)
-	}
-}
-
-func (m *PlanModel) syncFocus() {
-	m.in1.Blur()
-	m.out1.Blur()
-	m.in2.Blur()
-	switch m.focus {
-	case 0:
-		m.in1.Focus()
-	case 1:
-		m.out1.Focus()
-	case 2:
-		m.in2.Focus()
-	}
-}
-
-func (m PlanModel) View() string {
-	header := styles.Title.Render("Ponto Planner")
-	sub := styles.Subtitle.Render(m.date.Format("2006-01-02") + "  •  Meta " + fmtDur(m.baseTarget))
-	orig := styles.Muted.Render(originalsLine(m.originals))
-
-	inputs := lipgloss.JoinVertical(lipgloss.Left,
-		row("Entrada 1", m.in1.View()),
-		row("Saída 1", m.out1.View()),
-		row("Entrada 2", m.in2.View()),
-		row("Saída 2", styles.Calculated.Render(m.out2Str)+" "+styles.Muted.Render("(calculado)")),
-	)
-	if m.alternativeOut2Str != "" && m.balance != nil {
-		inputs = lipgloss.JoinVertical(lipgloss.Left, inputs,
-			styles.Muted.Render("Saída 2 alternativa: "+m.alternativeOut2Str+" (banco "+fmtSignedMinutes(m.balance.BalanceSecs)+")"),
-		)
-	} else if m.balanceError != "" {
-		inputs = lipgloss.JoinVertical(lipgloss.Left, inputs, styles.Muted.Render(m.balanceError))
-	}
-	inputs = styles.Panel.Render(inputs)
-
-	resume := lipgloss.JoinVertical(lipgloss.Left,
-		row("Meta do Dia", fmtDur(m.baseTarget)),
-		row("1ª Jornada", fmtDur(m.first)),
-		row("2ª Jornada", fmtDur(m.second)),
-		row("Total", fmtDur(m.total)),
-		row("Hora Extra", fmtDur(m.extra)),
-	)
-	resume = styles.Panel.Render(resume)
-
-	content := lipgloss.JoinHorizontal(lipgloss.Top, inputs, styles.Spacer, resume)
-	keys := styles.Keys.Render("↑/↓ ±15min • Tab/Shift+Tab alternar • Enter/Esc sair")
-	return lipgloss.JoinVertical(lipgloss.Left, header, sub, orig, styles.Gap, content, styles.Gap, keys)
-}
-
-func originalsLine(ts []time.Time) string {
-	if len(ts) == 0 {
-		return "Registros originais: (nenhum)"
-	}
-	s := "Registros originais: "
-	for i, t := range ts {
-		if i > 0 {
-			s += ", "
-		}
-		s += t.Format("15:04")
-	}
-	return s
-}
-
 func fmtDur(d time.Duration) string {
 	if d < 0 {
 		d = 0
 	}
-	h := int(d.Hours())
-	m := int(d.Minutes()) % 60
-	s := int(d.Seconds()) % 60
-	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
+	totalHours := int(d.Hours())
+	minutes := int(d.Minutes()) % 60
+	seconds := int(d.Seconds()) % 60
+	return fmt.Sprintf("%02d:%02d:%02d", totalHours, minutes, seconds)
 }
 
 func fmtSignedMinutes(seconds int64) string {
@@ -315,6 +425,50 @@ func fmtSignedMinutes(seconds int64) string {
 	}
 	minutes := (seconds + 30) / 60
 	return fmt.Sprintf("%s%02d:%02d", sign, minutes/60, minutes%60)
+}
+
+func containsColon(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == ':' {
+			return true
+		}
+	}
+	return false
+}
+
+func countDigits(s string) int {
+	count := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] >= '0' && s[i] <= '9' {
+			count++
+		}
+	}
+	return count
+}
+
+func formatDigitsToHHMM(s string) string {
+	digits := make([]rune, 0, len(s))
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			digits = append(digits, r)
+		}
+	}
+	if len(digits) >= 4 {
+		hours, _ := strconv.Atoi(string(digits[:2]))
+		minutes, _ := strconv.Atoi(string(digits[2:4]))
+		return fmt.Sprintf("%02d:%02d", hours%24, clampMinute(minutes))
+	}
+	return string(digits)
+}
+
+func clampMinute(m int) int {
+	if m < 0 {
+		return 0
+	}
+	if m > 59 {
+		return 59
+	}
+	return m
 }
 
 var colors = struct {
@@ -384,7 +538,7 @@ var styles = func() struct {
 }()
 
 func row(label, value string) string {
-	l := styles.RowLabel.Render(label + ":")
-	v := styles.RowValue.Render(value)
-	return lipgloss.JoinHorizontal(lipgloss.Top, l, lipgloss.NewStyle().Width(2).Render(" "), v)
+	labelRendered := styles.RowLabel.Render(label + ":")
+	valueRendered := styles.RowValue.Render(value)
+	return lipgloss.JoinHorizontal(lipgloss.Top, labelRendered, lipgloss.NewStyle().Width(2).Render(" "), valueRendered)
 }

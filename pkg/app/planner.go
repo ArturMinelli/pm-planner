@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"pm-cli/pkg/api"
@@ -20,21 +21,21 @@ type PlannerPayload struct {
 	Balance        *plan.BalanceAdjustment `json:"balance,omitempty"`
 	BalanceError   string                  `json:"balanceError,omitempty"`
 	OriginalTimes  []string                `json:"originalTimes"`
-	In1            string                  `json:"in1"`
-	Out1           string                  `json:"out1"`
-	In2            string                  `json:"in2"`
-	Out2           string                  `json:"out2"`
+	Journeys       []plan.Journey          `json:"journeys"`
+	SolvedSlot     plan.SolvedSlot         `json:"solvedSlot"`
 	OriginalsLine  string                  `json:"originalsLine"`
+	LoadWarning    string                  `json:"loadWarning,omitempty"`
 }
 
-// PlannerSummary is returned when recalculating from editable clock strings.
+// PlannerSummary is returned when recalculating from editable journey inputs.
 type PlannerSummary struct {
-	Out2            string `json:"out2"`
-	AlternativeOut2 string `json:"alternativeOut2,omitempty"`
-	FirstSpanSecs   int64  `json:"firstSpanSecs"`
-	SecondSpanSecs  int64  `json:"secondSpanSecs"`
-	TotalSpanSecs   int64  `json:"totalSpanSecs"`
-	OvertimeSecs    int64  `json:"overtimeSecs"`
+	Journeys        []plan.Journey `json:"journeys"`
+	SolvedSlot      plan.SolvedSlot `json:"solvedSlot"`
+	JourneySpanSecs []int64        `json:"journeySpanSecs"`
+	TotalSpanSecs   int64          `json:"totalSpanSecs"`
+	OvertimeSecs    int64          `json:"overtimeSecs"`
+	AlternativeTime string         `json:"alternativeTime,omitempty"`
+	Warnings        []string       `json:"warnings,omitempty"`
 }
 
 // FetchPlannerPayload loads the work day and builds suggestion fields (same pipeline as CLI `pm plan`).
@@ -93,27 +94,17 @@ func FetchPlannerPayload(ctx context.Context, client *api.Client, dateStr string
 		balanceAdjustment = &adjustment
 	}
 
-	anchors := plan.BuiltinAnchors()
-	if cfg != nil {
-		if resolved, err := config.ResolvePlannerAnchors(cfg); err == nil {
-			anchors = resolved
-		}
+	anchors, _ := config.ResolvePlannerAnchors(cfg)
+
+	stampStrings := make([]string, len(stamps))
+	for i, t := range stamps {
+		stampStrings[i] = t.Format("15:04")
 	}
 
-	sug, err := plan.Suggest(date, stamps, periods, baseTarget, anchors)
+	day, err := plan.SuggestDay(date, stampStrings, periods, baseTarget, anchors)
 	if err != nil {
 		return nil, err
 	}
-
-	in1Str := sug.In1.Format("15:04")
-	out1Str := sug.Out1.Format("15:04")
-	in2Str := sug.In2.Format("15:04")
-	out2Str := sug.Out2.Format("15:04")
-	if sug.Out2.IsZero() {
-		out2Str = plan.ComputeOut2(in1Str, out1Str, in2Str, baseTarget, date)
-	}
-
-	orig := FormatOriginalStamps(stamps)
 
 	return &PlannerPayload{
 		Date:           dateStr,
@@ -121,56 +112,125 @@ func FetchPlannerPayload(ctx context.Context, client *api.Client, dateStr string
 		Balance:        balanceAdjustment,
 		BalanceError:   balanceErr,
 		OriginalTimes:  OriginalStampStrings(stamps),
-		In1:            in1Str,
-		Out1:           out1Str,
-		In2:            in2Str,
-		Out2:           out2Str,
-		OriginalsLine:  orig,
+		Journeys:       day.Journeys,
+		SolvedSlot:     day.SolvedSlot,
+		OriginalsLine:  FormatOriginalStamps(stamps),
 	}, nil
 }
 
-// RecalculatePlanner updates out2 and segment summaries from edited HH:mm inputs.
-func RecalculatePlanner(dateStr string, baseTargetSecs int64, balance *plan.BalanceAdjustment, in1, out1, in2 string) (*PlannerSummary, error) {
+// BuildDefaultsPlannerPayload builds a settings-based planner payload when the API is unavailable.
+// Two unregistered journeys use resolved anchor times; solved exit is the last journey; no balance.
+func BuildDefaultsPlannerPayload(dateStr string) (*PlannerPayload, error) {
+	if dateStr == "" {
+		dateStr = time.Now().Format("2006-01-02")
+	}
+
 	loc := time.Now().Location()
 	date, err := time.ParseInLocation("2006-01-02", dateStr, loc)
 	if err != nil {
 		return nil, fmt.Errorf("date: %w", err)
 	}
-	baseTarget := time.Duration(baseTargetSecs) * time.Second
-	if baseTarget <= 0 {
-		baseTarget = defaultPlannerTarget
-	}
-	out2 := plan.ComputeOut2(in1, out1, in2, baseTarget, date)
-	alternativeOut2 := ""
-	if balance != nil && balance.AppliesToday && balance.TargetAdjustmentSecs != 0 {
-		alternativeTarget := time.Duration(balance.AdjustedTargetSecs) * time.Second
-		alternativeOut2 = plan.ComputeOut2(in1, out1, in2, alternativeTarget, date)
+
+	cfg, _ := config.Read("")
+	anchors, _ := config.ResolvePlannerAnchors(cfg)
+	if len(anchors) < 4 {
+		builtin := plan.BuiltinAnchors()
+		anchors = []string{builtin[0], builtin[1], builtin[2], builtin[3]}
 	}
 
-	first, second, total, extra := plan.SegmentDurations(in1, out1, in2, out2, baseTarget, date)
-	return &PlannerSummary{
-		Out2:            out2,
-		AlternativeOut2: alternativeOut2,
-		FirstSpanSecs:   int64(first.Seconds()),
-		SecondSpanSecs:  int64(second.Seconds()),
-		TotalSpanSecs:   int64(total.Seconds()),
-		OvertimeSecs:    int64(extra.Seconds()),
+	journeys := []plan.Journey{
+		{
+			Entry: plan.ClockSlot{Time: anchors[0], Registered: false},
+			Exit:  plan.ClockSlot{Time: anchors[1], Registered: false},
+		},
+		{
+			Entry: plan.ClockSlot{Time: anchors[2], Registered: false},
+			Exit:  plan.ClockSlot{Time: anchors[3], Registered: false},
+		},
+	}
+	solvedSlot := plan.SolvedSlot{JourneyIndex: 1, IsEntry: false}
+	day := plan.SolveSlot(
+		plan.Day{Journeys: journeys, SolvedSlot: solvedSlot},
+		defaultPlannerTarget,
+		solvedSlot,
+		date,
+	)
+
+	return &PlannerPayload{
+		Date:           dateStr,
+		BaseTargetSecs: int64(defaultPlannerTarget.Seconds()),
+		OriginalTimes:  []string{},
+		Journeys:       day.Journeys,
+		SolvedSlot:     solvedSlot,
+		OriginalsLine:  "(nenhum)",
 	}, nil
 }
 
-// FormatOriginalStamps matches CLI wording for huh note / display.
+// RecalculatePlanner recomputes the solved slot and segment summaries from journey inputs.
+func RecalculatePlanner(date time.Time, baseTargetSecs int64, balance *plan.BalanceAdjustment, journeys []plan.Journey, solvedSlot plan.SolvedSlot) (*PlannerSummary, error) {
+	target := time.Duration(baseTargetSecs) * time.Second
+	if target <= 0 {
+		target = defaultPlannerTarget
+	}
+
+	day := plan.Day{Journeys: journeys, SolvedSlot: solvedSlot}
+	day = plan.SolveSlot(day, target, solvedSlot, date)
+
+	summary := plan.Summarize(day, target, date)
+
+	alternativeTime := computeAlternativeTime(day, baseTargetSecs, solvedSlot, balance, date)
+
+	return &PlannerSummary{
+		Journeys:        summary.Journeys,
+		SolvedSlot:      summary.SolvedSlot,
+		JourneySpanSecs: summary.JourneySpanSecs,
+		TotalSpanSecs:   summary.TotalSpanSecs,
+		OvertimeSecs:    summary.OvertimeSecs,
+		AlternativeTime: alternativeTime,
+		Warnings:        summary.Warnings,
+	}, nil
+}
+
+func computeAlternativeTime(day plan.Day, baseTargetSecs int64, solvedSlot plan.SolvedSlot, balance *plan.BalanceAdjustment, date time.Time) string {
+	if balance == nil || !balance.AppliesToday || balance.TargetAdjustmentSecs == 0 {
+		return ""
+	}
+	if !solvedSlot.Valid() {
+		return ""
+	}
+	adjustedTargetSecs := baseTargetSecs + balance.TargetAdjustmentSecs
+	adjustedTarget := time.Duration(adjustedTargetSecs) * time.Second
+	altDay := plan.SolveSlot(day, adjustedTarget, solvedSlot, date)
+	if solvedSlot.JourneyIndex >= len(altDay.Journeys) {
+		return ""
+	}
+	solvedJourney := altDay.Journeys[solvedSlot.JourneyIndex]
+	if solvedSlot.IsEntry {
+		return solvedJourney.Entry.Time
+	}
+	return solvedJourney.Exit.Time
+}
+
+// FormatOriginalStamps formats clock stamps as one journey per line (entry — exit).
 func FormatOriginalStamps(stamps []time.Time) string {
+	return FormatOriginalStampStrings(OriginalStampStrings(stamps))
+}
+
+// FormatOriginalStampStrings formats HH:mm stamps as one journey per line (entry — exit).
+func FormatOriginalStampStrings(stamps []string) string {
 	if len(stamps) == 0 {
 		return "(nenhum)"
 	}
-	s := ""
-	for i, t := range stamps {
-		if i > 0 {
-			s += ", "
+
+	lines := make([]string, 0, (len(stamps)+1)/2)
+	for index := 0; index < len(stamps); index += 2 {
+		if index+1 < len(stamps) {
+			lines = append(lines, stamps[index]+" — "+stamps[index+1])
+			continue
 		}
-		s += t.Format("15:04")
+		lines = append(lines, stamps[index])
 	}
-	return s
+	return strings.Join(lines, "\n")
 }
 
 // OriginalStampStrings is the same times as HH:mm list.

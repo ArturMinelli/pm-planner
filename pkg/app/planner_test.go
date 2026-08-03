@@ -42,7 +42,7 @@ func TestFetchPlannerPayloadAppliesTodayBalance(t *testing.T) {
 	if payload.Balance == nil || payload.Balance.TargetAdjustmentSecs != 3600 {
 		t.Fatalf("balance: %#v", payload.Balance)
 	}
-	if payload.Out2 == "" {
+	if !payload.SolvedSlot.Valid() || payload.SolvedSlot.JourneyIndex >= len(payload.Journeys) || payload.Journeys[payload.SolvedSlot.JourneyIndex].Exit.Time == "" {
 		t.Fatal("normal clockout should remain available")
 	}
 }
@@ -66,8 +66,14 @@ func TestFetchPlannerPayloadKeepsPlanningWhenBalanceFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if payload.Balance != nil || payload.BalanceError == "" || payload.Out2 == "" {
-		t.Fatalf("payload should retain normal plan with balance error: %#v", payload)
+	if payload.Balance != nil {
+		t.Fatalf("expected no balance: %#v", payload.Balance)
+	}
+	if payload.BalanceError == "" {
+		t.Fatal("expected balance error")
+	}
+	if !payload.SolvedSlot.Valid() || payload.SolvedSlot.JourneyIndex >= len(payload.Journeys) || payload.Journeys[payload.SolvedSlot.JourneyIndex].Exit.Time == "" {
+		t.Fatal("normal clockout should remain available")
 	}
 }
 
@@ -106,12 +112,21 @@ func TestRecalculatePlannerKeepsNormalClockoutPrimary(t *testing.T) {
 		TargetAdjustmentSecs: 3600,
 		AdjustedTargetSecs:   9.5 * 60 * 60,
 	}
-	got, err := RecalculatePlanner("2026-06-09", 8.5*60*60, &balance, "08:00", "12:00", "13:30")
+	date, _ := time.Parse("2006-01-02", "2026-06-09")
+	journeys := []plan.Journey{
+		{Entry: plan.ClockSlot{Time: "08:00", Registered: true}, Exit: plan.ClockSlot{Time: "12:00", Registered: true}},
+		{Entry: plan.ClockSlot{Time: "13:30", Registered: true}, Exit: plan.ClockSlot{Registered: false}},
+	}
+	solvedSlot := plan.SolvedSlot{JourneyIndex: 1, IsEntry: false}
+	got, err := RecalculatePlanner(date, 8.5*60*60, &balance, journeys, solvedSlot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Out2 != "18:00" || got.AlternativeOut2 != "19:00" {
-		t.Fatalf("clockouts: %#v", got)
+	if got.SolvedSlot != solvedSlot || got.Journeys[1].Exit.Time != "18:00" {
+		t.Fatalf("normal clockout: %#v", got)
+	}
+	if got.AlternativeTime != "19:00" {
+		t.Fatalf("alternative time: got %q, want 19:00", got.AlternativeTime)
 	}
 	if got.TotalSpanSecs != 8.5*60*60 || got.OvertimeSecs != 0 {
 		t.Fatalf("normal totals changed by balance: %#v", got)
@@ -144,14 +159,23 @@ func TestRecalculatePlannerSupportsEarlierAndCappedAlternatives(t *testing.T) {
 			alternative: "21:00",
 		},
 	}
+	date, _ := time.Parse("2006-01-02", "2026-06-09")
+	journeys := []plan.Journey{
+		{Entry: plan.ClockSlot{Time: "08:00", Registered: true}, Exit: plan.ClockSlot{Time: "12:00", Registered: true}},
+		{Entry: plan.ClockSlot{Time: "13:30", Registered: true}, Exit: plan.ClockSlot{Registered: false}},
+	}
+	solvedSlot := plan.SolvedSlot{JourneyIndex: 1, IsEntry: false}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := RecalculatePlanner("2026-06-09", 8.5*60*60, &tt.balance, "08:00", "12:00", "13:30")
+			got, err := RecalculatePlanner(date, 8.5*60*60, &tt.balance, journeys, solvedSlot)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got.Out2 != "18:00" || got.AlternativeOut2 != tt.alternative {
-				t.Fatalf("clockouts: %#v", got)
+			if got.Journeys[1].Exit.Time != "18:00" {
+				t.Fatalf("normal clockout: %q, want 18:00", got.Journeys[1].Exit.Time)
+			}
+			if got.AlternativeTime != tt.alternative {
+				t.Fatalf("alternative time: got %q, want %q", got.AlternativeTime, tt.alternative)
 			}
 			if got.TotalSpanSecs != 8.5*60*60 || got.OvertimeSecs != 0 {
 				t.Fatalf("normal totals changed by alternative: %#v", got)
@@ -166,12 +190,136 @@ func TestRecalculatePlannerHidesNonTodayAlternative(t *testing.T) {
 		TargetAdjustmentSecs: -3600,
 		AdjustedTargetSecs:   7.5 * 60 * 60,
 	}
-	got, err := RecalculatePlanner("2026-06-08", 8.5*60*60, &balance, "08:00", "12:00", "13:30")
+	date, _ := time.Parse("2006-01-02", "2026-06-08")
+	journeys := []plan.Journey{
+		{Entry: plan.ClockSlot{Time: "08:00", Registered: true}, Exit: plan.ClockSlot{Time: "12:00", Registered: true}},
+		{Entry: plan.ClockSlot{Time: "13:30", Registered: true}, Exit: plan.ClockSlot{Registered: false}},
+	}
+	solvedSlot := plan.SolvedSlot{JourneyIndex: 1, IsEntry: false}
+	got, err := RecalculatePlanner(date, 8.5*60*60, &balance, journeys, solvedSlot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Out2 != "18:00" || got.AlternativeOut2 != "" {
-		t.Fatalf("non-today clockouts: %#v", got)
+	if got.Journeys[1].Exit.Time != "18:00" {
+		t.Fatalf("normal clockout: %q, want 18:00", got.Journeys[1].Exit.Time)
+	}
+	if got.AlternativeTime != "" {
+		t.Fatalf("non-today should have no alternative: %q", got.AlternativeTime)
+	}
+}
+
+func TestBuildDefaultsPlannerPayloadShape(t *testing.T) {
+	setupPlannerSession(t)
+
+	payload, err := BuildDefaultsPlannerPayload("2026-06-09")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if payload.Date != "2026-06-09" {
+		t.Fatalf("date: %q", payload.Date)
+	}
+	if payload.BaseTargetSecs != int64(defaultPlannerTarget.Seconds()) {
+		t.Fatalf("base target: %d", payload.BaseTargetSecs)
+	}
+	if payload.Balance != nil || payload.BalanceError != "" {
+		t.Fatalf("defaults should omit balance: %#v / %q", payload.Balance, payload.BalanceError)
+	}
+	if payload.OriginalsLine != "(nenhum)" {
+		t.Fatalf("originals: %q", payload.OriginalsLine)
+	}
+	if len(payload.OriginalTimes) != 0 {
+		t.Fatalf("original times: %#v", payload.OriginalTimes)
+	}
+	if len(payload.Journeys) != 2 {
+		t.Fatalf("journey count: %d", len(payload.Journeys))
+	}
+	for journeyIndex, journey := range payload.Journeys {
+		if journey.Entry.Registered || journey.Exit.Registered {
+			t.Fatalf("journey %d should be unregistered: %#v", journeyIndex, journey)
+		}
+		if journey.Entry.Time == "" || journey.Exit.Time == "" {
+			t.Fatalf("journey %d missing times: %#v", journeyIndex, journey)
+		}
+	}
+	if !payload.SolvedSlot.Valid() || payload.SolvedSlot.JourneyIndex != 1 || payload.SolvedSlot.IsEntry {
+		t.Fatalf("solved slot: %#v", payload.SolvedSlot)
+	}
+	if payload.LoadWarning != "" {
+		t.Fatalf("builder should not set load warning: %q", payload.LoadWarning)
+	}
+}
+
+func TestFormatOriginalStampStrings(t *testing.T) {
+	tests := []struct {
+		name   string
+		stamps []string
+		want   string
+	}{
+		{
+			name:   "empty",
+			stamps: nil,
+			want:   "(nenhum)",
+		},
+		{
+			name:   "single stamp",
+			stamps: []string{"08:00"},
+			want:   "08:00",
+		},
+		{
+			name:   "one journey",
+			stamps: []string{"08:00", "18:00"},
+			want:   "08:00 — 18:00",
+		},
+		{
+			name:   "two journeys",
+			stamps: []string{"08:00", "12:00", "13:00", "18:00"},
+			want:   "08:00 — 12:00\n13:00 — 18:00",
+		},
+		{
+			name:   "odd stamp count",
+			stamps: []string{"08:00", "12:00", "13:00"},
+			want:   "08:00 — 12:00\n13:00",
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := FormatOriginalStampStrings(testCase.stamps); got != testCase.want {
+				t.Fatalf("FormatOriginalStampStrings() = %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestBuildDefaultsPlannerPayloadUsesConfiguredAnchors(t *testing.T) {
+	setupPlannerSession(t)
+	if err := config.Save("", &config.File{
+		Planner: &config.PlannerAnchors{
+			In1:  "07:30",
+			Out1: "11:30",
+			In2:  "12:30",
+			Out2: "17:00",
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	payload, err := BuildDefaultsPlannerPayload("2026-06-09")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if payload.Journeys[0].Entry.Time != "07:30" || payload.Journeys[0].Exit.Time != "11:30" {
+		t.Fatalf("journey 1: %#v", payload.Journeys[0])
+	}
+	if payload.Journeys[1].Entry.Time != "12:30" {
+		t.Fatalf("journey 2 entry: %#v", payload.Journeys[1])
+	}
+	if !payload.SolvedSlot.Valid() || payload.SolvedSlot.JourneyIndex != 1 || payload.SolvedSlot.IsEntry {
+		t.Fatalf("solved slot: %#v", payload.SolvedSlot)
+	}
+	// Solved exit is recomputed from target; with these anchors remaining is 4h30 → 17:00.
+	if payload.Journeys[1].Exit.Time != "17:00" {
+		t.Fatalf("solved exit time: %q", payload.Journeys[1].Exit.Time)
 	}
 }
 

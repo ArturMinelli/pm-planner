@@ -16,6 +16,21 @@ export interface PmConfig {
   reminders?: ReminderSettings
 }
 
+export interface ClockSlot {
+  time: string
+  registered: boolean
+}
+
+export interface SolvedSlot {
+  journeyIndex: number
+  isEntry: boolean
+}
+
+export interface Journey {
+  entry: ClockSlot
+  exit: ClockSlot
+}
+
 /** Mirrors pkg/app payloads */
 export interface PlannerPayload {
   date: string
@@ -23,20 +38,28 @@ export interface PlannerPayload {
   balance?: BalanceAdjustment
   balanceError?: string
   originalTimes: string[]
-  in1: string
-  out1: string
-  in2: string
-  out2: string
+  journeys: Journey[]
+  solvedSlot: SolvedSlot
   originalsLine: string
+  loadWarning?: string
 }
 
 export interface PlannerSummary {
-  out2: string
-  alternativeOut2?: string
-  firstSpanSecs: number
-  secondSpanSecs: number
+  journeys: Journey[]
+  solvedSlot: SolvedSlot
+  journeySpanSecs: number[]
   totalSpanSecs: number
   overtimeSecs: number
+  alternativeTime?: string
+  warnings?: string[]
+}
+
+export interface RecalculateRequest {
+  date: string
+  baseTargetSecs: number
+  balance?: BalanceAdjustment
+  journeys: Journey[]
+  solvedSlot: SolvedSlot
 }
 
 export interface BalanceAdjustment {

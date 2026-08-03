@@ -1,156 +1,103 @@
 package plan
 
 import "time"
-
 // BuiltinAnchors are default clock targets (HH:MM) for Entrada1 → Saída1 → Entrada2 → Saída2.
 // Legacy shorthand "0008" means **08:00**, not midnight 00:08.
 func BuiltinAnchors() [4]string {
 	return [4]string{"08:00", "12:00", "13:30", "18:00"}
 }
 
-func absDur(d time.Duration) time.Duration {
-	if d < 0 {
-		return -d
+func absInt(value int) int {
+	if value < 0 {
+		return -value
 	}
-	return d
+	return value
 }
 
-func anchorCost(stamp, anchor time.Time) time.Duration {
-	return absDur(stamp.Sub(anchor))
+// parseHHMMToMinutes parses a "15:04" string and returns hours*60+minutes.
+// Returns 0 for invalid input.
+func parseHHMMToMinutes(hhmm string) int {
+	parsed, err := time.Parse("15:04", hhmm)
+	if err != nil {
+		return 0
+	}
+	return parsed.Hour()*60 + parsed.Minute()
 }
 
-// AssignStampsToPlannerSlots maps chronological stamps to the four planner slots.
-// Returned slice has length 4: each slot is the stamp index in sorted stamps, or -1.
-func AssignStampsToPlannerSlots(sorted []time.Time, date time.Time, anchorsHM [4]string) [4]int {
-	return assignStampsToPlannerSlots(sorted, date, anchorsHM)
-}
+// assignStampsToPlannerSlots uses order-preserving DP to assign all stamps to the
+// minimum-cost subset of slots. All stamps must be assigned (slotCount >= len(stamps)).
+// Returns a []string of length len(anchors): each element is the assigned stamp time or "".
+func assignStampsToPlannerSlots(stamps []string, anchors []string) []string {
+	numSlots := len(anchors)
+	result := make([]string, numSlots)
 
-// anchorCombinations returns all C(4,k) increasing index tuples drawn from {0,1,2,3}.
-func anchorCombinations(k int) [][]int {
-	if k <= 0 || k > 4 {
-		return nil
-	}
-	var out [][]int
-	var build func(start int, cur []int)
-	build = func(start int, cur []int) {
-		if len(cur) == k {
-			cp := make([]int, k)
-			copy(cp, cur)
-			out = append(out, cp)
-			return
-		}
-		for i := start; i < 4; i++ {
-			cur = append(cur, i)
-			build(i+1, cur)
-			cur = cur[:len(cur)-1]
-		}
-	}
-	build(0, nil)
-	return out
-}
-
-// assignStampsToPlannerSlots selects up to four increasing stamp indices and maps each to one
-// of four planner anchors (order-preserving), minimizing summed |stamp−anchor|.
-// Returned slice has length 4: each slot is the stamp index in sorted chronological stamps, or -1 if none.
-func assignStampsToPlannerSlots(sorted []time.Time, date time.Time, anchorsHM [4]string) [4]int {
-	fail := func() [4]int {
-		var r [4]int
-		for i := range r {
-			r[i] = -1
-		}
-		return r
+	if len(stamps) == 0 || numSlots == 0 {
+		return result
 	}
 
-	n := len(sorted)
-	var anchors [4]time.Time
-	for i, hhmm := range anchorsHM {
-		at, err := parseClock(hhmm, date)
-		if err != nil {
-			return fail()
-		}
-		anchors[i] = at
+	numStamps := len(stamps)
+
+	stampMinutes := make([]int, numStamps)
+	for stampIndex, stamp := range stamps {
+		stampMinutes[stampIndex] = parseHHMMToMinutes(stamp)
 	}
 
-	var best [4]int
-	for i := range best {
-		best[i] = -1
+	anchorMinutes := make([]int, numSlots)
+	for slotIndex, anchor := range anchors {
+		anchorMinutes[slotIndex] = parseHHMMToMinutes(anchor)
 	}
-	found := false
-	var bestCost time.Duration
 
-	improveIfBetter := func(anchorIx []int, stampIx []int) {
-		cost := time.Duration(0)
-		for j := range anchorIx {
-			cost += anchorCost(sorted[stampIx[j]], anchors[anchorIx[j]])
+	const maxCost = int(^uint(0) >> 1)
+
+	// dp[i][j] = min cost to assign stamps[0..i-1] to i slots chosen from anchors[0..j-1].
+	// All i stamps must be assigned; slots may be skipped (left empty).
+	dp := make([][]int, numStamps+1)
+	for rowIndex := range dp {
+		dp[rowIndex] = make([]int, numSlots+1)
+		for colIndex := range dp[rowIndex] {
+			dp[rowIndex][colIndex] = maxCost
 		}
-		if !found || cost < bestCost {
-			found = true
-			bestCost = cost
-			for i := range best {
-				best[i] = -1
+	}
+	for colIndex := 0; colIndex <= numSlots; colIndex++ {
+		dp[0][colIndex] = 0
+	}
+
+	for stampIndex := 1; stampIndex <= numStamps; stampIndex++ {
+		for slotIndex := 1; slotIndex <= numSlots; slotIndex++ {
+			// Option 1: skip slot slotIndex-1 (leave it empty).
+			skipSlotCost := dp[stampIndex][slotIndex-1]
+
+			// Option 2: assign stamp stampIndex-1 to slot slotIndex-1.
+			assignCost := maxCost
+			if dp[stampIndex-1][slotIndex-1] < maxCost {
+				assignCost = dp[stampIndex-1][slotIndex-1] + absInt(stampMinutes[stampIndex-1]-anchorMinutes[slotIndex-1])
 			}
-			for j := range anchorIx {
-				best[anchorIx[j]] = stampIx[j]
+
+			if assignCost < skipSlotCost {
+				dp[stampIndex][slotIndex] = assignCost
+			} else {
+				dp[stampIndex][slotIndex] = skipSlotCost
 			}
 		}
 	}
 
-	if n >= 4 {
-		combos := anchorCombinations(4)
-		if len(combos) == 0 || len(combos[0]) != 4 {
-			return fail()
+	// Backtrack to reconstruct the assignment.
+	stampIndex := numStamps
+	slotIndex := numSlots
+	for stampIndex > 0 && slotIndex > 0 {
+		assignCost := maxCost
+		if dp[stampIndex-1][slotIndex-1] < maxCost {
+			assignCost = dp[stampIndex-1][slotIndex-1] + absInt(stampMinutes[stampIndex-1]-anchorMinutes[slotIndex-1])
 		}
-		anc := combos[0]
-		var walk func(startIx int, picks []int)
-		walk = func(startIx int, picks []int) {
-			if len(picks) == 4 {
-				improveIfBetter(anc, picks)
-				return
-			}
-			need := 4 - len(picks)
-			for ix := startIx; ix <= n-need; ix++ {
-				walk(ix+1, append(picks, ix))
-			}
-		}
-		walk(0, nil)
-	} else {
-		k := n
-		for _, anc := range anchorCombinations(k) {
-			var walk func(startIx int, picks []int)
-			walk = func(startIx int, picks []int) {
-				if len(picks) == k {
-					improveIfBetter(anc, picks)
-					return
-				}
-				need := k - len(picks)
-				for ix := startIx; ix <= n-need; ix++ {
-					walk(ix+1, append(picks, ix))
-				}
-			}
-			walk(0, nil)
-		}
-	}
 
-	used := make([]bool, n)
-	for _, ix := range best {
-		if ix >= 0 {
-			used[ix] = true
-		}
-	}
-	var loose []int
-	for i := 0; i < n; i++ {
-		if !used[i] {
-			loose = append(loose, i)
-		}
-	}
-	li := 0
-	for si := 0; si < 4 && li < len(loose); si++ {
-		if best[si] >= 0 {
+		if dp[stampIndex][slotIndex] == assignCost {
+			result[slotIndex-1] = stamps[stampIndex-1]
+			stampIndex--
+			slotIndex--
 			continue
 		}
-		best[si] = loose[li]
-		li++
+		slotIndex--
 	}
 
-	return best
+	return result
 }

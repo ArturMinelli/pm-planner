@@ -21,13 +21,13 @@ func (p *PlannerAnchors) anySet() bool {
 }
 
 // ResolvePlannerAnchors merges config with built-in defaults. Invalid stored values fall back per slot.
-func ResolvePlannerAnchors(f *File) ([4]string, error) {
+func ResolvePlannerAnchors(f *File) ([]string, error) {
 	return mergePlannerAnchors(f, false)
 }
 
-func mergePlannerAnchors(f *File, strict bool) ([4]string, error) {
-	builtins := plan.BuiltinAnchors()
-	out := builtins
+func mergePlannerAnchors(f *File, strict bool) ([]string, error) {
+	builtinArray := plan.BuiltinAnchors()
+	out := []string{builtinArray[0], builtinArray[1], builtinArray[2], builtinArray[3]}
 	if f == nil || f.Planner == nil {
 		return out, nil
 	}
@@ -62,7 +62,10 @@ func hhmmToMinutes(s string) (int, bool) {
 }
 
 // ValidatePlannerAnchors checks four HH:MM values are strictly increasing with at least minAnchorGapMinutes between slots.
-func ValidatePlannerAnchors(anchors [4]string) error {
+func ValidatePlannerAnchors(anchors []string) error {
+	if len(anchors) != 4 {
+		return fmt.Errorf("expected 4 anchor slots, got %d", len(anchors))
+	}
 	mins := make([]int, 4)
 	for i, s := range anchors {
 		if !validHHMM(s) {

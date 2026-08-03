@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"sort"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -30,83 +29,161 @@ var planCmd = &cobra.Command{
 		ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
 		defer cancel()
 
-		st, err := app.FetchPlannerPayload(ctx, client, planDate)
+		payload, warning, err := loadPlanPayload(ctx, client, planDate)
 		if err != nil {
 			return err
 		}
-
-		loc := time.Now().Location()
-		date, _ := time.ParseInLocation("2006-01-02", planDate, loc)
-
-		stamps := make([]time.Time, 0, len(st.OriginalTimes))
-		for _, s := range st.OriginalTimes {
-			if t, err := api.ParseHHMMOnDate(s, date); err == nil {
-				stamps = append(stamps, t)
-			}
-		}
-		sort.Slice(stamps, func(i, j int) bool { return stamps[i].Before(stamps[j]) })
-
-		baseTarget := time.Duration(st.BaseTargetSecs) * time.Second
-
-		in1Str := st.In1
-		out1Str := st.Out1
-		in2Str := st.In2
-
-		if live {
-			m := ui.NewPlanModel(date, baseTarget, stamps, in1Str, out1Str, in2Str, st.Balance, balanceUnavailableToday(date, st.BalanceError))
-			p := tea.NewProgram(m)
-			if _, err := p.Run(); err != nil {
-				return err
-			}
-			return nil
+		if warning != "" {
+			fmt.Fprintln(cmd.ErrOrStderr(), warning)
 		}
 
-		out2Str := st.Out2
-		initialSummary, _ := app.RecalculatePlanner(planDate, st.BaseTargetSecs, st.Balance, in1Str, out1Str, in2Str)
-		fields := []huh.Field{
-			huh.NewNote().Title("Registros originais").Description(formatStamps(stamps)),
-			huh.NewInput().Title("Entrada 1").Value(&in1Str),
-			huh.NewInput().Title("Saída 1").Value(&out1Str),
-			huh.NewInput().Title("Entrada 2").Value(&in2Str),
-			huh.NewNote().Title("Saída 2").Description(out2Str),
-		}
-		if initialSummary != nil {
-			if line := formatAlternativeClockout(initialSummary.AlternativeOut2, st.Balance); line != "" {
-				fields = append(fields, huh.NewNote().Title("Opção de banco").Description(line))
-			}
-		}
-		if warning := balanceUnavailableToday(date, st.BalanceError); warning != "" {
-			fields = append(fields, huh.NewNote().Title("Banco de horas").Description(warning))
-		}
-		form := huh.NewForm(
-			huh.NewGroup(fields...),
-		)
-		if err := form.Run(); err != nil {
-			return err
-		}
-
-		alternativeOut2 := ""
-		if sum, err := app.RecalculatePlanner(planDate, st.BaseTargetSecs, st.Balance, in1Str, out1Str, in2Str); err == nil {
-			out2Str = sum.Out2
-			alternativeOut2 = sum.AlternativeOut2
-		}
-
-		fmt.Println()
-		fmt.Printf("Entrada 1: %s\nSaída 1: %s\nEntrada 2: %s\nSaída 2: %s\n", in1Str, out1Str, in2Str, out2Str)
-		if line := formatAlternativeClockout(alternativeOut2, st.Balance); line != "" {
-			fmt.Println(line)
-		} else if warning := balanceUnavailableToday(date, st.BalanceError); warning != "" {
-			fmt.Println(warning)
-		}
-		return nil
+		return runPlanWithPayload(planDate, payload, live)
 	},
 }
 
-func formatAlternativeClockout(out2 string, balance *plan.BalanceAdjustment) string {
-	if out2 == "" || balance == nil || !balance.AppliesToday || balance.TargetAdjustmentSecs == 0 {
+const planDefaultsWarning = "aviso: não foi possível carregar o dia; usando padrões do planner"
+
+func loadPlanPayload(
+	ctx context.Context,
+	client *api.Client,
+	dateStr string,
+) (*app.PlannerPayload, string, error) {
+	payload, err := app.FetchPlannerPayload(ctx, client, dateStr)
+	if err == nil {
+		return payload, "", nil
+	}
+
+	defaultsPayload, defaultsErr := app.BuildDefaultsPlannerPayload(dateStr)
+	if defaultsErr != nil {
+		return nil, "", err
+	}
+	return defaultsPayload, planDefaultsWarning, nil
+}
+
+func runPlanWithPayload(dateStr string, payload *app.PlannerPayload, liveMode bool) error {
+	loc := time.Now().Location()
+	date, _ := time.ParseInLocation("2006-01-02", dateStr, loc)
+	baseTarget := time.Duration(payload.BaseTargetSecs) * time.Second
+
+	if liveMode {
+		model := ui.NewPlanModel(
+			date,
+			baseTarget,
+			payload.OriginalTimes,
+			payload.Journeys,
+			payload.SolvedSlot,
+			payload.Balance,
+			balanceUnavailableToday(date, payload.BalanceError),
+		)
+		program := tea.NewProgram(model)
+		if _, runErr := program.Run(); runErr != nil {
+			return runErr
+		}
+		return nil
+	}
+
+	return runFormFlow(date, payload)
+}
+
+// journeyEditInputs holds mutable string fields for a single journey's form inputs.
+type journeyEditInputs struct {
+	entryTime string
+	exitTime  string
+}
+
+func runFormFlow(date time.Time, payload *app.PlannerPayload) error {
+	editableJourneys := buildEditableJourneys(payload.Journeys)
+
+	fields := buildFormFields(payload, editableJourneys)
+	form := huh.NewForm(huh.NewGroup(fields...))
+	if err := form.Run(); err != nil {
+		return err
+	}
+
+	updatedJourneys := applyEditsToJourneys(payload.Journeys, editableJourneys)
+	summary, err := app.RecalculatePlanner(date, payload.BaseTargetSecs, payload.Balance, updatedJourneys, payload.SolvedSlot)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println()
+	for index, journey := range summary.Journeys {
+		fmt.Printf("Entrada %d: %s\nSaída %d: %s\n", index+1, journey.Entry.Time, index+1, journey.Exit.Time)
+	}
+	if line := formatAlternativeTime(summary.AlternativeTime, payload.Balance); line != "" {
+		fmt.Println(line)
+	} else if warning := balanceUnavailableToday(date, payload.BalanceError); warning != "" {
+		fmt.Println(warning)
+	}
+	return nil
+}
+
+func buildEditableJourneys(journeys []plan.Journey) []journeyEditInputs {
+	editable := make([]journeyEditInputs, len(journeys))
+	for i, journey := range journeys {
+		editable[i] = journeyEditInputs{
+			entryTime: journey.Entry.Time,
+			exitTime:  journey.Exit.Time,
+		}
+	}
+	return editable
+}
+
+func buildFormFields(payload *app.PlannerPayload, editableJourneys []journeyEditInputs) []huh.Field {
+	fields := []huh.Field{
+		huh.NewNote().Title("Registros originais").Description(formatStamps(payload.OriginalTimes)),
+	}
+	for i := range editableJourneys {
+		entrySolved := payload.SolvedSlot.Valid() && payload.SolvedSlot.JourneyIndex == i && payload.SolvedSlot.IsEntry
+		exitSolved := payload.SolvedSlot.Valid() && payload.SolvedSlot.JourneyIndex == i && !payload.SolvedSlot.IsEntry
+
+		if entrySolved {
+			fields = append(fields,
+				huh.NewNote().Title(fmt.Sprintf("Entrada %d (calculado)", i+1)).Description(editableJourneys[i].entryTime),
+			)
+		} else {
+			fields = append(fields,
+				huh.NewInput().Title(fmt.Sprintf("Entrada %d", i+1)).Value(&editableJourneys[i].entryTime),
+			)
+		}
+		if exitSolved {
+			fields = append(fields,
+				huh.NewNote().Title(fmt.Sprintf("Saída %d (calculado)", i+1)).Description(editableJourneys[i].exitTime),
+			)
+		} else {
+			fields = append(fields,
+				huh.NewInput().Title(fmt.Sprintf("Saída %d", i+1)).Value(&editableJourneys[i].exitTime),
+			)
+		}
+	}
+	if warning := balanceUnavailableToday(time.Now(), payload.BalanceError); warning != "" {
+		fields = append(fields, huh.NewNote().Title("Banco de horas").Description(warning))
+	}
+	return fields
+}
+
+func applyEditsToJourneys(original []plan.Journey, editable []journeyEditInputs) []plan.Journey {
+	updated := make([]plan.Journey, len(original))
+	for i, journey := range original {
+		updated[i] = plan.Journey{
+			Entry: plan.ClockSlot{
+				Time:       editable[i].entryTime,
+				Registered: journey.Entry.Registered,
+			},
+			Exit: plan.ClockSlot{
+				Time:       editable[i].exitTime,
+				Registered: journey.Exit.Registered,
+			},
+		}
+	}
+	return updated
+}
+
+func formatAlternativeTime(alternativeTime string, balance *plan.BalanceAdjustment) string {
+	if alternativeTime == "" || balance == nil || !balance.AppliesToday || balance.TargetAdjustmentSecs == 0 {
 		return ""
 	}
-	return fmt.Sprintf("Saída 2 alternativa: %s (banco %s)", out2, formatSignedMinutes(balance.BalanceSecs))
+	return fmt.Sprintf("Horário alternativo: %s (banco %s)", alternativeTime, formatSignedMinutes(balance.BalanceSecs))
 }
 
 func formatSignedMinutes(seconds int64) string {
@@ -127,21 +204,21 @@ func balanceUnavailableToday(date time.Time, balanceError string) string {
 	if balanceError == "" || date.Year() != now.Year() || date.YearDay() != now.YearDay() {
 		return ""
 	}
-	return "Saldo indisponível; Saída 2 normal mantida."
+	return "Saldo indisponível; Saída normal mantida."
 }
 
-func formatStamps(stamps []time.Time) string {
+func formatStamps(stamps []string) string {
 	if len(stamps) == 0 {
 		return "(nenhum)"
 	}
-	s := ""
-	for i, t := range stamps {
+	result := ""
+	for i, stamp := range stamps {
 		if i > 0 {
-			s += ", "
+			result += ", "
 		}
-		s += t.Format("15:04")
+		result += stamp
 	}
-	return s
+	return result
 }
 
 func init() {

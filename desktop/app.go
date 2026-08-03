@@ -9,6 +9,7 @@ import (
 	"pm-cli/pkg/app"
 	"pm-cli/pkg/auth"
 	"pm-cli/pkg/config"
+	"pm-cli/pkg/plan"
 )
 
 // App is the Wails bind target; methods are exposed to the React frontend.
@@ -63,7 +64,26 @@ func (a *App) TestAuth(login, password string) string {
 	return ""
 }
 
+// RecalculateRequest carries the editable planner state sent from the frontend.
+type RecalculateRequest struct {
+	Date           string                  `json:"date"`
+	BaseTargetSecs int64                   `json:"baseTargetSecs"`
+	Balance        *plan.BalanceAdjustment `json:"balance,omitempty"`
+	Journeys       []plan.Journey          `json:"journeys"`
+	SolvedSlot     plan.SolvedSlot         `json:"solvedSlot"`
+}
+
+// RecalculateDay recomputes the solved slot and journey summaries from frontend-editable inputs.
+func (a *App) RecalculateDay(req RecalculateRequest) (*app.PlannerSummary, error) {
+	date, err := time.Parse("2006-01-02", req.Date)
+	if err != nil {
+		return nil, err
+	}
+	return app.RecalculatePlanner(date, req.BaseTargetSecs, req.Balance, req.Journeys, req.SolvedSlot)
+}
+
 // LoadPlanner fetches the work day and builds suggested clock times (shared with CLI).
+// On fetch failure it falls back to Settings defaults and sets LoadWarning.
 func (a *App) LoadPlanner(date string) (*app.PlannerPayload, error) {
 	if a.ctx == nil {
 		a.ctx = context.Background()
@@ -71,5 +91,16 @@ func (a *App) LoadPlanner(date string) (*app.PlannerPayload, error) {
 	cl := api.New()
 	ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)
 	defer cancel()
-	return app.FetchPlannerPayload(ctx, cl, date)
+
+	payload, err := app.FetchPlannerPayload(ctx, cl, date)
+	if err == nil {
+		return payload, nil
+	}
+
+	payload, defaultsErr := app.BuildDefaultsPlannerPayload(date)
+	if defaultsErr != nil {
+		return nil, err
+	}
+	payload.LoadWarning = "Não foi possível carregar o dia; usando padrões do planner."
+	return payload, nil
 }

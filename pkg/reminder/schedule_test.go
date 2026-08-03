@@ -26,7 +26,7 @@ func TestBuildScheduleUsesLeadMinutes(t *testing.T) {
 	day := &DayPlan{
 		Date: date.Format("2006-01-02"),
 		Slots: []Slot{
-			{Key: SlotIn1, Label: "Entrada 1", Time: date.Add(8 * time.Hour)},
+			{Key: SlotKey(0, false), Label: SlotLabel(0, false), Time: date.Add(8 * time.Hour)},
 		},
 	}
 	settings, err := config.ResolveReminders(&config.File{
@@ -52,7 +52,7 @@ func TestDueRemindersHonorsDeliveryWindowAndDedupe(t *testing.T) {
 	day := &DayPlan{
 		Date: date.Format("2006-01-02"),
 		Slots: []Slot{
-			{Key: SlotIn1, Label: "Entrada 1", Time: date.Add(8 * time.Hour)},
+			{Key: SlotKey(0, false), Label: SlotLabel(0, false), Time: date.Add(8 * time.Hour)},
 		},
 	}
 	settings, err := config.ResolveReminders(&config.File{
@@ -84,7 +84,7 @@ func TestNextWakeReturnsImmediateForDueReminder(t *testing.T) {
 	day := &DayPlan{
 		Date: date.Format("2006-01-02"),
 		Slots: []Slot{
-			{Key: SlotIn1, Label: "Entrada 1", Time: date.Add(8 * time.Hour)},
+			{Key: SlotKey(0, false), Label: SlotLabel(0, false), Time: date.Add(8 * time.Hour)},
 		},
 	}
 	settings, err := config.ResolveReminders(&config.File{

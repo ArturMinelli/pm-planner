@@ -32,15 +32,15 @@ func TestResolvePlannerAnchors_partialAndInvalid(t *testing.T) {
 }
 
 func TestValidatePlannerAnchors_rejectsOrder(t *testing.T) {
-	err := ValidatePlannerAnchors([4]string{"08:00", "12:00", "12:10", "18:00"})
+	err := ValidatePlannerAnchors([]string{"08:00", "12:00", "12:10", "18:00"})
 	if err == nil || !strings.Contains(err.Error(), "15 minutes") {
 		t.Fatalf("expected gap error, got %v", err)
 	}
 }
 
 func TestValidatePlannerAnchors_acceptsCustom(t *testing.T) {
-	a := [4]string{"07:30", "11:30", "12:30", "17:00"}
-	if err := ValidatePlannerAnchors(a); err != nil {
+	anchors := []string{"07:30", "11:30", "12:30", "17:00"}
+	if err := ValidatePlannerAnchors(anchors); err != nil {
 		t.Fatal(err)
 	}
 }

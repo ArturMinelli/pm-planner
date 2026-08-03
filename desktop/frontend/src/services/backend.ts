@@ -1,8 +1,10 @@
 import type {
   NotificationPermissionStatus,
+  PlannerSummary,
   PmConfig,
   PlannerAnchorsConfig,
   PlannerPayload,
+  RecalculateRequest,
   ReminderSettings,
   ReminderStatus,
 } from '../types'
@@ -18,6 +20,7 @@ interface GoPmApp {
   SaveConfig(c: PmConfig): Promise<void>
   TestAuth(login: string, password: string): Promise<string>
   LoadPlanner(date: string): Promise<PlannerPayload>
+  RecalculateDay(request: RecalculateRequest): Promise<PlannerSummary>
   GetReminderStatus(): Promise<ReminderStatus>
   SaveReminderSettings(settings: ReminderSettings): Promise<void>
   RequestNotificationPermission(): Promise<NotificationPermissionStatus>
@@ -120,6 +123,10 @@ export async function testAuth(
 
 export async function loadPlanner(date: string): Promise<PlannerPayload> {
   return requireRuntime().LoadPlanner(date)
+}
+
+export async function recalculateDay(request: RecalculateRequest): Promise<PlannerSummary> {
+  return requireRuntime().RecalculateDay(request)
 }
 
 export async function getReminderStatus(): Promise<ReminderStatus> {
