@@ -16,7 +16,6 @@ readonly DEFAULT_INSTALL_DIR
 readonly PATH_MARKER="# pm-planner setup"
 
 CHECK_ONLY=0
-NO_AUTOUPDATE=0
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -38,35 +37,25 @@ Instala dependências, compila e instala a CLI (pm) e o app desktop do PM Planne
 
 Opções:
   --check-only    Apenas verifica dependências, sem instalar nem compilar
-  --no-autoupdate Remove o registro de auto-atualização do OS (padrão: registrar)
   --help          Exibe esta ajuda
-
-Variáveis de ambiente (úteis com curl | bash):
-  PM_NO_AUTOUPDATE=1  Equivalente a --no-autoupdate
 
 Exemplos:
   curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.sh | bash
   git clone https://github.com/ArturMinelli/pm-planner.git && cd pm-planner
   ./scripts/setup.sh
-  ./scripts/setup.sh --no-autoupdate
 EOF
-}
-
-apply_env_flags() {
-	case "${PM_NO_AUTOUPDATE:-}" in
-		1|true|yes|TRUE|YES|True) NO_AUTOUPDATE=1 ;;
-	esac
 }
 
 parse_args() {
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-			--build)         shift ;; # obsoleto: compilação é o comportamento padrão
-			--check-only)    CHECK_ONLY=1; shift ;;
-			--autoupdate)    shift ;; # obsoleto: auto-atualização já é o padrão
-			--no-autoupdate) NO_AUTOUPDATE=1; shift ;;
-			--help|-h)       usage; exit 0 ;;
-			*)               die "Opção desconhecida: $1 (use --help)" ;;
+			--build)      shift ;; # obsoleto: compilação é o comportamento padrão
+			--check-only) CHECK_ONLY=1; shift ;;
+			# Obsoletos: a auto-atualização diária foi removida em favor do botão
+			# "Atualizar" nas configurações do app.
+			--autoupdate|--no-autoupdate) shift ;;
+			--help|-h)    usage; exit 0 ;;
+			*)            die "Opção desconhecida: $1 (use --help)" ;;
 		esac
 	done
 }
@@ -511,71 +500,17 @@ _autoupdate_plist_file() {
 	echo "$HOME/Library/LaunchAgents/com.pm-planner.autoupdate.plist"
 }
 
-install_autoupdate() {
-	local root="$1"
-	local wrapper="$root/scripts/auto-update.sh"
-
-	chmod +x "$wrapper" 2>/dev/null || true
-
-	case "$(detect_os)" in
-		linux)
-			local autostart_dir="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
-			local desktop_file="$autostart_dir/pm-planner-autoupdate.desktop"
-			mkdir -p "$autostart_dir"
-			cat > "$desktop_file" <<EOF
-[Desktop Entry]
-Type=Application
-Name=PM Planner Auto Update
-Comment=Atualiza o PM Planner automaticamente uma vez por dia ao fazer login
-Exec=bash "$wrapper"
-Hidden=false
-NoDisplay=true
-X-GNOME-Autostart-enabled=true
-EOF
-			ok "Auto-atualização registrada: $desktop_file"
-			;;
-		darwin)
-			local agents_dir="$HOME/Library/LaunchAgents"
-			local plist_file="$agents_dir/com.pm-planner.autoupdate.plist"
-			mkdir -p "$agents_dir"
-			cat > "$plist_file" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>Label</key>
-	<string>com.pm-planner.autoupdate</string>
-	<key>ProgramArguments</key>
-	<array>
-		<string>/bin/bash</string>
-		<string>$wrapper</string>
-	</array>
-	<key>RunAtLoad</key>
-	<true/>
-	<key>StandardOutPath</key>
-	<string>/dev/null</string>
-	<key>StandardErrorPath</key>
-	<string>/dev/null</string>
-</dict>
-</plist>
-EOF
-			launchctl load "$plist_file" 2>/dev/null || true
-			ok "Auto-atualização registrada: $plist_file"
-			;;
-	esac
-	info "Log de auto-atualização: ${XDG_CACHE_HOME:-$HOME/.cache}/pm/autoupdate.log"
-}
-
-uninstall_autoupdate() {
+# A auto-atualização diária foi substituída pelo botão "Atualizar" nas
+# configurações do app. Instalações antigas ainda têm o registro no OS, então
+# todo setup o remove. Silencioso quando não há nada registrado.
+remove_legacy_autoupdate() {
 	case "$(detect_os)" in
 		linux)
 			local desktop_file
 			desktop_file="$(_autoupdate_desktop_file)"
 			if [[ -f "$desktop_file" ]]; then
 				rm -f "$desktop_file"
-				ok "Auto-atualização removida ($desktop_file)"
-			else
-				warn "Auto-atualização não estava registrada"
+				ok "Auto-atualização diária removida ($desktop_file)"
 			fi
 			;;
 		darwin)
@@ -584,9 +519,7 @@ uninstall_autoupdate() {
 			if [[ -f "$plist_file" ]]; then
 				launchctl unload "$plist_file" 2>/dev/null || true
 				rm -f "$plist_file"
-				ok "Auto-atualização removida ($plist_file)"
-			else
-				warn "Auto-atualização não estava registrada"
+				ok "Auto-atualização diária removida ($plist_file)"
 			fi
 			;;
 	esac
@@ -621,7 +554,6 @@ print_next_steps() {
 }
 
 main() {
-	apply_env_flags
 	parse_args "$@"
 
 	echo ""
@@ -649,20 +581,7 @@ main() {
 
 	run_doctor || true
 
-	if [[ "$NO_AUTOUPDATE" -eq 1 ]]; then
-		uninstall_autoupdate
-	elif [[ "$CHECK_ONLY" -eq 0 ]]; then
-		local au_root=""
-		au_root="$(find_project_root 2>/dev/null)" || true
-		if [[ -z "$au_root" ]] && is_project_root "$DEFAULT_INSTALL_DIR"; then
-			au_root="$DEFAULT_INSTALL_DIR"
-		fi
-		if [[ -n "$au_root" ]]; then
-			install_autoupdate "$au_root"
-		else
-			warn "Não foi possível localizar o diretório do projeto para registrar a auto-atualização"
-		fi
-	fi
+	remove_legacy_autoupdate
 
 	print_next_steps
 	echo ""

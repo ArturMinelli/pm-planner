@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as backend from '../services/backend'
-import type { ReminderSettings } from '../types'
+import type { ReminderSettings, UpdateStatus } from '../types'
 import {
   builtinPlannerAnchors,
   DEFAULT_BALANCE_CREDIT_MULTIPLIER,
@@ -20,6 +20,7 @@ import { Banner, Page, PageHeader, Toast } from '../components/ui'
 import AccountSettingsForm from '../features/settings/AccountSettingsForm'
 import PlannerDefaultsForm from '../features/settings/PlannerDefaultsForm'
 import ReminderSettingsForm from '../features/settings/ReminderSettingsForm'
+import UpdateSettingsForm from '../features/settings/UpdateSettingsForm'
 
 type SettingsToast = {
   tone: 'success' | 'error'
@@ -42,6 +43,9 @@ export default function SettingsPage() {
   )
   const [toast, setToast] = useState<SettingsToast | null>(null)
   const [busy, setBusy] = useState(false)
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
+  const [checkingUpdate, setCheckingUpdate] = useState(false)
+  const [updating, setUpdating] = useState(false)
 
   const dismissToast = useCallback(() => {
     setToast(null)
@@ -100,6 +104,20 @@ export default function SettingsPage() {
       }
     })()
   }, [showError])
+
+  // An update runs while the app is closed, so its outcome is only reported here.
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const result = await backend.consumeUpdateResult()
+        if (!result) return
+        if (result.ok) showSuccess(result.message)
+        else showError(result.message)
+      } catch (e) {
+        showError(e)
+      }
+    })()
+  }, [showError, showSuccess])
 
   const applyAnchors = (next: PlannerAnchorTimes) => {
     setAnchors(enforceAnchorOrder(next))
@@ -201,6 +219,31 @@ export default function SettingsPage() {
     }
   }
 
+  const checkUpdate = async () => {
+    dismissToast()
+    setCheckingUpdate(true)
+    try {
+      setUpdateStatus(await backend.checkForUpdate())
+    } catch (e) {
+      showError(e)
+    } finally {
+      setCheckingUpdate(false)
+    }
+  }
+
+  const startUpdate = async () => {
+    dismissToast()
+    setUpdating(true)
+    try {
+      await backend.startUpdate()
+      showSuccess('Atualizando: o app será fechado e reaberto automaticamente.')
+    } catch (e) {
+      // The app stays open when the updater fails to start.
+      showError(e)
+      setUpdating(false)
+    }
+  }
+
   const test = async () => {
     dismissToast()
     if (!backend.hasWailsRuntime()) {
@@ -281,6 +324,15 @@ export default function SettingsPage() {
         canUseRuntime={backend.hasWailsRuntime()}
         onSettingsChange={setReminders}
         onSave={() => void saveReminders()}
+      />
+
+      <UpdateSettingsForm
+        status={updateStatus}
+        checking={checkingUpdate}
+        updating={updating}
+        canUseRuntime={backend.hasWailsRuntime()}
+        onCheck={() => void checkUpdate()}
+        onUpdate={() => void startUpdate()}
       />
 
       {toast ? (

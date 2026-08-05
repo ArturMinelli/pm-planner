@@ -5,6 +5,8 @@ import type {
   PlannerPayload,
   ReminderSettings,
   ReminderStatus,
+  UpdateResult,
+  UpdateStatus,
 } from '../types'
 import {
   builtinPlannerAnchors,
@@ -12,6 +14,7 @@ import {
   DEFAULT_MAX_DAILY_EXTRA_MINUTES,
 } from '../util/plannerDefaults'
 import { defaultReminderSettings, normalizeReminderSettings } from '../util/reminderSettings'
+import { browserUpdateStatus } from '../util/updateStatus'
 
 interface GoPmApp {
   GetConfig(): Promise<PmConfig>
@@ -21,6 +24,9 @@ interface GoPmApp {
   GetReminderStatus(): Promise<ReminderStatus>
   SaveReminderSettings(settings: ReminderSettings): Promise<void>
   RequestNotificationPermission(): Promise<NotificationPermissionStatus>
+  CheckForUpdate(): Promise<UpdateStatus>
+  StartUpdate(): Promise<void>
+  ConsumeUpdateResult(): Promise<UpdateResult | null>
 }
 
 function goApp(): GoPmApp | undefined {
@@ -150,4 +156,22 @@ export async function saveReminderSettings(
 
 export async function requestNotificationPermission(): Promise<NotificationPermissionStatus> {
   return requireRuntime().RequestNotificationPermission()
+}
+
+export async function checkForUpdate(): Promise<UpdateStatus> {
+  if (!hasWailsRuntime()) return browserUpdateStatus()
+  const status = await requireRuntime().CheckForUpdate()
+  // Go marshals an empty blocker slice as null.
+  return { ...status, blockers: status.blockers ?? [] }
+}
+
+/** Closes the app: the update runs detached and reopens it when it finishes. */
+export async function startUpdate(): Promise<void> {
+  return requireRuntime().StartUpdate()
+}
+
+/** Returns the outcome of an update that ran while the app was closed, once. */
+export async function consumeUpdateResult(): Promise<UpdateResult | null> {
+  if (!hasWailsRuntime()) return null
+  return (await requireRuntime().ConsumeUpdateResult()) ?? null
 }

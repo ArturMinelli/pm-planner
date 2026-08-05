@@ -5,6 +5,8 @@
 param(
     [switch]$Build,        # obsoleto: compilação é o comportamento padrão
     [switch]$CheckOnly,
+    # Obsoletos: a auto-atualização diária foi removida em favor do botão
+    # "Atualizar" nas configurações do app. Aceitos para não quebrar scripts antigos.
     [switch]$Autoupdate,
     [switch]$NoAutoupdate,
     [switch]$Help
@@ -32,14 +34,12 @@ Instala dependências, compila e instala a CLI (pm) e o app desktop do PM Planne
 
 Opções:
   -CheckOnly     Apenas verifica dependências, sem instalar nem compilar
-  -NoAutoupdate  Remove o registro de auto-atualização do Agendador de Tarefas (padrão: registrar)
   -Help          Exibe esta ajuda
 
 Exemplos:
   irm https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/setup.ps1 | iex
   git clone https://github.com/ArturMinelli/pm-planner.git; cd pm-planner
   .\scripts\setup.ps1
-  .\scripts\setup.ps1 -NoAutoupdate
 
 Nota: revise o script antes de executar com irm | iex.
 "@
@@ -372,43 +372,14 @@ function Show-NextSteps {
 
 $AutoupdateTaskName = "PM Planner Auto Update"
 
-function Install-Autoupdate {
-    param([string]$Root)
-
-    $wrapper = Join-Path $Root "scripts\auto-update.ps1"
-    if (-not (Test-Path $wrapper)) {
-        Write-Warn "auto-update.ps1 não encontrado em $wrapper"
-        return
-    }
-
-    $action   = New-ScheduledTaskAction `
-                    -Execute "powershell.exe" `
-                    -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -NonInteractive -File `"$wrapper`""
-    $trigger  = New-ScheduledTaskTrigger -AtLogOn
-    $settings = New-ScheduledTaskSettingsSet `
-                    -ExecutionTimeLimit (New-TimeSpan -Hours 1) `
-                    -StartWhenAvailable
-
-    Register-ScheduledTask `
-        -TaskName $AutoupdateTaskName `
-        -Action $action `
-        -Trigger $trigger `
-        -Settings $settings `
-        -RunLevel Limited `
-        -Force | Out-Null
-
-    Write-Ok "Auto-atualização registrada no Agendador de Tarefas ('$AutoupdateTaskName')"
-    $logFile = Join-Path $env:LOCALAPPDATA "pm\autoupdate.log"
-    Write-Info "Log de auto-atualização: $logFile"
-}
-
-function Uninstall-Autoupdate {
+# A auto-atualização diária foi substituída pelo botão "Atualizar" nas
+# configurações do app. Instalações antigas ainda têm a tarefa agendada, então
+# todo setup a remove. Silencioso quando não há nada registrado.
+function Remove-LegacyAutoupdate {
     $task = Get-ScheduledTask -TaskName $AutoupdateTaskName -ErrorAction SilentlyContinue
     if ($null -ne $task) {
         Unregister-ScheduledTask -TaskName $AutoupdateTaskName -Confirm:$false
-        Write-Ok "Auto-atualização removida do Agendador de Tarefas"
-    } else {
-        Write-Warn "Auto-atualização não estava registrada"
+        Write-Ok "Auto-atualização diária removida do Agendador de Tarefas"
     }
 }
 
@@ -445,17 +416,7 @@ try {
     Write-Warn "Verificação do projeto falhou: $_"
 }
 
-if ($NoAutoupdate) {
-    Uninstall-Autoupdate
-} elseif (-not $CheckOnly) {
-    $root = Find-ProjectRoot
-    if (-not $root -and (Test-ProjectRoot $DefaultInstallDir)) { $root = $DefaultInstallDir }
-    if ($root) {
-        Install-Autoupdate $root
-    } else {
-        Write-Warn "Não foi possível localizar o diretório do projeto para registrar a auto-atualização"
-    }
-}
+Remove-LegacyAutoupdate
 
 Show-NextSteps
 Write-Host ""
