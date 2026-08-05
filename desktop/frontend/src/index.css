@@ -673,9 +673,9 @@ input[readonly] {
 
 .planner-warning {
   font-size: 0.82rem;
-  color: var(--warn);
-  background: var(--warn-bg);
-  border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+  color: var(--warning);
+  background: var(--warning-bg);
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
   border-radius: var(--radius);
   padding: 0.4rem 0.55rem;
 }
@@ -688,10 +688,6 @@ input[readonly] {
   min-height: 1.8rem;
   padding: 0.25rem 0.55rem;
   font-size: 0.8rem;
-}
-
-.exit-field {
-  position: relative;
 }
 
 .exit-label-actions {
@@ -894,10 +890,6 @@ input[readonly] {
   color: var(--warning);
 }
 
-.clockout-field {
-  position: relative;
-}
-
 .clockout-label-row,
 .clockout-values {
   display: flex;
@@ -925,6 +917,22 @@ input[readonly] {
   .exit-label-actions {
     flex-basis: 100%;
     justify-content: flex-start;
+  }
+}
+
+@container (max-width: 12.5rem) {
+  .clockout-values {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .clockout-values .calculator-btn {
+    width: 100%;
+    height: 2.58rem;
+  }
+
+  .alternative-clockout {
+    width: 100%;
   }
 }
 
@@ -1169,20 +1177,6 @@ input[readonly] {
   .exit-label-actions {
     flex-basis: 100%;
     justify-content: flex-start;
-  }
-
-  .clockout-values {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .clockout-values .calculator-btn {
-    width: 100%;
-    height: 2.58rem;
-  }
-
-  .alternative-clockout {
-    width: 100%;
   }
 
   .clockout-tooltip {
