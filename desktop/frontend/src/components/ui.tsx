@@ -12,8 +12,18 @@ function classNames(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(' ')
 }
 
-export function Page({ children }: { children: ReactNode }) {
-  return <section className="page">{children}</section>
+export function Page({
+  children,
+  narrow = false,
+}: {
+  children: ReactNode
+  narrow?: boolean
+}) {
+  return (
+    <section className={classNames('page', narrow && 'narrow')}>
+      {children}
+    </section>
+  )
 }
 
 export function PageHeader({

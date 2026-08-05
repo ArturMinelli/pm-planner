@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import type { Journey, SolvedSlot } from '../../types'
+import type { BalanceAdjustment, Journey, SolvedSlot } from '../../types'
 import { isSlotSolved } from '../../util/plannerSuggestions'
 import PlannerSlotField from './PlannerSlotField'
 
@@ -7,6 +7,9 @@ type PlannerJourneyGroupProps = {
   journey: Journey
   journeyIndex: number
   solvedSlot: SolvedSlot
+  balance?: BalanceAdjustment
+  balanceError?: string
+  alternativeTime?: string
   disabled?: boolean
   onUpdateTime: (journeyIndex: number, isEntry: boolean, time: string) => void
   onRemove: (journeyIndex: number) => void
@@ -21,6 +24,9 @@ export default function PlannerJourneyGroup({
   journey,
   journeyIndex,
   solvedSlot,
+  balance,
+  balanceError,
+  alternativeTime,
   disabled,
   onUpdateTime,
   onRemove,
@@ -42,11 +48,7 @@ export default function PlannerJourneyGroup({
           className="btn secondary journey-remove-btn"
           onClick={() => onRemove(journeyIndex)}
           disabled={disabled || isRegistered}
-          title={
-            isRegistered
-              ? 'Não é possível remover uma jornada com marcações registradas'
-              : undefined
-          }
+          title={isRegistered ? 'Não é possível remover uma jornada com marcações registradas' : undefined}
           aria-label={`Remover ${ordinal} Jornada`}
         >
           ✕
@@ -59,6 +61,9 @@ export default function PlannerJourneyGroup({
           isSolved={entrySolved}
           fieldId={entryInputId}
           label={`Entrada ${journeyIndex + 1}`}
+          balance={entrySolved ? balance : undefined}
+          balanceError={entrySolved ? balanceError : undefined}
+          alternativeTime={entrySolved ? alternativeTime : undefined}
           disabled={disabled}
           onTimeChange={(time) => onUpdateTime(journeyIndex, true, time)}
           onToggleSolved={() => onToggleSolved(journeyIndex, true)}
@@ -69,6 +74,9 @@ export default function PlannerJourneyGroup({
           isSolved={exitSolved}
           fieldId={exitInputId}
           label={`Saída ${journeyIndex + 1}`}
+          balance={exitSolved ? balance : undefined}
+          balanceError={exitSolved ? balanceError : undefined}
+          alternativeTime={exitSolved ? alternativeTime : undefined}
           disabled={disabled}
           onTimeChange={(time) => onUpdateTime(journeyIndex, false, time)}
           onToggleSolved={() => onToggleSolved(journeyIndex, false)}

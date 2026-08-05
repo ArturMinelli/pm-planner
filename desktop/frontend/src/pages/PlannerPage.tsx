@@ -222,6 +222,7 @@ export default function PlannerPage() {
 
   const timesDisabled = fetching
   const originalsLine = loaded?.originalsLine
+  const isToday = loaded?.date === localDateYYYYMMDD()
 
   return (
     <Page>
@@ -256,6 +257,8 @@ export default function PlannerPage() {
             loading={fetching}
             journeys={journeys}
             solvedSlot={solvedSlot}
+            balance={loaded?.balance}
+            balanceError={isToday ? loaded?.balanceError : undefined}
             summary={summary}
             originalsLine={originalsLine}
             disabled={timesDisabled}

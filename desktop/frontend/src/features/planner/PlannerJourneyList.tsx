@@ -1,11 +1,13 @@
 import { Card } from '../../components/ui'
-import type { Journey, PlannerSummary, SolvedSlot } from '../../types'
+import type { BalanceAdjustment, Journey, PlannerSummary, SolvedSlot } from '../../types'
 import PlannerJourneyGroup from './PlannerJourneyGroup'
 
 type PlannerJourneyListProps = {
   loading?: boolean
   journeys: Journey[]
   solvedSlot: SolvedSlot
+  balance?: BalanceAdjustment
+  balanceError?: string
   summary?: PlannerSummary | null
   originalsLine?: string
   disabled?: boolean
@@ -31,6 +33,8 @@ export default function PlannerJourneyList({
   loading = false,
   journeys,
   solvedSlot,
+  balance,
+  balanceError,
   summary,
   originalsLine,
   disabled,
@@ -39,6 +43,8 @@ export default function PlannerJourneyList({
   onUpdateJourney,
   onToggleSolved,
 }: PlannerJourneyListProps) {
+  const alternativeTime = summary?.alternativeTime
+
   return (
     <Card title="Horários do dia" stretch>
       {loading ? (
@@ -66,6 +72,9 @@ export default function PlannerJourneyList({
                 journey={journey}
                 journeyIndex={index}
                 solvedSlot={solvedSlot}
+                balance={balance}
+                balanceError={balanceError}
+                alternativeTime={alternativeTime}
                 disabled={disabled}
                 onUpdateTime={onUpdateJourney}
                 onRemove={onRemoveJourney}
