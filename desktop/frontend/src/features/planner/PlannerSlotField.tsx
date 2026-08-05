@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useState, type MouseEvent } from 'react'
 import PlannerTimeInput from '../../components/PlannerTimeInput'
 import type { BalanceAdjustment, ClockSlot } from '../../types'
 import {
@@ -45,6 +45,7 @@ export default function PlannerSlotField({
 }: PlannerSlotFieldProps) {
   const tooltipId = useId()
   const [tooltipOpen, setTooltipOpen] = useState(false)
+  const [inputFocused, setInputFocused] = useState(false)
 
   const hasAlternative = Boolean(
     balance?.appliesToday &&
@@ -59,87 +60,99 @@ export default function PlannerSlotField({
 
   const showBalanceBadge = isSolved && (hasAlternative || unavailable)
   const canCalculate = !slot.registered
-  const hasStatusBadges = slot.registered || isSolved || showBalanceBadge
+  const calculateHint = 'Clique para calcular pela meta do dia'
+  const registeredHint = 'Marcação registrada no PontoMais'
+
+  function handleTimeWrapClick(event: MouseEvent<HTMLDivElement>) {
+    if (isSolved || !canCalculate || disabled || inputFocused) return
+    if (event.target instanceof HTMLInputElement) return
+    onToggleSolved()
+  }
 
   return (
-    <div className={`field slot-field ${isSolved ? 'slot-solved' : ''}`}>
+    <div className="field slot-field">
       <label htmlFor={fieldId}>{label}</label>
-      {hasStatusBadges ? (
+      {showBalanceBadge ? (
         <div className="slot-status-badges">
-          {slot.registered ? (
-            <span className="registered-badge">registrada</span>
-          ) : null}
-          {isSolved ? (
-            <span className="calculada-badge">calculada</span>
-          ) : null}
-          {showBalanceBadge ? (
-            <span className="clockout-tooltip-wrap">
-              <button
-                type="button"
-                className={`balance-badge ${unavailable ? 'unavailable' : tone}`}
-                aria-describedby={tooltipId}
-                aria-expanded={tooltipOpen}
-                onClick={() => setTooltipOpen((open) => !open)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape') setTooltipOpen(false)
-                }}
-                onBlur={() => setTooltipOpen(false)}
-              >
-                {unavailable
-                  ? 'Saldo indisponível'
-                  : `Banco ${formatSignedRoundedMinutes(balance?.balanceSecs ?? 0)}`}
-              </button>
-              <span
-                id={tooltipId}
-                role="tooltip"
-                className={`clockout-tooltip ${tooltipOpen ? 'open' : ''}`}
-              >
-                {tooltipText}
-              </span>
+          <span className="clockout-tooltip-wrap">
+            <button
+              type="button"
+              className={`balance-badge ${unavailable ? 'unavailable' : tone}`}
+              aria-describedby={tooltipId}
+              aria-expanded={tooltipOpen}
+              onClick={() => setTooltipOpen((open) => !open)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setTooltipOpen(false)
+              }}
+              onBlur={() => setTooltipOpen(false)}
+            >
+              {unavailable
+                ? 'Saldo indisponível'
+                : `Banco ${formatSignedRoundedMinutes(balance?.balanceSecs ?? 0)}`}
+            </button>
+            <span
+              id={tooltipId}
+              role="tooltip"
+              className={`clockout-tooltip ${tooltipOpen ? 'open' : ''}`}
+            >
+              {tooltipText}
             </span>
-          ) : null}
+          </span>
         </div>
       ) : null}
       <div className="clockout-values">
-        {isSolved ? (
-          <output
-            id={fieldId}
-            className="calculada-time"
-            aria-label={`${label} calculada: ${slot.time}`}
-          >
-            {slot.time}
-          </output>
-        ) : (
-          <PlannerTimeInput
-            id={fieldId}
-            name={fieldId}
-            value={slot.time}
-            onChange={onTimeChange}
-            disabled={disabled}
-          />
-        )}
-        <button
-          type="button"
-          className={`calculator-btn ${isSolved ? 'active' : ''}`}
-          aria-label={
-            isSolved
-              ? 'Desativar cálculo automático'
-              : 'Calcular este horário pela meta do dia'
-          }
-          onClick={onToggleSolved}
-          disabled={disabled || !canCalculate}
-          title={!canCalculate ? 'Marcações registradas não podem ser calculadas' : undefined}
-        >
-          ⊕
-        </button>
-        {hasAlternative ? (
-          <output
-            className={`alternative-clockout ${tone}`}
-            aria-label={`${label} alternativa: ${alternativeTime}`}
-          >
-            {alternativeTime}
-          </output>
-        ) : null}
+        <div className="clockout-values-primary">
+          {isSolved ? (
+            <div className="calculada-timebox">
+              <button
+                type="button"
+                id={fieldId}
+                className="calculada-time"
+                aria-label={`${label} calculada: ${slot.time}. Clique para desativar o cálculo automático`}
+                onClick={onToggleSolved}
+                disabled={disabled || !canCalculate}
+                title={
+                  !canCalculate
+                    ? 'Marcações registradas não podem ser calculadas'
+                    : 'Desativar cálculo automático'
+                }
+              >
+                {slot.time}
+              </button>
+              {hasAlternative ? (
+                <output
+                  className={`calculada-time-alt alternative-clockout ${tone}`}
+                  aria-label={`${label} alternativa: ${alternativeTime}`}
+                >
+                  {alternativeTime}
+                </output>
+              ) : null}
+            </div>
+          ) : (
+            <div
+              className={`clockout-time-wrap${slot.registered ? ' registered' : ''}${canCalculate && !disabled ? ' calculable' : ''}`}
+              onClick={handleTimeWrapClick}
+              title={
+                slot.registered
+                  ? registeredHint
+                  : canCalculate && !disabled
+                    ? calculateHint
+                    : undefined
+              }
+              aria-label={slot.registered ? `${label}, ${registeredHint}` : undefined}
+            >
+              <PlannerTimeInput
+                id={fieldId}
+                name={fieldId}
+                value={slot.time}
+                onChange={onTimeChange}
+                disabled={disabled}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

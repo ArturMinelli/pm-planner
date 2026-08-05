@@ -338,25 +338,19 @@ func (m PlanModel) View() string {
 		journeyLines = append(journeyLines, styles.Subtitle.Render(fmt.Sprintf("Jornada %d", i+1)))
 
 		entryLabel := fmt.Sprintf("  Entrada %d", i+1)
-		if journey.Entry.Registered {
-			entryLabel += " (registrada)"
-		}
 		if m.isSolved(i, true) {
 			solvedValue := styles.Calculated.Render(journey.Entry.Time) + " " + styles.Muted.Render("◆ (calculado)")
 			journeyLines = append(journeyLines, row(entryLabel, solvedValue))
 		} else {
-			journeyLines = append(journeyLines, row(entryLabel, m.entryInputs[i].View()))
+			journeyLines = append(journeyLines, row(entryLabel, slotValue(m.entryInputs[i].View(), journey.Entry.Registered)))
 		}
 
 		exitLabel := fmt.Sprintf("  Saída %d", i+1)
-		if journey.Exit.Registered {
-			exitLabel += " (registrada)"
-		}
 		if m.isSolved(i, false) {
 			solvedValue := styles.Calculated.Render(journey.Exit.Time) + " " + styles.Muted.Render("◆ (calculado)")
 			journeyLines = append(journeyLines, row(exitLabel, solvedValue))
 		} else {
-			journeyLines = append(journeyLines, row(exitLabel, m.exitInputs[i].View()))
+			journeyLines = append(journeyLines, row(exitLabel, slotValue(m.exitInputs[i].View(), journey.Exit.Registered)))
 		}
 	}
 
@@ -478,6 +472,7 @@ var colors = struct {
 	Label       lipgloss.Color
 	Value       lipgloss.Color
 	Calculated  lipgloss.Color
+	Registered  lipgloss.Color
 	Muted       lipgloss.Color
 	Spacer      lipgloss.Color
 	Keys        lipgloss.Color
@@ -491,6 +486,7 @@ var colors = struct {
 	Label:       lipgloss.Color("245"),
 	Value:       lipgloss.Color("255"),
 	Calculated:  lipgloss.Color("42"),
+	Registered:  lipgloss.Color("34"),
 	Muted:       lipgloss.Color("241"),
 	Spacer:      lipgloss.Color("237"),
 	Keys:        lipgloss.Color("244"),
@@ -505,24 +501,26 @@ var styles = func() struct {
 	Panel      lipgloss.Style
 	RowLabel   lipgloss.Style
 	RowValue   lipgloss.Style
-	Calculated lipgloss.Style
-	Muted      lipgloss.Style
-	Spacer     string
-	Gap        string
-	Keys       lipgloss.Style
+	Calculated       lipgloss.Style
+	RegisteredBorder lipgloss.Style
+	Muted            lipgloss.Style
+	Spacer           string
+	Gap              string
+	Keys             lipgloss.Style
 } {
 	panel := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colors.PanelBorder).Padding(1, 2)
 	return struct {
-		Title      lipgloss.Style
-		Subtitle   lipgloss.Style
-		Panel      lipgloss.Style
-		RowLabel   lipgloss.Style
-		RowValue   lipgloss.Style
-		Calculated lipgloss.Style
-		Muted      lipgloss.Style
-		Spacer     string
-		Gap        string
-		Keys       lipgloss.Style
+		Title            lipgloss.Style
+		Subtitle         lipgloss.Style
+		Panel            lipgloss.Style
+		RowLabel         lipgloss.Style
+		RowValue         lipgloss.Style
+		Calculated       lipgloss.Style
+		RegisteredBorder lipgloss.Style
+		Muted            lipgloss.Style
+		Spacer           string
+		Gap              string
+		Keys             lipgloss.Style
 	}{
 		Title:      lipgloss.NewStyle().Foreground(colors.Title).Bold(true).MarginBottom(1),
 		Subtitle:   lipgloss.NewStyle().Foreground(colors.Subtitle),
@@ -530,12 +528,23 @@ var styles = func() struct {
 		RowLabel:   lipgloss.NewStyle().Foreground(colors.Label),
 		RowValue:   lipgloss.NewStyle().Foreground(colors.Value).Bold(true),
 		Calculated: lipgloss.NewStyle().Foreground(colors.Calculated).Bold(true),
-		Muted:      lipgloss.NewStyle().Foreground(colors.Muted),
+		RegisteredBorder: lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colors.Registered).
+			Padding(0, 1),
+		Muted: lipgloss.NewStyle().Foreground(colors.Muted),
 		Spacer:     lipgloss.NewStyle().Width(4).Render(" "),
 		Gap:        lipgloss.NewStyle().Height(1).Render(""),
 		Keys:       lipgloss.NewStyle().Foreground(colors.Keys),
 	}
 }()
+
+func slotValue(value string, registered bool) string {
+	if registered {
+		return styles.RegisteredBorder.Render(value)
+	}
+	return value
+}
 
 func row(label, value string) string {
 	labelRendered := styles.RowLabel.Render(label + ":")
