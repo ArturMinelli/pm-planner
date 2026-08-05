@@ -97,7 +97,8 @@ describe('PlannerJourneyList', () => {
       />,
     )
 
-    expect(html).toContain('calculator-btn active')
+    expect(html).toContain('calculada-time')
+    expect(html).toMatch(/<button[^>]*class="calculada-time"/)
   })
 
   it('disables the remove button for registered journeys', () => {

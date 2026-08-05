@@ -45,7 +45,7 @@ func TestPlanModelShowsNormalAndConciseAlternativeClockout(t *testing.T) {
 			t.Fatalf("view missing %q:\n%s", want, view)
 		}
 	}
-	for _, unwanted := range []string{"Saldo atual", "Ajuste hoje", "Saldo estimado"} {
+	for _, unwanted := range []string{"Saldo atual", "Ajuste hoje", "Saldo estimado", "(registrada)"} {
 		if strings.Contains(view, unwanted) {
 			t.Fatalf("view should not contain %q:\n%s", unwanted, view)
 		}

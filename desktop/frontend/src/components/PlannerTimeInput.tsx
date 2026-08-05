@@ -1,10 +1,12 @@
-import type { JSX } from 'react'
+import type { FocusEventHandler, JSX } from 'react'
 
 export type PlannerTimeInputProps = {
   value: string
   onChange: (next: string) => void
   onStep?: (deltaMinutes: number) => void
   onBlurNormalize?: () => void
+  onFocus?: FocusEventHandler<HTMLInputElement>
+  onBlur?: FocusEventHandler<HTMLInputElement>
   disabled?: boolean
   id?: string
   name?: string
@@ -25,6 +27,8 @@ export default function PlannerTimeInput({
   onChange,
   onStep,
   onBlurNormalize,
+  onFocus,
+  onBlur,
   disabled,
   id,
   name,
@@ -45,7 +49,11 @@ export default function PlannerTimeInput({
       disabled={disabled}
       value={value}
       onChange={(e) => onChange(digitsToMaskedTime(e.target.value))}
-      onBlur={() => onBlurNormalize?.()}
+      onFocus={onFocus}
+      onBlur={(e) => {
+        onBlurNormalize?.()
+        onBlur?.(e)
+      }}
       onKeyDown={(e) => {
         if (!onStep) return
         if (e.key === 'ArrowUp') {
