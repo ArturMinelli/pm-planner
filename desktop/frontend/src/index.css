@@ -690,14 +690,12 @@ input[readonly] {
   font-size: 0.8rem;
 }
 
-.exit-label-actions {
+.slot-status-badges {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   min-width: 0;
-  flex: 0 1 auto;
-  justify-content: flex-end;
 }
 
 .registered-badge {
@@ -890,7 +888,6 @@ input[readonly] {
   color: var(--warning);
 }
 
-.clockout-label-row,
 .clockout-values {
   display: flex;
   min-width: 0;
@@ -898,47 +895,14 @@ input[readonly] {
   gap: 0.45rem;
 }
 
-.clockout-label-row {
-  flex-wrap: wrap;
-  min-height: 1.3rem;
-  justify-content: flex-start;
-  gap: 0.35rem;
+.slot-field {
+  min-width: 0;
 }
 
-.clockout-label-row label {
-  flex: 0 0 auto;
-  min-width: max-content;
+.slot-field > label {
   white-space: nowrap;
   overflow-wrap: normal;
   word-break: keep-all;
-}
-
-@container (max-width: 11rem) {
-  .exit-label-actions {
-    flex-basis: 100%;
-    justify-content: flex-start;
-  }
-}
-
-@container (max-width: 12.5rem) {
-  .clockout-values {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .clockout-values .calculator-btn {
-    width: 100%;
-    height: 2.58rem;
-  }
-
-  .alternative-clockout {
-    width: 100%;
-  }
-}
-
-.slot-field {
-  container-type: inline-size;
-  min-width: 0;
 }
 
 .clockout-values input {
@@ -1174,9 +1138,18 @@ input[readonly] {
     grid-column: 1 / -1;
   }
 
-  .exit-label-actions {
-    flex-basis: 100%;
-    justify-content: flex-start;
+  .clockout-values {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .clockout-values .calculator-btn {
+    width: 100%;
+    height: 2.58rem;
+  }
+
+  .alternative-clockout {
+    width: 100%;
   }
 
   .clockout-tooltip {
