@@ -94,3 +94,25 @@ export interface NotificationPermissionStatus {
   authorized: boolean
   detail?: string
 }
+
+/** Mirrors pm-cli pkg/update.Status */
+export interface UpdateStatus {
+  root: string
+  /** False for tarball installs, where no commit comparison is possible. */
+  isGit: boolean
+  commitSha: string
+  commitDate: string
+  behind: number
+  dirty: boolean
+  blockers: string[]
+  updateAvailable: boolean
+}
+
+/** Mirrors pm-cli pkg/update.Result */
+export interface UpdateResult {
+  ok: boolean
+  message: string
+  logPath: string
+  commit: string
+  finishedAt: string
+}

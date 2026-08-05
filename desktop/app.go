@@ -10,6 +10,7 @@ import (
 	"pm-cli/pkg/auth"
 	"pm-cli/pkg/config"
 	"pm-cli/pkg/plan"
+	"pm-cli/pkg/update"
 )
 
 // App is the Wails bind target; methods are exposed to the React frontend.
@@ -25,6 +26,8 @@ func NewApp() *App {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	_ = config.Init("")
+	// Updates are manual now; drop the daily schedule older installs registered.
+	_ = update.RemoveScheduledAutoUpdate()
 }
 
 // GetConfig reads the YAML file on disk used by pm CLI (~/.config/pm/config.yaml).
