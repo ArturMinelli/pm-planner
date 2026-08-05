@@ -226,8 +226,8 @@ export default function PlannerPage() {
   return (
     <Page>
       <PageHeader
-        title="Planejar Jornada"
-        description="Veja e ajuste os horários do dia. O horário calculada preenche a meta automaticamente."
+        title="Jornada"
+        description="Planeje a jornada do dia com os registros do PontoMais — uma saída é calculada para bater a meta."
         actions={
           <Field id="planner-date" label="Data" className="page-header-date">
             <PlannerDatePicker
