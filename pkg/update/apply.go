@@ -73,6 +73,7 @@ func Apply(ctx context.Context, options ApplyOptions) (*Result, error) {
 	name, args := updateScriptCommand(script)
 	command := exec.CommandContext(ctx, name, args...)
 	command.Dir = root
+	command.Env = augmentedEnv()
 	command.Stdout = output
 	command.Stderr = output
 	runErr := command.Run()

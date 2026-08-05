@@ -49,7 +49,7 @@ func Check(ctx context.Context) (*Status, error) {
 		root:     root,
 		isGit:    isGitCheckout(root),
 		run:      runCapture,
-		lookPath: exec.LookPath,
+		lookPath: resolveToolPath,
 	}), nil
 }
 
