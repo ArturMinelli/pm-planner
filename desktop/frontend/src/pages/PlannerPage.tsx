@@ -228,7 +228,7 @@ export default function PlannerPage() {
     <Page>
       <PageHeader
         title="Planejar Jornada"
-        description="Veja e ajuste os horários do dia. O horário calculada preenche a meta automaticamente."
+        description="Veja e ajuste os horários do dia. O horário calculado preenche a meta automaticamente."
         actions={
           <Field id="planner-date" label="Data" className="page-header-date">
             <PlannerDatePicker

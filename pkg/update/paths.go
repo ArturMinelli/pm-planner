@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 
 	"pm-cli/internal/project"
@@ -165,6 +166,166 @@ func goBinDirs() []string {
 		)
 	}
 	return dirs
+}
+
+// resolveToolPath finds a build tool on PATH or in known install locations.
+// GUI launches inherit a minimal PATH that often excludes Go and Node.
+func resolveToolPath(name string) (string, error) {
+	if path, err := exec.LookPath(name); err == nil {
+		return path, nil
+	}
+
+	binary := project.BinaryName(name, runtime.GOOS)
+	for _, dir := range toolDirs(name) {
+		candidate := filepath.Join(dir, binary)
+		if isExecutableFile(candidate) {
+			return candidate, nil
+		}
+	}
+	return "", exec.ErrNotFound
+}
+
+func toolDirs(name string) []string {
+	switch name {
+	case "go":
+		return goToolchainDirs()
+	case "node":
+		return nodeBinDirs()
+	default:
+		return nil
+	}
+}
+
+// goToolchainDirs lists directories that may contain the go compiler itself
+// (distinct from GOPATH/bin, which holds go-installed tools like pm).
+func goToolchainDirs() []string {
+	dirs := make([]string, 0, 8)
+	if home, err := os.UserHomeDir(); err == nil {
+		dirs = append(dirs, filepath.Join(home, ".local", "go", "bin"))
+	}
+	dirs = append(dirs, "/usr/local/go/bin")
+	dirs = append(dirs, commonBinDirs()...)
+	return dirs
+}
+
+// nodeBinDirs lists directories that may contain the node binary, including
+// version managers whose install paths are outside a typical GUI PATH.
+func nodeBinDirs() []string {
+	dirs := make([]string, 0, 16)
+	dirs = append(dirs, versionManagerNodeBins(
+		envOrHome("NVM_DIR", ".nvm"),
+		filepath.Join("versions", "node"),
+		"bin",
+	)...)
+	dirs = append(dirs, versionManagerNodeBins(
+		envOrHome("FNM_DIR", filepath.Join(".local", "share", "fnm")),
+		"node-versions",
+		filepath.Join("installation", "bin"),
+	)...)
+	dirs = append(dirs, commonBinDirs()...)
+	return dirs
+}
+
+func envOrHome(envKey, homeRelative string) string {
+	if value := strings.TrimSpace(os.Getenv(envKey)); value != "" {
+		return value
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, homeRelative)
+}
+
+// versionManagerNodeBins returns bin dirs under a version-manager root,
+// newest version first so resolveToolPath prefers a current install.
+func versionManagerNodeBins(root, versionsRel, binRel string) []string {
+	if root == "" {
+		return nil
+	}
+	versionsDir := filepath.Join(root, versionsRel)
+	entries, err := os.ReadDir(versionsDir)
+	if err != nil {
+		return nil
+	}
+
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			names = append(names, entry.Name())
+		}
+	}
+	slices.Sort(names)
+	slices.Reverse(names)
+
+	dirs := make([]string, 0, len(names))
+	for _, name := range names {
+		dirs = append(dirs, filepath.Join(versionsDir, name, binRel))
+	}
+	return dirs
+}
+
+func commonBinDirs() []string {
+	dirs := []string{"/usr/local/bin", "/usr/bin", "/snap/bin"}
+	switch runtime.GOOS {
+	case "darwin":
+		dirs = append(dirs, "/opt/homebrew/bin")
+	default:
+		dirs = append(dirs, "/home/linuxbrew/.linuxbrew/bin")
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		dirs = append(dirs, filepath.Join(home, ".local", "bin"))
+	}
+	return dirs
+}
+
+// augmentedEnv returns the process environment with known Go/Node bin
+// directories prepended to PATH so update subprocesses inherit a usable PATH.
+func augmentedEnv() []string {
+	extra := append(goToolchainDirs(), nodeBinDirs()...)
+	extra = append(extra, goBinDirs()...)
+	path := prependPath(os.Getenv("PATH"), extra...)
+	return replaceEnv(os.Environ(), "PATH", path)
+}
+
+func prependPath(current string, dirs ...string) string {
+	seen := make(map[string]bool)
+	parts := make([]string, 0, len(dirs)+1)
+	for _, dir := range dirs {
+		if dir == "" || seen[dir] {
+			continue
+		}
+		seen[dir] = true
+		parts = append(parts, dir)
+	}
+	if current != "" {
+		for _, dir := range filepath.SplitList(current) {
+			if dir == "" || seen[dir] {
+				continue
+			}
+			seen[dir] = true
+			parts = append(parts, dir)
+		}
+	}
+	return strings.Join(parts, string(os.PathListSeparator))
+}
+
+func replaceEnv(environ []string, key, value string) []string {
+	prefix := key + "="
+	out := make([]string, 0, len(environ)+1)
+	replaced := false
+	for _, entry := range environ {
+		if strings.HasPrefix(entry, prefix) {
+			out = append(out, prefix+value)
+			replaced = true
+			continue
+		}
+		out = append(out, entry)
+	}
+	if !replaced {
+		out = append(out, prefix+value)
+	}
+	return out
 }
 
 func isExecutableFile(path string) bool {
