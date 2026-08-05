@@ -1,118 +1,243 @@
-import { useCallback, useMemo, useState } from 'react'
-import type { PlannerPayload } from '../types'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { Journey, PlannerPayload, PlannerSummary, SolvedSlot } from '../types'
 import * as backend from '../services/backend'
 import { localDateYYYYMMDD } from '../util/timeFormat'
 import {
-  adjustPlannerTime,
-  enforcePlannerOrder,
-  type PlannerTimeField,
-  type PlannerTimes,
-} from '../util/plannerTimes'
-import { Banner, Page, PageHeader, Stack } from '../components/ui'
-import PlannerLoadCard from '../features/planner/PlannerLoadCard'
+  applyInstantSuggestions,
+  defaultSolvedSlot,
+  NO_SOLVED_SLOT,
+  seedEntryAfterExit,
+} from '../util/plannerSuggestions'
+import { enforceJourneyOrder } from '../util/plannerTimes'
+import { Banner, Field, Page, PageHeader, Stack } from '../components/ui'
+import PlannerDatePicker from '../components/PlannerDatePicker'
 import PlannerSummaryPanel from '../features/planner/PlannerSummaryPanel'
-import PlannerTimeFields from '../features/planner/PlannerTimeFields'
-import { calculatePlannerSummary } from '../features/planner/plannerSummary'
+import PlannerJourneyList from '../features/planner/PlannerJourneyList'
+
+const DEFAULT_BREAK_MINUTES = 60
 
 export default function PlannerPage() {
   const [date, setDate] = useState(localDateYYYYMMDD)
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
+  const [fetching, setFetching] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState<PlannerPayload | null>(null)
+  const [rawJourneys, setRawJourneys] = useState<Journey[]>([])
+  const [journeys, setJourneys] = useState<Journey[]>([])
+  const [solvedSlot, setSolvedSlot] = useState<SolvedSlot>(NO_SOLVED_SLOT)
+  const [summary, setSummary] = useState<PlannerSummary | null>(null)
 
-  const [in1, setIn1] = useState('')
-  const [out1, setOut1] = useState('')
-  const [in2, setIn2] = useState('')
+  const loadedRef = useRef<PlannerPayload | null>(null)
+  loadedRef.current = loaded
 
-  const baseTargetSecs = loaded?.baseTargetSecs ?? 0
-  const alternativeTargetSecs =
-    loaded?.balance?.appliesToday &&
-    loaded.balance.targetAdjustmentSecs !== 0
-      ? loaded.balance.adjustedTargetSecs
-      : undefined
-  const timesDisabled = busy || !loaded
+  const summaryRequestRef = useRef(0)
+  const fetchRequestRef = useRef(0)
   const hasRuntime = backend.hasWailsRuntime()
-  const times = useMemo<PlannerTimes>(() => ({ in1, out1, in2 }), [in1, out1, in2])
 
-  const summary = useMemo(
-    () =>
-      loaded
-        ? calculatePlannerSummary({
-            baseTargetSecs,
-            alternativeTargetSecs,
-            in1,
-            out1,
-            in2,
-          })
-        : null,
-    [loaded, baseTargetSecs, alternativeTargetSecs, in1, out1, in2],
-  )
+  const recalculateSummary = useCallback(
+    (journeysToCalc: Journey[], activeSlot: SolvedSlot) => {
+      const currentLoaded = loadedRef.current
+      if (!currentLoaded) return
 
-  const applyTimes = useCallback((next: PlannerTimes) => {
-    setIn1(next.in1)
-    setOut1(next.out1)
-    setIn2(next.in2)
-  }, [])
-
-  const changeTime = useCallback(
-    (field: PlannerTimeField, value: string) => {
-      applyTimes({ in1, out1, in2, [field]: value })
+      const requestId = ++summaryRequestRef.current
+      void backend
+        .recalculateDay({
+          date: currentLoaded.date,
+          baseTargetSecs: currentLoaded.baseTargetSecs,
+          balance: currentLoaded.balance,
+          journeys: journeysToCalc,
+          solvedSlot: activeSlot,
+        })
+        .then((newSummary) => {
+          if (requestId !== summaryRequestRef.current) return
+          setSummary(newSummary)
+        })
+        .catch(() => {
+          // summary errors are non-fatal
+        })
     },
-    [applyTimes, in1, out1, in2],
+    [],
   )
 
-  const stepTime = useCallback(
-    (field: PlannerTimeField, delta: number) => {
-      applyTimes(adjustPlannerTime({ in1, out1, in2 }, field, delta))
+  const commitPlannerState = useCallback(
+    (
+      rawJourneysInput: Journey[],
+      slot: SolvedSlot,
+      preserveSlot?: { journeyIndex: number; isEntry: boolean },
+    ) => {
+      const currentLoaded = loadedRef.current
+      if (!currentLoaded) return
+
+      const { journeys: solvedJourneys, solvedSlot: activeSlot } = applyInstantSuggestions(
+        rawJourneysInput,
+        slot,
+        currentLoaded.baseTargetSecs,
+        { preserveSlot },
+      )
+      setRawJourneys(rawJourneysInput)
+      setJourneys(solvedJourneys)
+      setSolvedSlot(activeSlot)
+      recalculateSummary(solvedJourneys, activeSlot)
     },
-    [applyTimes, in1, out1, in2],
+    [recalculateSummary],
   )
 
-  const blurTime = useCallback(
-    (field: PlannerTimeField, value: string) => {
-      applyTimes(enforcePlannerOrder({ in1, out1, in2, [field]: value }))
+  const handleUpdateJourney = useCallback(
+    (journeyIndex: number, isEntry: boolean, time: string) => {
+      const patched = rawJourneys.map((journey, index) => {
+        if (index !== journeyIndex) return journey
+        if (isEntry) {
+          return {
+            ...journey,
+            entry: { time, registered: journey.entry.registered },
+          }
+        }
+        return {
+          ...journey,
+          exit: { time, registered: journey.exit.registered },
+        }
+      })
+      const reordered = enforceJourneyOrder(patched, journeyIndex, isEntry)
+      commitPlannerState(reordered, solvedSlot, { journeyIndex, isEntry })
     },
-    [applyTimes, in1, out1, in2],
+    [rawJourneys, solvedSlot, commitPlannerState],
   )
 
-  const load = async () => {
-    setErr(null)
-    setBusy(true)
-    setLoaded(null)
-    try {
-      if (!backend.hasWailsRuntime()) {
-        setErr('Abra esta interface pelo app desktop pm-desktop para carregar dados.')
-        return
-      }
-      const payload = await backend.loadPlanner(date)
-      setLoaded(payload)
-      setIn1(payload.in1)
-      setOut1(payload.out1)
-      setIn2(payload.in2)
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(false)
+  const handleToggleSolved = useCallback(
+    (journeyIndex: number, isEntry: boolean) => {
+      const isActive =
+        solvedSlot.journeyIndex === journeyIndex && solvedSlot.isEntry === isEntry
+      const newSlot: SolvedSlot = isActive
+        ? NO_SOLVED_SLOT
+        : { journeyIndex, isEntry }
+      commitPlannerState(rawJourneys, newSlot)
+    },
+    [rawJourneys, solvedSlot, commitPlannerState],
+  )
+
+  const handleAddJourney = useCallback(() => {
+    const lastJourney = rawJourneys[rawJourneys.length - 1]
+    const previousExitTime = lastJourney?.exit.time ?? ''
+    const newEntryTime = seedEntryAfterExit(previousExitTime, DEFAULT_BREAK_MINUTES)
+    const newJourney: Journey = {
+      entry: { time: newEntryTime, registered: false },
+      exit: { time: '', registered: false },
     }
-  }
+    const newJourneys = [...rawJourneys, newJourney]
+    const newSlot: SolvedSlot = {
+      journeyIndex: newJourneys.length - 1,
+      isEntry: false,
+    }
+    commitPlannerState(newJourneys, newSlot)
+  }, [rawJourneys, commitPlannerState])
 
-  const originals = useMemo(
-    () => loaded?.originalsLine ?? '(carregue o dia primeiro)',
-    [loaded?.originalsLine],
+  const handleRemoveJourney = useCallback(
+    (journeyIndex: number) => {
+      const newJourneys = rawJourneys.filter((_, index) => index !== journeyIndex)
+      let newSlot = solvedSlot
+      if (solvedSlot.journeyIndex === journeyIndex) {
+        newSlot = NO_SOLVED_SLOT
+      } else if (solvedSlot.journeyIndex > journeyIndex) {
+        newSlot = {
+          journeyIndex: solvedSlot.journeyIndex - 1,
+          isEntry: solvedSlot.isEntry,
+        }
+      }
+      if (newSlot.journeyIndex < 0) {
+        newSlot = defaultSolvedSlot(newJourneys)
+      }
+      commitPlannerState(newJourneys, newSlot)
+    },
+    [rawJourneys, solvedSlot, commitPlannerState],
   )
+
+  useEffect(() => {
+    if (!hasRuntime) {
+      setFetching(false)
+      setLoaded(null)
+      setSummary(null)
+      setRawJourneys([])
+      setJourneys([])
+      setSolvedSlot(NO_SOLVED_SLOT)
+      return
+    }
+
+    const requestId = ++fetchRequestRef.current
+    let cancelled = false
+
+    const fetchDay = async () => {
+      setFetching(true)
+      setError(null)
+      setLoaded(null)
+      setSummary(null)
+      setRawJourneys([])
+      setJourneys([])
+      setSolvedSlot(NO_SOLVED_SLOT)
+
+      try {
+        const payload = await backend.loadPlanner(date)
+        if (cancelled || requestId !== fetchRequestRef.current) return
+
+        const activeSlot = payload.solvedSlot?.journeyIndex >= 0
+          ? payload.solvedSlot
+          : defaultSolvedSlot(payload.journeys)
+        const { journeys: instantJourneys, solvedSlot: instantSlot } = applyInstantSuggestions(
+          payload.journeys,
+          activeSlot,
+          payload.baseTargetSecs,
+        )
+
+        setLoaded(payload)
+        setRawJourneys(payload.journeys)
+        setJourneys(instantJourneys)
+        setSolvedSlot(instantSlot)
+
+        try {
+          const initialSummary = await backend.recalculateDay({
+            date: payload.date,
+            baseTargetSecs: payload.baseTargetSecs,
+            balance: payload.balance,
+            journeys: instantJourneys,
+            solvedSlot: instantSlot,
+          })
+          if (cancelled || requestId !== fetchRequestRef.current) return
+          setSummary(initialSummary)
+        } catch (_error) {
+          // summary recalculation is optional on first load
+        }
+      } catch (caughtError) {
+        if (cancelled || requestId !== fetchRequestRef.current) return
+        setError(caughtError instanceof Error ? caughtError.message : String(caughtError))
+      } finally {
+        if (cancelled || requestId !== fetchRequestRef.current) return
+        setFetching(false)
+      }
+    }
+
+    void fetchDay()
+
+    return () => {
+      cancelled = true
+    }
+  }, [date, hasRuntime])
+
+  const timesDisabled = fetching
+  const originalsLine = loaded?.originalsLine
+  const isToday = loaded?.date === localDateYYYYMMDD()
 
   return (
     <Page>
       <PageHeader
         title="Planejar Jornada"
-        description={
-          <>
-            Carrega o mesmo dia útil da API que o comando{' '}
-            <code className="pill" translate="no">
-              pm plan
-            </code>
-            .
-          </>
+        description="Veja e ajuste os horários do dia. O horário calculada preenche a meta automaticamente."
+        actions={
+          <Field id="planner-date" label="Data" className="page-header-date">
+            <PlannerDatePicker
+              id="planner-date"
+              value={date}
+              onChange={setDate}
+              disabled={fetching}
+            />
+          </Field>
         }
       />
 
@@ -123,31 +248,30 @@ export default function PlannerPage() {
           </Banner>
         ) : null}
 
-        <PlannerLoadCard
-          date={date}
-          busy={busy}
-          onDateChange={setDate}
-          onLoad={() => void load()}
-        />
+        {loaded?.loadWarning ? <Banner>{loaded.loadWarning}</Banner> : null}
 
-        {err ? <Banner tone="error">{err}</Banner> : null}
+        {error ? <Banner tone="error">{error}</Banner> : null}
 
         <div className="grid-2">
-          <PlannerTimeFields
-            originals={originals}
-            times={times}
-            disabled={timesDisabled}
-            out2={summary?.out2 ?? loaded?.out2 ?? '—'}
-            alternativeOut2={summary?.alternativeOut2}
+          <PlannerJourneyList
+            loading={fetching}
+            journeys={journeys}
+            solvedSlot={solvedSlot}
             balance={loaded?.balance}
-            balanceError={
-              loaded?.date === localDateYYYYMMDD() ? loaded.balanceError : undefined
-            }
-            onTimeChange={changeTime}
-            onStep={stepTime}
-            onBlurNormalize={(field) => blurTime(field, times[field])}
+            balanceError={isToday ? loaded?.balanceError : undefined}
+            summary={summary}
+            originalsLine={originalsLine}
+            disabled={timesDisabled}
+            onAddJourney={handleAddJourney}
+            onRemoveJourney={handleRemoveJourney}
+            onUpdateJourney={handleUpdateJourney}
+            onToggleSolved={handleToggleSolved}
           />
-          <PlannerSummaryPanel loaded={loaded} summary={summary} />
+          <PlannerSummaryPanel
+            loading={fetching}
+            loaded={loaded}
+            summary={summary}
+          />
         </div>
       </Stack>
     </Page>

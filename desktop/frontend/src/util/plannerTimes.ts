@@ -1,3 +1,5 @@
+import type { Journey } from '../types'
+
 export const STEP_MINUTES = 15
 export const MIN_GAP_MINUTES = 15
 export const DAY_START = 0
@@ -150,6 +152,50 @@ export function adjustPlannerAnchor(
   const next = addMinutes(times[field], deltaMinutes)
   if (next === null) return times
   return enforceAnchorOrder({ ...times, [field]: next })
+}
+
+export function enforceJourneyOrder(
+  journeys: Journey[],
+  _changedIndex: number,
+  _isEntry: boolean,
+): Journey[] {
+  const result = journeys.map((journey) => ({ ...journey }))
+
+  for (let journeyIndex = 0; journeyIndex < result.length; journeyIndex++) {
+    const entryMinutes = parseHHMM(result[journeyIndex].entry.time)
+    const exitMinutes = parseHHMM(result[journeyIndex].exit.time)
+
+    if (entryMinutes !== null && exitMinutes !== null && exitMinutes < entryMinutes + MIN_GAP_MINUTES) {
+      result[journeyIndex] = {
+        ...result[journeyIndex],
+        exit: {
+          ...result[journeyIndex].exit,
+          time: formatMinutes(entryMinutes + MIN_GAP_MINUTES),
+        },
+      }
+    }
+  }
+
+  for (let journeyIndex = 1; journeyIndex < result.length; journeyIndex++) {
+    const previousExitMinutes = parseHHMM(result[journeyIndex - 1].exit.time)
+    const currentEntryMinutes = parseHHMM(result[journeyIndex].entry.time)
+
+    if (
+      previousExitMinutes !== null &&
+      currentEntryMinutes !== null &&
+      currentEntryMinutes < previousExitMinutes + MIN_GAP_MINUTES
+    ) {
+      result[journeyIndex] = {
+        ...result[journeyIndex],
+        entry: {
+          ...result[journeyIndex].entry,
+          time: formatMinutes(previousExitMinutes + MIN_GAP_MINUTES),
+        },
+      }
+    }
+  }
+
+  return result
 }
 
 export function validatePlannerAnchors(times: PlannerAnchorTimes): string | null {

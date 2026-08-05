@@ -9,7 +9,7 @@ import (
 func TestFileStorePersistsDelivery(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "state.json")
 	store := NewFileStore(path)
-	id := ReminderID("2026-06-08", SlotIn1, 15)
+	id := ReminderID("2026-06-08", SlotKey(0, false), 15)
 	if store.WasDelivered(id) {
 		t.Fatal("fresh store should be empty")
 	}
@@ -25,8 +25,8 @@ func TestFileStorePersistsDelivery(t *testing.T) {
 func TestFileStorePruneBefore(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "state.json")
 	store := NewFileStore(path)
-	oldID := ReminderID("2026-06-07", SlotIn1, 15)
-	keepID := ReminderID("2026-06-08", SlotIn1, 15)
+	oldID := ReminderID("2026-06-07", SlotKey(0, false), 15)
+	keepID := ReminderID("2026-06-08", SlotKey(0, false), 15)
 	if err := store.MarkDelivered(oldID, time.Now()); err != nil {
 		t.Fatal(err)
 	}

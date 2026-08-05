@@ -29,14 +29,21 @@ export function Page({
 export function PageHeader({
   title,
   description,
+  actions,
 }: {
   title: string
   description?: ReactNode
+  actions?: ReactNode
 }) {
   return (
     <header className="page-header">
-      <h1>{title}</h1>
-      {description ? <p className="muted">{description}</p> : null}
+      <div className="page-header-row">
+        <div className="page-header-text">
+          <h1>{title}</h1>
+          {description ? <p className="muted">{description}</p> : null}
+        </div>
+        {actions ? <div className="page-header-actions">{actions}</div> : null}
+      </div>
     </header>
   )
 }

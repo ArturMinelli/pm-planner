@@ -280,7 +280,7 @@ export default function SettingsPage() {
     : 'Modo navegador: edição apenas local; gravar/API exige o shell Wails.'
 
   return (
-    <Page narrow>
+    <Page>
       <PageHeader
         title="Configurações"
         description={
@@ -296,35 +296,37 @@ export default function SettingsPage() {
 
       {devHint ? <Banner>{devHint}</Banner> : null}
 
-      <AccountSettingsForm
-        login={login}
-        password={password}
-        busy={busy}
-        canTest={backend.hasWailsRuntime()}
-        onLoginChange={setLogin}
-        onPasswordChange={setPassword}
-        onSave={() => void saveAccount()}
-        onTest={() => void test()}
-      />
+      <div className="settings-grid">
+        <AccountSettingsForm
+          login={login}
+          password={password}
+          busy={busy}
+          canTest={backend.hasWailsRuntime()}
+          onLoginChange={setLogin}
+          onPasswordChange={setPassword}
+          onSave={() => void saveAccount()}
+          onTest={() => void test()}
+        />
 
-      <PlannerDefaultsForm
-        anchors={anchors}
-        maxDailyExtraHours={maxDailyExtraHours}
-        balanceCreditMultiplier={balanceCreditMultiplier}
-        busy={busy}
-        onAnchorsChange={applyAnchors}
-        onMaxDailyExtraHoursChange={setMaxDailyExtraHours}
-        onBalanceCreditMultiplierChange={setBalanceCreditMultiplier}
-        onSave={() => void savePlanner()}
-      />
+        <PlannerDefaultsForm
+          anchors={anchors}
+          maxDailyExtraHours={maxDailyExtraHours}
+          balanceCreditMultiplier={balanceCreditMultiplier}
+          busy={busy}
+          onAnchorsChange={applyAnchors}
+          onMaxDailyExtraHoursChange={setMaxDailyExtraHours}
+          onBalanceCreditMultiplierChange={setBalanceCreditMultiplier}
+          onSave={() => void savePlanner()}
+        />
 
-      <ReminderSettingsForm
-        settings={reminders}
-        busy={busy}
-        canUseRuntime={backend.hasWailsRuntime()}
-        onSettingsChange={setReminders}
-        onSave={() => void saveReminders()}
-      />
+        <ReminderSettingsForm
+          settings={reminders}
+          busy={busy}
+          canUseRuntime={backend.hasWailsRuntime()}
+          onSettingsChange={setReminders}
+          onSave={() => void saveReminders()}
+        />
+      </div>
 
       <UpdateSettingsForm
         status={updateStatus}

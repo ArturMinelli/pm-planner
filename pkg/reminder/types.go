@@ -5,21 +5,25 @@ import (
 	"time"
 )
 
-const (
-	SlotIn1  = "in1"
-	SlotOut1 = "out1"
-	SlotIn2  = "in2"
-	SlotOut2 = "out2"
-)
-
-var slotLabels = map[string]string{
-	SlotIn1:  "Entrada 1",
-	SlotOut1: "Saída 1",
-	SlotIn2:  "Entrada 2",
-	SlotOut2: "Saída 2",
+// SlotKey returns the reminder key for a given journey index and whether it is an exit.
+// Examples: journeyIndex=0, isExit=false → "in1"; journeyIndex=1, isExit=true → "out2"
+func SlotKey(journeyIndex int, isExit bool) string {
+	number := journeyIndex + 1
+	if isExit {
+		return fmt.Sprintf("out%d", number)
+	}
+	return fmt.Sprintf("in%d", number)
 }
 
-var slotOrder = []string{SlotIn1, SlotOut1, SlotIn2, SlotOut2}
+// SlotLabel returns the Portuguese label for a slot.
+// Examples: journeyIndex=0, isExit=false → "Entrada 1"; journeyIndex=1, isExit=true → "Saída 2"
+func SlotLabel(journeyIndex int, isExit bool) string {
+	number := journeyIndex + 1
+	if isExit {
+		return fmt.Sprintf("Saída %d", number)
+	}
+	return fmt.Sprintf("Entrada %d", number)
+}
 
 // Slot is one recommended clock-in/out point for a work day.
 type Slot struct {

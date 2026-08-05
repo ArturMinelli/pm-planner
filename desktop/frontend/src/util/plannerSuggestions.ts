@@ -1,0 +1,239 @@
+import type { Journey, SolvedSlot } from '../types'
+import { addMinutes, parseHHMM } from './plannerTimes'
+
+export const BUILTIN_ANCHORS = ['08:00', '12:00', '13:30', '18:00'] as const
+export const DEFAULT_BREAK_MINUTES = 60
+
+export const NO_SOLVED_SLOT: SolvedSlot = { journeyIndex: -1, isEntry: false }
+
+export type SlotRef = {
+  journeyIndex: number
+  isEntry: boolean
+}
+
+export function isSolvedSlotValid(slot: SolvedSlot): boolean {
+  return slot.journeyIndex >= 0
+}
+
+export function isSlotSolved(slot: SolvedSlot, journeyIndex: number, isEntry: boolean): boolean {
+  return slot.journeyIndex === journeyIndex && slot.isEntry === isEntry
+}
+
+export function defaultSolvedSlot(journeys: Journey[]): SolvedSlot {
+  let lastSlot = NO_SOLVED_SLOT
+  for (let journeyIndex = 0; journeyIndex < journeys.length; journeyIndex++) {
+    const journey = journeys[journeyIndex]
+    if (!journey.entry.registered) {
+      lastSlot = { journeyIndex, isEntry: true }
+    }
+    if (!journey.exit.registered) {
+      lastSlot = { journeyIndex, isEntry: false }
+    }
+  }
+  return lastSlot
+}
+
+function parseBaseJourneySpanMinutes(base: string[]): number {
+  let totalMinutes = 0
+  for (let entryIndex = 0; entryIndex + 1 < base.length; entryIndex += 2) {
+    const entryMinutes = parseHHMM(base[entryIndex])
+    const exitMinutes = parseHHMM(base[entryIndex + 1])
+    if (entryMinutes === null || exitMinutes === null) {
+      continue
+    }
+    const spanMinutes = exitMinutes - entryMinutes
+    if (spanMinutes > 0) {
+      totalMinutes += spanMinutes
+    }
+  }
+  return totalMinutes
+}
+
+export function resolveAnchors(
+  base: string[],
+  slotCount: number,
+  breakMinutes: number,
+  targetSecs: number,
+): string[] {
+  const result = new Array<string>(slotCount)
+  const baseJourneyCount = Math.floor(base.length / 2)
+  const extraJourneyCount = slotCount / 2 - baseJourneyCount
+  const baseSpanMinutes = parseBaseJourneySpanMinutes(base)
+  let remainingMinutes = Math.round(targetSecs / 60) - baseSpanMinutes
+  if (remainingMinutes < 0) {
+    remainingMinutes = 0
+  }
+
+  const remainingShareMinutes =
+    extraJourneyCount > 0 ? Math.floor(remainingMinutes / extraJourneyCount) : 0
+
+  for (let slotIndex = 0; slotIndex < slotCount; slotIndex++) {
+    if (slotIndex < base.length) {
+      result[slotIndex] = base[slotIndex]
+      continue
+    }
+    if (slotIndex % 2 === 0) {
+      result[slotIndex] = addMinutes(result[slotIndex - 1], breakMinutes) ?? ''
+      continue
+    }
+    result[slotIndex] = addMinutes(result[slotIndex - 1], remainingShareMinutes) ?? ''
+  }
+
+  return result
+}
+
+export function applyAnchorSuggestions(
+  journeys: Journey[],
+  baseAnchors: string[],
+  targetSecs: number,
+  breakMinutes: number,
+  solvedSlot: SolvedSlot,
+  preserveSlot?: SlotRef,
+): Journey[] {
+  const slotCount = journeys.length * 2
+  const anchors = resolveAnchors(baseAnchors, slotCount, breakMinutes, targetSecs)
+  const result = journeys.map((journey) => ({
+    entry: { ...journey.entry },
+    exit: { ...journey.exit },
+  }))
+
+  for (let journeyIndex = 0; journeyIndex < result.length; journeyIndex++) {
+    const entrySlotIndex = journeyIndex * 2
+    const exitSlotIndex = journeyIndex * 2 + 1
+    const preserveEntry =
+      preserveSlot?.journeyIndex === journeyIndex && preserveSlot.isEntry
+    const preserveExit =
+      preserveSlot?.journeyIndex === journeyIndex && !preserveSlot.isEntry
+
+    if (
+      !result[journeyIndex].entry.registered &&
+      !isSlotSolved(solvedSlot, journeyIndex, true) &&
+      !preserveEntry &&
+      anchors[entrySlotIndex]
+    ) {
+      result[journeyIndex].entry.time = anchors[entrySlotIndex]
+    }
+
+    if (
+      !result[journeyIndex].exit.registered &&
+      !isSlotSolved(solvedSlot, journeyIndex, false) &&
+      !preserveExit &&
+      anchors[exitSlotIndex]
+    ) {
+      result[journeyIndex].exit.time = anchors[exitSlotIndex]
+    }
+  }
+
+  return result
+}
+
+function journeySpanSeconds(journey: Journey): number {
+  const entryMinutes = parseHHMM(journey.entry.time)
+  const exitMinutes = parseHHMM(journey.exit.time)
+  if (entryMinutes === null || exitMinutes === null) {
+    return 0
+  }
+  const spanMinutes = exitMinutes - entryMinutes
+  if (spanMinutes <= 0) {
+    return 0
+  }
+  return spanMinutes * 60
+}
+
+export function solveSlot(
+  journeys: Journey[],
+  solvedSlot: SolvedSlot,
+  targetSecs: number,
+): Journey[] {
+  if (!isSolvedSlotValid(solvedSlot) || solvedSlot.journeyIndex >= journeys.length) {
+    return journeys
+  }
+
+  const solvedJourney = journeys[solvedSlot.journeyIndex]
+  if (solvedSlot.isEntry && solvedJourney.entry.registered) {
+    return journeys
+  }
+  if (!solvedSlot.isEntry && solvedJourney.exit.registered) {
+    return journeys
+  }
+
+  let fixedSpanSecs = 0
+  for (let journeyIndex = 0; journeyIndex < journeys.length; journeyIndex++) {
+    if (journeyIndex === solvedSlot.journeyIndex) {
+      continue
+    }
+    fixedSpanSecs += journeySpanSeconds(journeys[journeyIndex])
+  }
+
+  let remainingSecs = targetSecs - fixedSpanSecs
+  if (remainingSecs < 0) {
+    remainingSecs = 0
+  }
+
+  const result = journeys.map((journey) => ({
+    entry: { ...journey.entry },
+    exit: { ...journey.exit },
+  }))
+
+  if (solvedSlot.isEntry) {
+    const exitMinutes = parseHHMM(result[solvedSlot.journeyIndex].exit.time)
+    if (exitMinutes === null) {
+      return journeys
+    }
+    const entryMinutes = exitMinutes - Math.round(remainingSecs / 60)
+    const clampedEntry = Math.max(0, Math.min(exitMinutes, entryMinutes))
+    result[solvedSlot.journeyIndex].entry = {
+      time: formatFromMinutes(clampedEntry),
+      registered: false,
+    }
+    return result
+  }
+
+  const entryMinutes = parseHHMM(result[solvedSlot.journeyIndex].entry.time)
+  if (entryMinutes === null) {
+    return journeys
+  }
+  const exitMinutes = entryMinutes + Math.round(remainingSecs / 60)
+  result[solvedSlot.journeyIndex].exit = {
+    time: formatFromMinutes(exitMinutes),
+    registered: false,
+  }
+  return result
+}
+
+function formatFromMinutes(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60) % 24
+  const minutes = totalMinutes % 60
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}
+
+export type InstantSuggestionOptions = {
+  baseAnchors?: string[]
+  breakMinutes?: number
+  preserveSlot?: SlotRef
+}
+
+export function applyInstantSuggestions(
+  journeys: Journey[],
+  solvedSlot: SolvedSlot,
+  targetSecs: number,
+  options: InstantSuggestionOptions = {},
+): { journeys: Journey[]; solvedSlot: SolvedSlot } {
+  const baseAnchors = options.baseAnchors ?? [...BUILTIN_ANCHORS]
+  const breakMinutes = options.breakMinutes ?? DEFAULT_BREAK_MINUTES
+  const activeSlot = isSolvedSlotValid(solvedSlot) ? solvedSlot : defaultSolvedSlot(journeys)
+  const anchored = applyAnchorSuggestions(
+    journeys,
+    baseAnchors,
+    targetSecs,
+    breakMinutes,
+    activeSlot,
+    options.preserveSlot,
+  )
+  const solvedJourneys = solveSlot(anchored, activeSlot, targetSecs)
+  return { journeys: solvedJourneys, solvedSlot: activeSlot }
+}
+
+export function seedEntryAfterExit(previousExitTime: string, breakMinutes: number): string {
+  return addMinutes(previousExitTime, breakMinutes) ?? ''
+}
