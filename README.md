@@ -24,6 +24,7 @@ O PM Planner é um auxiliar do PontoMais que permite planejar os horários de po
   - [Listar um Dia de Trabalho](#listar-um-dia-de-trabalho)
   - [Planejar um Dia de Trabalho](#planejar-um-dia-de-trabalho)
   - [Versão](#versão)
+  - [Atualizar](#atualizar)
 - [Usando o App Desktop (GUI)](#usando-o-app-desktop-gui)
   - [Página do Planner](#página-do-planner)
   - [Página de Configurações](#página-de-configurações)
@@ -91,34 +92,37 @@ pm list
 
 ### Atualizar instalação existente
 
-Se você já instalou o PM Planner e quer obter a versão mais recente (código, CLI e app desktop):
+A atualização é sempre manual — o PM Planner não se atualiza sozinho em segundo plano.
+
+**Pelo app desktop (recomendado):** abra **Configurações → Atualizações**, clique em **Verificar Atualizações** e depois em **Atualizar Agora**. O app fecha, atualiza e reabre sozinho, mostrando o resultado ao voltar.
+
+**Pela CLI:**
+
+```bash
+pm update           # verifica e, se houver novidade, atualiza
+pm update --check   # apenas verifica
+```
+
+**Sem a CLI instalada**, os scripts fazem o mesmo trabalho:
 
 | Plataforma | Comando |
 | --- | --- |
 | **macOS / Linux** | `curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.sh \| bash` |
 | **Windows** | `irm https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.ps1 \| iex` |
 
-**macOS / Linux:**
+Em qualquer um dos caminhos, a atualização:
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.sh | bash
-```
-
-**Windows:**
-
-```powershell
-irm https://raw.githubusercontent.com/ArturMinelli/pm-planner/main/scripts/update.ps1 | iex
-```
-
-O script de update:
-
-1. Localiza a instalação existente (`~/pm-planner` ou o clone atual)
+1. Localiza a instalação existente (`~/.local/share/pm-planner`, `~/Library/Application Support/pm-planner`, `%USERPROFILE%\pm-planner` ou o clone atual)
 2. Atualiza o código-fonte (`git pull` se houver repositório git; caso contrário, baixa o tarball mais recente)
 3. Encerra o app desktop e o daemon de lembretes (se estiverem em execução) para liberar os binários antes da reinstalação
 4. Reinstala a CLI (`pm`) e recompila/reinstala o app desktop
 5. Reinicia o daemon de lembretes automaticamente se ele estava ativo antes do update
 
+A saída completa fica em `~/.cache/pm/update.log` (`%LOCALAPPDATA%\pm\update.log` no Windows).
+
 Se a instalação ainda não existir, use o [script de setup](#instalação-rápida-recomendado) primeiro.
+
+> Versões anteriores registravam uma auto-atualização diária no login (entrada XDG autostart, LaunchAgent ou Agendador de Tarefas). Ela foi removida: o app desktop, o `setup` e o `update` apagam esse registro automaticamente na primeira execução.
 
 ---
 
@@ -472,6 +476,17 @@ pm version
 
 Imprime a versão do binário, o hash do commit e a data de build.
 
+### Atualizar
+
+```bash
+pm update           # verifica e, se houver novidade, atualiza
+pm update --check   # apenas verifica, sem alterar nada
+```
+
+`pm update --check` mostra o commit instalado, sua data e quantas atualizações existem em `origin/main`. A atualização é bloqueada — com o motivo na tela — quando há alterações locais não commitadas, quando Go ou Node.js não estão no PATH, ou quando o repositório remoto está inacessível.
+
+Em instalações feitas a partir do tarball (sem git) não há como comparar versões, e atualizar sempre reinstala a partir do código mais recente.
+
 ---
 
 ## Usando o App Desktop (GUI)
@@ -539,6 +554,12 @@ Clique no ícone de configurações na barra lateral para configurar o app.
 - Ative os lembretes para iniciar o daemon em segundo plano e avisar antes de Entrada 1, Saída 1, Entrada 2 e Saída 2.
 - Adicione e remova quantos avisos personalizados quiser, entre 1 minuto e 4 horas antes.
 - Quando **Iniciar com o sistema** estiver ativo, o app cria um LaunchAgent no macOS, uma entrada XDG autostart no Linux, ou um atalho Startup no Windows.
+
+**Atualizações:**
+
+- Clique em **Verificar Atualizações** para comparar o commit instalado com `origin/main`. O card mostra a versão instalada e quantas atualizações existem.
+- Clique em **Atualizar Agora** para aplicar. O app fecha, a atualização roda em segundo plano e o app reabre sozinho — o resultado aparece como aviso na volta.
+- Quando algo impede a atualização (alterações locais não commitadas, Go ou Node.js ausentes, repositório remoto inacessível), o motivo aparece no card e o botão fica desabilitado, antes de o app fechar.
 
 ---
 
