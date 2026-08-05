@@ -59,12 +59,13 @@ export default function PlannerSlotField({
 
   const showBalanceBadge = isSolved && (hasAlternative || unavailable)
   const canCalculate = !slot.registered
+  const hasStatusBadges = slot.registered || isSolved || showBalanceBadge
 
   return (
     <div className={`field slot-field ${isSolved ? 'slot-solved' : ''}`}>
-      <div className="clockout-label-row">
-        <label htmlFor={fieldId}>{label}</label>
-        <div className="exit-label-actions">
+      <label htmlFor={fieldId}>{label}</label>
+      {hasStatusBadges ? (
+        <div className="slot-status-badges">
           {slot.registered ? (
             <span className="registered-badge">registrada</span>
           ) : null}
@@ -98,7 +99,7 @@ export default function PlannerSlotField({
             </span>
           ) : null}
         </div>
-      </div>
+      ) : null}
       <div className="clockout-values">
         {isSolved ? (
           <output

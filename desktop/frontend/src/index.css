@@ -673,9 +673,9 @@ input[readonly] {
 
 .planner-warning {
   font-size: 0.82rem;
-  color: var(--warn);
-  background: var(--warn-bg);
-  border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+  color: var(--warning);
+  background: var(--warning-bg);
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
   border-radius: var(--radius);
   padding: 0.4rem 0.55rem;
 }
@@ -690,18 +690,12 @@ input[readonly] {
   font-size: 0.8rem;
 }
 
-.exit-field {
-  position: relative;
-}
-
-.exit-label-actions {
+.slot-status-badges {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   min-width: 0;
-  flex: 0 1 auto;
-  justify-content: flex-end;
 }
 
 .registered-badge {
@@ -894,11 +888,6 @@ input[readonly] {
   color: var(--warning);
 }
 
-.clockout-field {
-  position: relative;
-}
-
-.clockout-label-row,
 .clockout-values {
   display: flex;
   min-width: 0;
@@ -906,31 +895,14 @@ input[readonly] {
   gap: 0.45rem;
 }
 
-.clockout-label-row {
-  flex-wrap: wrap;
-  min-height: 1.3rem;
-  justify-content: flex-start;
-  gap: 0.35rem;
+.slot-field {
+  min-width: 0;
 }
 
-.clockout-label-row label {
-  flex: 0 0 auto;
-  min-width: max-content;
+.slot-field > label {
   white-space: nowrap;
   overflow-wrap: normal;
   word-break: keep-all;
-}
-
-@container (max-width: 11rem) {
-  .exit-label-actions {
-    flex-basis: 100%;
-    justify-content: flex-start;
-  }
-}
-
-.slot-field {
-  container-type: inline-size;
-  min-width: 0;
 }
 
 .clockout-values input {
@@ -1164,11 +1136,6 @@ input[readonly] {
 
   .reminder-lead-add .btn {
     grid-column: 1 / -1;
-  }
-
-  .exit-label-actions {
-    flex-basis: 100%;
-    justify-content: flex-start;
   }
 
   .clockout-values {
