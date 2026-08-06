@@ -13,18 +13,12 @@ import (
 	"pm-cli/pkg/config"
 	"pm-cli/pkg/message"
 	"pm-cli/pkg/reminder"
+	"pm-cli/pkg/server"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-type ReminderStatus struct {
-	Settings                 config.Reminders `json:"settings"`
-	AutostartEnabled         bool             `json:"autostartEnabled"`
-	DaemonRunning            bool             `json:"daemonRunning"`
-	NotificationAvailable    bool             `json:"notificationAvailable"`
-	NotificationAuthorized   bool             `json:"notificationAuthorized"`
-	NotificationStatusDetail string           `json:"notificationStatusDetail,omitempty"`
-}
+type ReminderStatus = server.ReminderStatus
 
 type NotificationPermissionStatus struct {
 	Available  bool   `json:"available"`
@@ -66,11 +60,7 @@ func (a desktopAlerter) SendReminder(ctx context.Context, event reminder.Schedul
 }
 
 func (a *App) GetReminderStatus() (*ReminderStatus, error) {
-	f, err := config.Read("")
-	if err != nil {
-		return nil, err
-	}
-	settings, err := config.ResolveReminders(f)
+	settings, err := server.ReadReminderSettings()
 	if err != nil {
 		return nil, err
 	}
@@ -88,16 +78,12 @@ func (a *App) GetReminderStatus() (*ReminderStatus, error) {
 }
 
 func (a *App) SaveReminderSettings(settings config.Reminders) error {
-	normalized, err := config.ResolveReminders(&config.File{Reminders: &settings})
-	if err != nil {
+	if err := server.SaveReminderSettingsToConfig(settings); err != nil {
 		return err
 	}
-	f, err := config.Read("")
+
+	normalized, err := server.ReadReminderSettings()
 	if err != nil {
-		return err
-	}
-	f.Reminders = &normalized
-	if err := config.Save("", f); err != nil {
 		return err
 	}
 

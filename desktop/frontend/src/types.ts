@@ -102,6 +102,20 @@ export interface ReminderStatus {
   notificationStatusDetail?: string
 }
 
+export interface ScheduledReminder {
+  id: string
+  date: string
+  slotKey: string
+  slotLabel: string
+  slotTime: string
+  leadMinutes: number
+  fireAt: string
+}
+
+export interface ReminderPlanPayload {
+  schedule: ScheduledReminder[]
+}
+
 export interface NotificationPermissionStatus {
   available: boolean
   authorized: boolean

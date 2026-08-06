@@ -34,7 +34,6 @@ export default function PlannerPage() {
 
   const summaryRequestRef = useRef(0)
   const fetchRequestRef = useRef(0)
-  const hasRuntime = backend.hasWailsRuntime()
 
   const recalculateSummary = useCallback(
     (journeysToCalc: Journey[], activeSlot: SolvedSlot) => {
@@ -154,16 +153,6 @@ export default function PlannerPage() {
   )
 
   useEffect(() => {
-    if (!hasRuntime) {
-      setFetching(false)
-      setLoaded(null)
-      setSummary(null)
-      setRawJourneys([])
-      setJourneys([])
-      setSolvedSlot(NO_SOLVED_SLOT)
-      return
-    }
-
     const requestId = ++fetchRequestRef.current
     let cancelled = false
 
@@ -222,7 +211,7 @@ export default function PlannerPage() {
     return () => {
       cancelled = true
     }
-  }, [date, hasRuntime, t])
+  }, [date, t])
 
   const timesDisabled = fetching
   const originalsLine = loaded?.originalsLine || t('planner.none')
@@ -247,8 +236,6 @@ export default function PlannerPage() {
       />
 
       <Stack>
-        {!hasRuntime ? <Banner>{t('common.browserMode')}</Banner> : null}
-
         {loadWarning ? <Banner>{loadWarning}</Banner> : null}
 
         {error ? <Banner tone="error">{error}</Banner> : null}

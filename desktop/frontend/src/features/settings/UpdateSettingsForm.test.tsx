@@ -23,7 +23,7 @@ function render(props: Partial<Parameters<typeof UpdateSettingsForm>[0]> = {}) {
       status={null}
       checking={false}
       updating={false}
-      canUseRuntime
+      canApplyUpdate
       onCheck={() => undefined}
       onUpdate={() => undefined}
       {...props}

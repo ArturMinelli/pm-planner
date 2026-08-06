@@ -13,11 +13,9 @@ import type {
 } from '../types'
 import {
   builtinPlannerAnchors,
-  DEFAULT_BALANCE_CREDIT_MULTIPLIER,
-  DEFAULT_MAX_DAILY_EXTRA_MINUTES,
 } from '../util/plannerDefaults'
-import { defaultReminderSettings, normalizeReminderSettings } from '../util/reminderSettings'
-import { browserUpdateStatus } from '../util/updateStatus'
+import { normalizeReminderSettings } from '../util/reminderSettings'
+import * as httpClient from './httpClient'
 
 interface GoPmApp {
   GetConfig(): Promise<PmConfig>
@@ -48,7 +46,6 @@ function requireRuntime(): GoPmApp {
   return app
 }
 
-/** Safe for browser/dev preview — returns mock mode flag */
 function normalizePlanner(
   planner?: PlannerAnchorsConfig,
 ): PlannerAnchorsConfig | undefined {
@@ -64,14 +61,7 @@ function normalizePlanner(
 
 export async function getConfig(): Promise<PmConfig> {
   if (!hasWailsRuntime()) {
-    return {
-      login: '',
-      password: '',
-      max_daily_extra_minutes: DEFAULT_MAX_DAILY_EXTRA_MINUTES,
-      balance_credit_multiplier: DEFAULT_BALANCE_CREDIT_MULTIPLIER,
-      planner: builtinPlannerAnchors(),
-      reminders: defaultReminderSettings(),
-    }
+    return httpClient.getConfig()
   }
   const config = await requireRuntime().GetConfig()
   return {
@@ -82,6 +72,9 @@ export async function getConfig(): Promise<PmConfig> {
 }
 
 export async function saveConfig(config: PmConfig): Promise<void> {
+  if (!hasWailsRuntime()) {
+    return httpClient.saveConfig(config)
+  }
   const payload: PmConfig = {
     login: config.login,
     password: config.password,
@@ -125,27 +118,29 @@ export async function testAuth(
   login: string,
   password: string,
 ): Promise<AuthResult> {
+  if (!hasWailsRuntime()) {
+    return httpClient.testAuth(login, password)
+  }
   return requireRuntime().TestAuth(login, password)
 }
 
 export async function loadPlanner(date: string): Promise<PlannerPayload> {
+  if (!hasWailsRuntime()) {
+    return httpClient.loadPlanner(date)
+  }
   return requireRuntime().LoadPlanner(date)
 }
 
 export async function recalculateDay(request: RecalculateRequest): Promise<PlannerSummary> {
+  if (!hasWailsRuntime()) {
+    return httpClient.recalculateDay(request)
+  }
   return requireRuntime().RecalculateDay(request)
 }
 
 export async function getReminderStatus(): Promise<ReminderStatus> {
   if (!hasWailsRuntime()) {
-    return {
-      settings: defaultReminderSettings(),
-      autostartEnabled: false,
-      daemonRunning: false,
-      notificationAvailable: false,
-      notificationAuthorized: false,
-      notificationStatusDetail: 'settings.reminders.browserDetail',
-    }
+    return httpClient.getReminderStatus()
   }
   const status = await requireRuntime().GetReminderStatus()
   return {
@@ -157,17 +152,32 @@ export async function getReminderStatus(): Promise<ReminderStatus> {
 export async function saveReminderSettings(
   settings: ReminderSettings,
 ): Promise<void> {
+  if (!hasWailsRuntime()) {
+    return httpClient.saveReminderSettings(settings)
+  }
   return requireRuntime().SaveReminderSettings(
     normalizeReminderSettings(settings),
   )
 }
 
 export async function requestNotificationPermission(): Promise<NotificationPermissionStatus> {
+  if (!hasWailsRuntime()) {
+    return httpClient.requestNotificationPermission()
+  }
   return requireRuntime().RequestNotificationPermission()
 }
 
+export async function getReminderPlan(date: string) {
+  if (!hasWailsRuntime()) {
+    return httpClient.getReminderPlan(date)
+  }
+  throw new Error('errors.desktopShellRequired')
+}
+
 export async function checkForUpdate(): Promise<UpdateStatus> {
-  if (!hasWailsRuntime()) return browserUpdateStatus()
+  if (!hasWailsRuntime()) {
+    return httpClient.checkForUpdate()
+  }
   const status = await requireRuntime().CheckForUpdate()
   // Go marshals an empty blocker slice as null.
   return { ...status, blockers: status.blockers ?? [] }
@@ -175,11 +185,20 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
 
 /** Closes the app: the update runs detached and reopens it when it finishes. */
 export async function startUpdate(): Promise<void> {
+  if (!hasWailsRuntime()) {
+    return httpClient.startUpdate()
+  }
   return requireRuntime().StartUpdate()
 }
 
 /** Returns the outcome of an update that ran while the app was closed, once. */
 export async function consumeUpdateResult(): Promise<UpdateResult | null> {
-  if (!hasWailsRuntime()) return null
+  if (!hasWailsRuntime()) {
+    return httpClient.consumeUpdateResult()
+  }
   return (await requireRuntime().ConsumeUpdateResult()) ?? null
+}
+
+export function usesHttpTransport(): boolean {
+  return !hasWailsRuntime()
 }

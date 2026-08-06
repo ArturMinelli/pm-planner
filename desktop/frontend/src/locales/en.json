@@ -10,9 +10,6 @@
     "minutes": "minutes",
     "hours": "hours",
     "hour": "hour",
-    "browserMode": "Browser mode: use the desktop app to load real API data.",
-    "desktopOnlyConfig": "Settings are saved by the desktop app. Use pm-desktop here.",
-    "desktopOnlyAuth": "Authentication only works inside the desktop app.",
     "desktopOnlyUpdates": "Updates only work inside the desktop app."
   },
   "nav": {
@@ -63,7 +60,6 @@
   "settings": {
     "title": "Settings",
     "description": "Uses the same config file as the CLI, resolved by <code>pm</code> on each platform.",
-    "browserHint": "Browser mode: local editing only; saving/API requires the Wails shell.",
     "language": {
       "title": "Language",
       "description": "Choose the app language. Changes apply immediately.",
@@ -110,8 +106,7 @@
       "removeNoticeDisabled": "Add another notice before removing this one",
       "removeNoticeTitle": "Remove notice",
       "save": "Save reminders",
-      "saved": "Reminders saved and daemon synchronized.",
-      "browserDetail": "Browser mode"
+      "saved": "Reminders saved."
     },
     "updates": {
       "title": "Updates",

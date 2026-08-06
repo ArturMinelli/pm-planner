@@ -2,27 +2,16 @@ package main
 
 import (
 	"context"
-	"strings"
-	"time"
 
-	"pm-cli/pkg/api"
 	"pm-cli/pkg/app"
-	"pm-cli/pkg/auth"
 	"pm-cli/pkg/config"
-	"pm-cli/pkg/message"
-	"pm-cli/pkg/plan"
+	"pm-cli/pkg/server"
 	"pm-cli/pkg/update"
 )
 
 // App is the Wails bind target; methods are exposed to the React frontend.
 type App struct {
 	ctx context.Context
-}
-
-// AuthResult is returned by TestAuth.
-type AuthResult struct {
-	OK    bool             `json:"ok"`
-	Error *message.Message `json:"error,omitempty"`
 }
 
 // NewApp constructs the desktop app context.
@@ -39,78 +28,37 @@ func (a *App) Startup(ctx context.Context) {
 
 // GetConfig reads the YAML file on disk used by pm CLI (~/.config/pm/config.yaml).
 func (a *App) GetConfig() (*config.File, error) {
-	return config.Read("")
+	return server.GetConfig()
 }
 
 // SaveConfig writes YAML and refreshes viper so auth/session use the latest values.
 func (a *App) SaveConfig(f *config.File) error {
-	return config.Save("", f)
+	return server.SaveConfig(f)
 }
 
 // TestAuth validates login/password with a fresh sign-in (ignores cached session), then
 // confirms the resulting session is actually accepted by the API.
-func (a *App) TestAuth(login, password string) AuthResult {
-	login = strings.TrimSpace(login)
-	if login == "" || password == "" {
-		return AuthResult{
-			Error: message.Ptr(message.KeyErrorsAuthMissingCredentials, nil),
-		}
-	}
-	if err := auth.VerifyCredentials(login, password); err != nil {
-		classified := message.FromError(err)
-		return AuthResult{Error: &classified}
-	}
-
-	ctx := a.ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	reqCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-	if err := api.New().VerifyAccess(reqCtx); err != nil {
-		classified := message.FromError(err)
-		return AuthResult{Error: &classified}
-	}
-	return AuthResult{OK: true}
+func (a *App) TestAuth(login, password string) server.AuthResult {
+	return server.TestAuth(a.context(), login, password)
 }
 
 // RecalculateRequest carries the editable planner state sent from the frontend.
-type RecalculateRequest struct {
-	Date           string                  `json:"date"`
-	BaseTargetSecs int64                   `json:"baseTargetSecs"`
-	Balance        *plan.BalanceAdjustment `json:"balance,omitempty"`
-	Journeys       []plan.Journey          `json:"journeys"`
-	SolvedSlot     plan.SolvedSlot         `json:"solvedSlot"`
-}
+type RecalculateRequest = server.RecalculateRequest
 
 // RecalculateDay recomputes the solved slot and journey summaries from frontend-editable inputs.
 func (a *App) RecalculateDay(req RecalculateRequest) (*app.PlannerSummary, error) {
-	date, err := time.Parse("2006-01-02", req.Date)
-	if err != nil {
-		return nil, err
-	}
-	return app.RecalculatePlanner(date, req.BaseTargetSecs, req.Balance, req.Journeys, req.SolvedSlot)
+	return server.RecalculateDay(req)
 }
 
 // LoadPlanner fetches the work day and builds suggested clock times (shared with CLI).
 // On fetch failure it falls back to Settings defaults and sets LoadWarning.
 func (a *App) LoadPlanner(date string) (*app.PlannerPayload, error) {
+	return server.LoadPlanner(a.context(), date)
+}
+
+func (a *App) context() context.Context {
 	if a.ctx == nil {
-		a.ctx = context.Background()
+		return context.Background()
 	}
-	cl := api.New()
-	ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)
-	defer cancel()
-
-	payload, err := app.FetchPlannerPayload(ctx, cl, date)
-	if err == nil {
-		return payload, nil
-	}
-
-	payload, defaultsErr := app.BuildDefaultsPlannerPayload(date)
-	if defaultsErr != nil {
-		return nil, err
-	}
-	payload.LoadWarning = message.Ptr(message.KeyErrorsPlannerLoadFallback, nil)
-	return payload, nil
+	return a.ctx
 }

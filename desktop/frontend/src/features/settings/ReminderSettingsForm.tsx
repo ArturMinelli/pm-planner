@@ -11,7 +11,7 @@ import {
 type ReminderSettingsFormProps = {
   settings: ReminderSettings
   busy: boolean
-  canUseRuntime: boolean
+  showAutostart: boolean
   onSettingsChange: (settings: ReminderSettings) => void
   onSave: () => void
 }
@@ -21,7 +21,7 @@ type ReminderLeadUnit = 'minutes' | 'hours'
 export default function ReminderSettingsForm({
   settings,
   busy,
-  canUseRuntime,
+  showAutostart,
   onSettingsChange,
   onSave,
 }: ReminderSettingsFormProps) {
@@ -76,15 +76,17 @@ export default function ReminderSettingsForm({
             />
             <span>{t('settings.reminders.enable')}</span>
           </label>
-          <label className="check-row">
-            <input
-              type="checkbox"
-              checked={normalized.autostart}
-              disabled={!normalized.enabled}
-              onChange={(event) => update({ autostart: event.target.checked })}
-            />
-            <span>{t('settings.reminders.autostart')}</span>
-          </label>
+          {showAutostart ? (
+            <label className="check-row">
+              <input
+                type="checkbox"
+                checked={normalized.autostart}
+                disabled={!normalized.enabled}
+                onChange={(event) => update({ autostart: event.target.checked })}
+              />
+              <span>{t('settings.reminders.autostart')}</span>
+            </label>
+          ) : null}
         </div>
 
         <Field
@@ -163,7 +165,7 @@ export default function ReminderSettingsForm({
           <Button
             type="submit"
             variant="primary"
-            disabled={busy || !canUseRuntime}
+            disabled={busy}
             aria-busy={busy}
           >
             {busy ? t('common.saving') : t('settings.reminders.save')}

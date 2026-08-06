@@ -22,13 +22,6 @@ export default function LanguageSettingsForm({
   const { t } = useTranslation()
 
   const saveLocale = async () => {
-    if (!backend.hasWailsRuntime()) {
-      await i18n.changeLanguage(locale)
-      document.documentElement.lang = locale
-      onSaved()
-      return
-    }
-
     try {
       await backend.mergeAndSave({ locale })
       await i18n.changeLanguage(locale)

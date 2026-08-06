@@ -21,7 +21,7 @@ import {
 import { defaultReminderSettings, normalizeReminderSettings } from '../util/reminderSettings'
 import { translateMessage } from '../i18n/translateMessage'
 import { defaultLocale, isAppLocale } from '../i18n'
-import { Banner, Page, PageHeader, Toast } from '../components/ui'
+import { Page, PageHeader, Toast } from '../components/ui'
 import AccountSettingsForm from '../features/settings/AccountSettingsForm'
 import LanguageSettingsForm from '../features/settings/LanguageSettingsForm'
 import PlannerDefaultsForm from '../features/settings/PlannerDefaultsForm'
@@ -55,6 +55,7 @@ export default function SettingsPage() {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
   const [checkingUpdate, setCheckingUpdate] = useState(false)
   const [updating, setUpdating] = useState(false)
+  const usesDesktopShell = backend.hasWailsRuntime()
 
   const dismissToast = useCallback(() => {
     setToast(null)
@@ -114,10 +115,8 @@ export default function SettingsPage() {
           })
         }
         setReminders(normalizeReminderSettings(config.reminders))
-        if (backend.hasWailsRuntime()) {
-          const status = await backend.getReminderStatus()
-          setReminders(status.settings)
-        }
+        const status = await backend.getReminderStatus()
+        setReminders(status.settings)
       } catch (error) {
         showError(error)
       }
@@ -125,6 +124,7 @@ export default function SettingsPage() {
   }, [showError])
 
   useEffect(() => {
+    if (!usesDesktopShell) return
     ;(async () => {
       try {
         const result = await backend.consumeUpdateResult()
@@ -136,7 +136,7 @@ export default function SettingsPage() {
         showError(error)
       }
     })()
-  }, [showError, showSuccess, t])
+  }, [showError, showSuccess, t, usesDesktopShell])
 
   const applyAnchors = (next: PlannerAnchorTimes) => {
     setAnchors(enforceAnchorOrder(next))
@@ -144,10 +144,6 @@ export default function SettingsPage() {
 
   const saveAccount = async () => {
     dismissToast()
-    if (!backend.hasWailsRuntime()) {
-      showError(t('common.desktopOnlyConfig'))
-      return
-    }
     const loginErrorKey = validateLoginCredential(login)
     if (loginErrorKey) {
       showError(t(loginErrorKey))
@@ -169,10 +165,6 @@ export default function SettingsPage() {
 
   const savePlanner = async () => {
     dismissToast()
-    if (!backend.hasWailsRuntime()) {
-      showError(t('common.desktopOnlyConfig'))
-      return
-    }
     const anchorError = validatePlannerAnchors(anchors)
     if (anchorError) {
       if (anchorError.key === 'errors.validation.invalidAnchorTime') {
@@ -219,17 +211,12 @@ export default function SettingsPage() {
   }
 
   const refreshReminderSettings = async () => {
-    if (!backend.hasWailsRuntime()) return
     const status = await backend.getReminderStatus()
     setReminders(status.settings)
   }
 
   const saveReminders = async () => {
     dismissToast()
-    if (!backend.hasWailsRuntime()) {
-      showError(t('common.desktopOnlyConfig'))
-      return
-    }
     const normalized = normalizeReminderSettings(reminders)
     setBusy(true)
     try {
@@ -269,10 +256,6 @@ export default function SettingsPage() {
 
   const test = async () => {
     dismissToast()
-    if (!backend.hasWailsRuntime()) {
-      showError(t('common.desktopOnlyAuth'))
-      return
-    }
     if (!login.trim() || !password) {
       showError(t('settings.account.testMissing'))
       return
@@ -300,8 +283,6 @@ export default function SettingsPage() {
     }
   }
 
-  const devHint = backend.hasWailsRuntime() ? '' : t('settings.browserHint')
-
   return (
     <Page>
       <PageHeader
@@ -310,8 +291,6 @@ export default function SettingsPage() {
           <Trans i18nKey="settings.description" components={{ code: <code className="pill" translate="no" /> }} />
         }
       />
-
-      {devHint ? <Banner>{devHint}</Banner> : null}
 
       <div className="settings-grid">
         <LanguageSettingsForm
@@ -326,7 +305,6 @@ export default function SettingsPage() {
           login={login}
           password={password}
           busy={busy}
-          canTest={backend.hasWailsRuntime()}
           onLoginChange={setLogin}
           onPasswordChange={setPassword}
           onSave={() => void saveAccount()}
@@ -347,7 +325,7 @@ export default function SettingsPage() {
         <ReminderSettingsForm
           settings={reminders}
           busy={busy}
-          canUseRuntime={backend.hasWailsRuntime()}
+          showAutostart={usesDesktopShell}
           onSettingsChange={setReminders}
           onSave={() => void saveReminders()}
         />
@@ -357,7 +335,7 @@ export default function SettingsPage() {
         status={updateStatus}
         checking={checkingUpdate}
         updating={updating}
-        canUseRuntime={backend.hasWailsRuntime()}
+        canApplyUpdate={usesDesktopShell}
         onCheck={() => void checkUpdate()}
         onUpdate={() => void startUpdate()}
       />

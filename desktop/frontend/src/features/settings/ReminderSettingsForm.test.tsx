@@ -13,7 +13,7 @@ describe('ReminderSettingsForm', () => {
           native_notifications: false,
         }}
         busy={false}
-        canUseRuntime
+        showAutostart
         onSettingsChange={() => undefined}
         onSave={() => undefined}
       />,

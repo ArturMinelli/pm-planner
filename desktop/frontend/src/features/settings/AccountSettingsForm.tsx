@@ -6,7 +6,6 @@ type AccountSettingsFormProps = {
   login: string
   password: string
   busy: boolean
-  canTest: boolean
   onLoginChange: (value: string) => void
   onPasswordChange: (value: string) => void
   onSave: () => void
@@ -17,7 +16,6 @@ export default function AccountSettingsForm({
   login,
   password,
   busy,
-  canTest,
   onLoginChange,
   onPasswordChange,
   onSave,
@@ -76,7 +74,7 @@ export default function AccountSettingsForm({
             type="button"
             variant="secondary"
             onClick={onTest}
-            disabled={busy || !canTest}
+            disabled={busy}
             aria-busy={busy}
           >
             {t('settings.account.test')}

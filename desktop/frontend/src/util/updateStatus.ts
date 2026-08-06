@@ -3,19 +3,6 @@ import type { UpdateStatus } from '../types'
 
 const isoDateParts = /^(\d{4})-(\d{2})-(\d{2})/
 
-export function browserUpdateStatus(): UpdateStatus {
-  return {
-    root: '',
-    isGit: false,
-    commitSha: '',
-    commitDate: '',
-    behind: 0,
-    dirty: false,
-    blockers: [{ key: 'common.desktopOnlyUpdates' }],
-    updateAvailable: false,
-  }
-}
-
 /** Reads the calendar date out of a commit timestamp, ignoring its time zone. */
 export function formatCommitDate(commitDate: string): string {
   const parts = isoDateParts.exec(commitDate.trim())

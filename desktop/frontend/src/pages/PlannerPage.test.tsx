@@ -143,13 +143,14 @@ describe('PlannerPage', () => {
     expect(container.textContent).toContain('Entry 1')
   })
 
-  it('shows a browser banner without fetching when Wails is unavailable', async () => {
+  it('loads planner data when Wails is unavailable (HTTP transport)', async () => {
     mockedBackend.hasWailsRuntime.mockReturnValue(false)
 
     await renderPage()
 
-    expect(mockedBackend.loadPlanner).not.toHaveBeenCalled()
-    expect(container.textContent).toContain('Browser mode')
+    expect(mockedBackend.loadPlanner).toHaveBeenCalledTimes(1)
+    expect(mockedBackend.loadPlanner).toHaveBeenCalledWith('2026-06-09')
+    expect(container.textContent).not.toContain('Browser mode')
   })
 
   it('renders journey list and summary inside a two-column grid', async () => {

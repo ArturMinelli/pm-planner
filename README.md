@@ -581,7 +581,7 @@ bin/pm project clean
 | Build no Linux não encontra o WebKitGTK | Instale `libwebkit2gtk-4.1-dev`; distribuições mais antigas podem precisar de `libwebkit2gtk-4.0-dev` com build tags ajustadas |
 | `linux/386` tenta linkar contra GTK/WebKit 64 bits | Use `pm project build desktop`; o comando força `GOARCH=amd64` no Linux x86\_64, a menos que `--force-go-host` seja passado |
 | Assets do frontend ausentes em tempo de execução | Execute `pm project build desktop` sem `--skip-frontend` |
-| App desktop exibe banner "Modo navegador" | O frontend foi aberto em um navegador comum em vez de pelo `pm-desktop`; chamadas reais à API só funcionam dentro do shell Wails |
+| Desenvolvimento no navegador sem API | Rode `npm run dev` em `desktop/frontend` — inicia o servidor Go local (`cmd/pm-dev`) e o Vite com proxy `/api` |
 | Erro de autenticação no `pm list` | Verifique o `config.yaml` com login (e-mail ou CPF) e senha corretos; use Configurações → **Testar Login** no app desktop para verificar |
 | `gcc` não encontrado no Windows | Instale o [TDM-GCC](https://jmeubank.github.io/tdm-gcc/) e certifique-se de que está no `PATH` |
 | WebView2 não encontrado no Windows | Baixe e instale o [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2) da Microsoft |

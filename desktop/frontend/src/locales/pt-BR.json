@@ -10,9 +10,6 @@
     "minutes": "minutos",
     "hours": "horas",
     "hour": "hora",
-    "browserMode": "Modo navegador: use o app desktop para carregar dados reais da API.",
-    "desktopOnlyConfig": "Configurações são gravadas pelo app desktop. Use pm-desktop aqui.",
-    "desktopOnlyAuth": "Autenticação só funciona dentro do desktop.",
     "desktopOnlyUpdates": "Atualizações só funcionam dentro do app desktop."
   },
   "nav": {
@@ -63,7 +60,6 @@
   "settings": {
     "title": "Configurações",
     "description": "Usa o mesmo arquivo de configuração da CLI, resolvido por <code>pm</code> em cada plataforma.",
-    "browserHint": "Modo navegador: edição apenas local; gravar/API exige o shell Wails.",
     "language": {
       "title": "Idioma",
       "description": "Escolha o idioma do app. A alteração é aplicada imediatamente.",
@@ -110,8 +106,7 @@
       "removeNoticeDisabled": "Adicione outro aviso antes de remover este",
       "removeNoticeTitle": "Remover aviso",
       "save": "Salvar lembretes",
-      "saved": "Lembretes salvos e daemon sincronizado.",
-      "browserDetail": "Modo navegador"
+      "saved": "Lembretes salvos."
     },
     "updates": {
       "title": "Atualizações",

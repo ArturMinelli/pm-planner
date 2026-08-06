@@ -11,7 +11,7 @@ type UpdateSettingsFormProps = {
   status: UpdateStatus | null
   checking: boolean
   updating: boolean
-  canUseRuntime: boolean
+  canApplyUpdate: boolean
   onCheck: () => void
   onUpdate: () => void
 }
@@ -20,13 +20,13 @@ export default function UpdateSettingsForm({
   status,
   checking,
   updating,
-  canUseRuntime,
+  canApplyUpdate,
   onCheck,
   onUpdate,
 }: UpdateSettingsFormProps) {
   const { t } = useTranslation()
   const blockers = status?.blockers ?? []
-  const canUpdate = !!status?.updateAvailable && !updating && canUseRuntime
+  const canUpdate = !!status?.updateAvailable && !updating && canApplyUpdate
 
   return (
     <Card
@@ -57,7 +57,7 @@ export default function UpdateSettingsForm({
       <div className="btn-row">
         <Button
           variant="secondary"
-          disabled={checking || updating || !canUseRuntime}
+          disabled={checking || updating}
           aria-busy={checking}
           onClick={onCheck}
         >
