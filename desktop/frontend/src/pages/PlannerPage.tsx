@@ -6,11 +6,13 @@ import { translateMessage } from '../i18n/translateMessage'
 import { localDateYYYYMMDD } from '../util/timeFormat'
 import {
   applyInstantSuggestions,
+  BUILTIN_ANCHORS,
   defaultSolvedSlot,
   NO_SOLVED_SLOT,
   seedEntryAfterExit,
 } from '../util/plannerSuggestions'
 import { enforceJourneyOrder } from '../util/plannerTimes'
+import { resolvePlannerAnchorsArray } from '../util/plannerDefaults'
 import { Banner, Field, Page, PageHeader, Stack } from '../components/ui'
 import PlannerDatePicker from '../components/PlannerDatePicker'
 import PlannerSummaryPanel from '../features/planner/PlannerSummaryPanel'
@@ -31,6 +33,8 @@ export default function PlannerPage() {
 
   const loadedRef = useRef<PlannerPayload | null>(null)
   loadedRef.current = loaded
+
+  const baseAnchorsRef = useRef<string[]>([...BUILTIN_ANCHORS])
 
   const summaryRequestRef = useRef(0)
   const fetchRequestRef = useRef(0)
@@ -73,7 +77,10 @@ export default function PlannerPage() {
         rawJourneysInput,
         slot,
         currentLoaded.baseTargetSecs,
-        { preserveSlot },
+        {
+          baseAnchors: baseAnchorsRef.current,
+          preserveSlot,
+        },
       )
       setRawJourneys(rawJourneysInput)
       setJourneys(solvedJourneys)
@@ -166,8 +173,13 @@ export default function PlannerPage() {
       setSolvedSlot(NO_SOLVED_SLOT)
 
       try {
-        const payload = await backend.loadPlanner(date)
+        const [config, payload] = await Promise.all([
+          backend.getConfig(),
+          backend.loadPlanner(date),
+        ])
         if (cancelled || requestId !== fetchRequestRef.current) return
+
+        baseAnchorsRef.current = [...resolvePlannerAnchorsArray(config.planner)]
 
         const activeSlot = payload.solvedSlot?.journeyIndex >= 0
           ? payload.solvedSlot
@@ -176,6 +188,7 @@ export default function PlannerPage() {
           payload.journeys,
           activeSlot,
           payload.baseTargetSecs,
+          { baseAnchors: baseAnchorsRef.current },
         )
 
         setLoaded(payload)

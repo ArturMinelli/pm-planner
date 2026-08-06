@@ -4,12 +4,14 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { PlannerPayload, PlannerSummary } from '../types'
+import type { PmConfig, PlannerPayload, PlannerSummary } from '../types'
 import * as backend from '../services/backend'
 import PlannerPage from './PlannerPage'
+import { builtinPlannerAnchors } from '../util/plannerDefaults'
 
 vi.mock('../services/backend', () => ({
   hasWailsRuntime: vi.fn(),
+  getConfig: vi.fn(),
   loadPlanner: vi.fn(),
   recalculateDay: vi.fn(),
 }))
@@ -23,6 +25,23 @@ vi.mock('../util/timeFormat', async (importOriginal) => {
 })
 
 const mockedBackend = vi.mocked(backend)
+
+function defaultConfig(): PmConfig {
+  return {
+    login: '',
+    password: '',
+    planner: builtinPlannerAnchors(),
+  }
+}
+
+function setInputValue(input: HTMLInputElement, value: string) {
+  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    'value',
+  )?.set
+  nativeInputValueSetter?.call(input, value)
+  input.dispatchEvent(new Event('input', { bubbles: true }))
+}
 
 function samplePayload(overrides: Partial<PlannerPayload> = {}): PlannerPayload {
   return {
@@ -68,6 +87,7 @@ describe('PlannerPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedBackend.hasWailsRuntime.mockReturnValue(true)
+    mockedBackend.getConfig.mockResolvedValue(defaultConfig())
     mockedBackend.loadPlanner.mockImplementation(async (date) =>
       samplePayload({ date }),
     )
@@ -97,6 +117,7 @@ describe('PlannerPage', () => {
 
     expect(mockedBackend.loadPlanner).toHaveBeenCalledTimes(1)
     expect(mockedBackend.loadPlanner).toHaveBeenCalledWith('2026-06-09')
+    expect(mockedBackend.getConfig).toHaveBeenCalledTimes(1)
     expect(mockedBackend.recalculateDay).toHaveBeenCalledTimes(1)
     expect(container.textContent).toContain('Meta do dia')
     expect(container.textContent).toContain('Entrada 1')
@@ -107,6 +128,7 @@ describe('PlannerPage', () => {
     await renderPage()
 
     mockedBackend.loadPlanner.mockClear()
+    mockedBackend.getConfig.mockClear()
     mockedBackend.recalculateDay.mockClear()
 
     await act(async () => {
@@ -126,7 +148,54 @@ describe('PlannerPage', () => {
 
     expect(mockedBackend.loadPlanner).toHaveBeenCalledTimes(1)
     expect(mockedBackend.loadPlanner).toHaveBeenCalledWith('2026-06-15')
+    expect(mockedBackend.getConfig).toHaveBeenCalledTimes(1)
     expect(mockedBackend.recalculateDay).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses configured anchors for unregistered journey fields', async () => {
+    mockedBackend.getConfig.mockResolvedValue({
+      login: '',
+      password: '',
+      planner: {
+        in1: '09:00',
+        out1: '12:30',
+        in2: '14:00',
+        out2: '19:00',
+      },
+    })
+    mockedBackend.loadPlanner.mockResolvedValue(
+      samplePayload({
+        journeys: [
+          {
+            entry: { time: '08:00', registered: false },
+            exit: { time: '12:00', registered: false },
+          },
+          {
+            entry: { time: '13:30', registered: false },
+            exit: { time: '18:00', registered: false },
+          },
+        ],
+        solvedSlot: { journeyIndex: 1, isEntry: false },
+      }),
+    )
+
+    await renderPage()
+
+    const journeyInputs = container.querySelectorAll('.journey-list input[type="text"]')
+    expect(journeyInputs).toHaveLength(3)
+    expect((journeyInputs[0] as HTMLInputElement).value).toBe('09:00')
+    expect((journeyInputs[1] as HTMLInputElement).value).toBe('12:30')
+    expect((journeyInputs[2] as HTMLInputElement).value).toBe('14:00')
+
+    await act(async () => {
+      setInputValue(journeyInputs[0] as HTMLInputElement, '0915')
+      await flushPromises()
+    })
+
+    const updatedInputs = container.querySelectorAll('.journey-list input[type="text"]')
+    expect((updatedInputs[0] as HTMLInputElement).value).toBe('09:15')
+    expect((updatedInputs[1] as HTMLInputElement).value).toBe('12:30')
+    expect((updatedInputs[2] as HTMLInputElement).value).toBe('14:00')
   })
 
   it('shows a warning banner when the payload includes loadWarning', async () => {

@@ -1,3 +1,6 @@
+import type { PlannerAnchorsConfig } from '../types'
+import { parseHHMM } from './plannerTimes'
+
 /** Must match plan.BuiltinAnchors() in pkg/plan/assign.go */
 export const BUILTIN_PLANNER_ANCHORS = {
   in1: '08:00',
@@ -18,4 +21,29 @@ export type PlannerAnchorTimes = {
 
 export function builtinPlannerAnchors(): PlannerAnchorTimes {
   return { ...BUILTIN_PLANNER_ANCHORS }
+}
+
+/** Mirrors pkg/config/planner.go mergePlannerAnchors(strict=false). */
+export function resolvePlannerAnchorsArray(
+  planner?: PlannerAnchorsConfig,
+): [string, string, string, string] {
+  const builtins = builtinPlannerAnchors()
+  const base: [string, string, string, string] = [
+    builtins.in1,
+    builtins.out1,
+    builtins.in2,
+    builtins.out2,
+  ]
+  if (!planner) {
+    return base
+  }
+
+  const fields = [planner.in1, planner.out1, planner.in2, planner.out2] as const
+  return base.map((fallback, index) => {
+    const value = fields[index]?.trim() ?? ''
+    if (!value || parseHHMM(value) === null) {
+      return fallback
+    }
+    return value
+  }) as [string, string, string, string]
 }
