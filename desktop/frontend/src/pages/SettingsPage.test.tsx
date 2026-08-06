@@ -7,11 +7,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PmConfig, ReminderStatus } from '../types'
 import * as backend from '../services/backend'
 import SettingsPage from './SettingsPage'
+import { renderWithConfig } from '../test/renderWithConfig'
 
 vi.mock('../services/backend', () => ({
   hasWailsRuntime: vi.fn(),
+  usesHttpTransport: vi.fn(),
   getConfig: vi.fn(),
+  saveConfig: vi.fn(),
+  saveReminderSettings: vi.fn(),
   getReminderStatus: vi.fn(),
+  testAuth: vi.fn(),
+  checkForUpdate: vi.fn(),
+  consumeUpdateResult: vi.fn(),
 }))
 
 const mockedBackend = vi.mocked(backend)
@@ -29,10 +36,13 @@ describe('SettingsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedBackend.hasWailsRuntime.mockReturnValue(true)
+    mockedBackend.usesHttpTransport.mockReturnValue(false)
     mockedBackend.getConfig.mockResolvedValue({
       login: 'user@example.com',
       password: 'secret',
     } satisfies PmConfig)
+    mockedBackend.saveConfig.mockResolvedValue(undefined)
+    mockedBackend.saveReminderSettings.mockResolvedValue(undefined)
     mockedBackend.getReminderStatus.mockResolvedValue({
       settings: {
         enabled: false,
@@ -45,6 +55,7 @@ describe('SettingsPage', () => {
       notificationAvailable: true,
       notificationAuthorized: true,
     } satisfies ReminderStatus)
+    mockedBackend.consumeUpdateResult.mockResolvedValue(null)
 
     container = document.createElement('div')
     document.body.appendChild(container)
@@ -60,7 +71,7 @@ describe('SettingsPage', () => {
 
   async function renderPage() {
     await act(async () => {
-      root.render(<SettingsPage />)
+      root.render(renderWithConfig(<SettingsPage />))
       await flushPromises()
     })
   }
@@ -76,5 +87,27 @@ describe('SettingsPage', () => {
     expect(sections[0].querySelector('#settings-login')).not.toBeNull()
     expect(sections[1].querySelector('#settings-anchor-in1')).not.toBeNull()
     expect(sections[2].querySelector('#settings-reminder-lead-amount')).not.toBeNull()
+  })
+
+  it('saves account settings through the config context', async () => {
+    await renderPage()
+
+    const saveButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Salvar conta',
+    )
+    expect(saveButton).not.toBeNull()
+
+    await act(async () => {
+      saveButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      await flushPromises()
+    })
+
+    expect(mockedBackend.saveConfig).toHaveBeenCalledTimes(1)
+    expect(mockedBackend.saveConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        login: 'user@example.com',
+        password: 'secret',
+      }),
+    )
   })
 })

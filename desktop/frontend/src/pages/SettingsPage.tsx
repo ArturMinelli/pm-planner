@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import * as backend from '../services/backend'
+import { useConfig } from '../context/ConfigContext'
 import type { ReminderSettings, UpdateStatus } from '../types'
 import {
   builtinPlannerAnchors,
@@ -35,6 +36,7 @@ const TOAST_AUTO_DISMISS_MS = 4200
 
 export default function SettingsPage() {
   const { t } = useTranslation()
+  const { config, mergeAndSave, saveReminderSettings: persistReminderSettings } = useConfig()
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [maxDailyExtraHours, setMaxDailyExtraHours] = useState(
@@ -86,36 +88,40 @@ export default function SettingsPage() {
   }, [toast])
 
   useEffect(() => {
-    ;(async () => {
+    if (!config) return
+
+    const builtins = builtinPlannerAnchors()
+    // Hydrate editable form fields from the shared config store.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- settings forms are local drafts until Save
+    setLogin(config.login ?? '')
+    setPassword(config.password ?? '')
+    setMaxDailyExtraHours(
+      String(
+        (config.max_daily_extra_minutes ?? DEFAULT_MAX_DAILY_EXTRA_MINUTES) / 60,
+      ),
+    )
+    setBalanceCreditMultiplier(
+      String(config.balance_credit_multiplier ?? DEFAULT_BALANCE_CREDIT_MULTIPLIER),
+    )
+    if (config.planner) {
+      setAnchors({
+        in1: config.planner.in1 ?? builtins.in1,
+        out1: config.planner.out1 ?? builtins.out1,
+        in2: config.planner.in2 ?? builtins.in2,
+        out2: config.planner.out2 ?? builtins.out2,
+      })
+    }
+    setReminders(normalizeReminderSettings(config.reminders))
+
+    void (async () => {
       try {
-        const config = await backend.getConfig()
-        const builtins = builtinPlannerAnchors()
-        setLogin(config.login ?? '')
-        setPassword(config.password ?? '')
-        setMaxDailyExtraHours(
-          String(
-            (config.max_daily_extra_minutes ?? DEFAULT_MAX_DAILY_EXTRA_MINUTES) / 60,
-          ),
-        )
-        setBalanceCreditMultiplier(
-          String(config.balance_credit_multiplier ?? DEFAULT_BALANCE_CREDIT_MULTIPLIER),
-        )
-        if (config.planner) {
-          setAnchors({
-            in1: config.planner.in1 ?? builtins.in1,
-            out1: config.planner.out1 ?? builtins.out1,
-            in2: config.planner.in2 ?? builtins.in2,
-            out2: config.planner.out2 ?? builtins.out2,
-          })
-        }
-        setReminders(normalizeReminderSettings(config.reminders))
         const status = await backend.getReminderStatus()
         setReminders(status.settings)
       } catch (error) {
         showError(error)
       }
     })()
-  }, [showError])
+  }, [config, showError])
 
   useEffect(() => {
     if (!usesDesktopShell) return
@@ -145,7 +151,7 @@ export default function SettingsPage() {
     }
     setBusy(true)
     try {
-      await backend.mergeAndSave({
+      await mergeAndSave({
         login: normalizeLoginCredential(login),
         password,
       })
@@ -191,7 +197,7 @@ export default function SettingsPage() {
     }
     setBusy(true)
     try {
-      await backend.mergeAndSave({
+      await mergeAndSave({
         planner: { ...anchors },
         max_daily_extra_minutes: maxDailyExtraMinutes,
         balance_credit_multiplier: multiplier,
@@ -214,7 +220,7 @@ export default function SettingsPage() {
     const normalized = normalizeReminderSettings(reminders)
     setBusy(true)
     try {
-      await backend.saveReminderSettings(normalized)
+      await persistReminderSettings(normalized)
       await refreshReminderSettings()
       showSuccess(t('settings.reminders.saved'))
     } catch (error) {

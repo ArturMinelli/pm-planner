@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Journey, PlannerPayload, PlannerSummary, SolvedSlot } from '../types'
 import * as backend from '../services/backend'
+import { useConfig } from '../context/ConfigContext'
 import { translateMessage } from '../i18n/translateMessage'
 import { localDateYYYYMMDD } from '../util/timeFormat'
 import {
   applyInstantSuggestions,
-  BUILTIN_ANCHORS,
   defaultSolvedSlot,
   NO_SOLVED_SLOT,
   seedEntryAfterExit,
@@ -22,6 +22,7 @@ const DEFAULT_BREAK_MINUTES = 60
 
 export default function PlannerPage() {
   const { t } = useTranslation()
+  const { config, configRevision } = useConfig()
   const [date, setDate] = useState(localDateYYYYMMDD)
   const [fetching, setFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -34,7 +35,7 @@ export default function PlannerPage() {
   const loadedRef = useRef<PlannerPayload | null>(null)
   loadedRef.current = loaded
 
-  const baseAnchorsRef = useRef<string[]>([...BUILTIN_ANCHORS])
+  const baseAnchorsRef = useRef<string[]>([...resolvePlannerAnchorsArray()])
 
   const summaryRequestRef = useRef(0)
   const fetchRequestRef = useRef(0)
@@ -160,6 +161,8 @@ export default function PlannerPage() {
   )
 
   useEffect(() => {
+    if (!config) return
+
     const requestId = ++fetchRequestRef.current
     let cancelled = false
 
@@ -173,10 +176,7 @@ export default function PlannerPage() {
       setSolvedSlot(NO_SOLVED_SLOT)
 
       try {
-        const [config, payload] = await Promise.all([
-          backend.getConfig(),
-          backend.loadPlanner(date),
-        ])
+        const payload = await backend.loadPlanner(date)
         if (cancelled || requestId !== fetchRequestRef.current) return
 
         baseAnchorsRef.current = [...resolvePlannerAnchorsArray(config.planner)]
@@ -214,8 +214,9 @@ export default function PlannerPage() {
         const message = caughtError instanceof Error ? caughtError.message : String(caughtError)
         setError(message.startsWith('errors.') ? t(message) : message)
       } finally {
-        if (cancelled || requestId !== fetchRequestRef.current) return
-        setFetching(false)
+        if (!cancelled && requestId === fetchRequestRef.current) {
+          setFetching(false)
+        }
       }
     }
 
@@ -224,7 +225,7 @@ export default function PlannerPage() {
     return () => {
       cancelled = true
     }
-  }, [date, t])
+  }, [config, configRevision, date, t])
 
   const timesDisabled = fetching
   const originalsLine = loaded?.originalsLine || t('planner.none')

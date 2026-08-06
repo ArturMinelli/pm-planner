@@ -95,6 +95,10 @@ export function stopBrowserReminderScheduler() {
   }
 }
 
+export function notifyConfigChanged() {
+  void pollReminders()
+}
+
 export async function requestBrowserNotificationPermission(): Promise<boolean> {
   if (!backend.usesHttpTransport()) return false
   const status = await backend.requestNotificationPermission()

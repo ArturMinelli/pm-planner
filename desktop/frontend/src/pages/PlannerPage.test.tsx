@@ -1,17 +1,21 @@
 /**
  * @vitest-environment jsdom
  */
-import { act } from 'react'
+import { act, type ReactNode, useEffect } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PmConfig, PlannerPayload, PlannerSummary } from '../types'
 import * as backend from '../services/backend'
 import PlannerPage from './PlannerPage'
 import { builtinPlannerAnchors } from '../util/plannerDefaults'
+import { renderWithConfig } from '../test/renderWithConfig'
+import { useConfig } from '../context/ConfigContext'
 
 vi.mock('../services/backend', () => ({
   hasWailsRuntime: vi.fn(),
+  usesHttpTransport: vi.fn(),
   getConfig: vi.fn(),
+  saveConfig: vi.fn(),
   loadPlanner: vi.fn(),
   recalculateDay: vi.fn(),
 }))
@@ -25,6 +29,15 @@ vi.mock('../util/timeFormat', async (importOriginal) => {
 })
 
 const mockedBackend = vi.mocked(backend)
+let mergeAndSaveRef: ((patch: Partial<PmConfig>) => Promise<void>) | null = null
+
+function ConfigCapture({ children }: { children: ReactNode }) {
+  const { mergeAndSave } = useConfig()
+  useEffect(() => {
+    mergeAndSaveRef = mergeAndSave
+  }, [mergeAndSave])
+  return children
+}
 
 function defaultConfig(): PmConfig {
   return {
@@ -86,8 +99,11 @@ describe('PlannerPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mergeAndSaveRef = null
     mockedBackend.hasWailsRuntime.mockReturnValue(true)
+    mockedBackend.usesHttpTransport.mockReturnValue(false)
     mockedBackend.getConfig.mockResolvedValue(defaultConfig())
+    mockedBackend.saveConfig.mockResolvedValue(undefined)
     mockedBackend.loadPlanner.mockImplementation(async (date) =>
       samplePayload({ date }),
     )
@@ -107,7 +123,11 @@ describe('PlannerPage', () => {
 
   async function renderPage() {
     await act(async () => {
-      root.render(<PlannerPage />)
+      root.render(renderWithConfig(
+        <ConfigCapture>
+          <PlannerPage />
+        </ConfigCapture>,
+      ))
       await flushPromises()
     })
   }
@@ -128,7 +148,6 @@ describe('PlannerPage', () => {
     await renderPage()
 
     mockedBackend.loadPlanner.mockClear()
-    mockedBackend.getConfig.mockClear()
     mockedBackend.recalculateDay.mockClear()
 
     await act(async () => {
@@ -148,7 +167,29 @@ describe('PlannerPage', () => {
 
     expect(mockedBackend.loadPlanner).toHaveBeenCalledTimes(1)
     expect(mockedBackend.loadPlanner).toHaveBeenCalledWith('2026-06-15')
-    expect(mockedBackend.getConfig).toHaveBeenCalledTimes(1)
+    expect(mockedBackend.recalculateDay).toHaveBeenCalledTimes(1)
+  })
+
+  it('re-fetches when config revision changes', async () => {
+    await renderPage()
+
+    mockedBackend.loadPlanner.mockClear()
+    mockedBackend.recalculateDay.mockClear()
+
+    await act(async () => {
+      await mergeAndSaveRef?.({
+        planner: {
+          in1: '09:00',
+          out1: '12:30',
+          in2: '14:00',
+          out2: '19:00',
+        },
+      })
+      await flushPromises()
+    })
+
+    expect(mockedBackend.loadPlanner).toHaveBeenCalledTimes(1)
+    expect(mockedBackend.loadPlanner).toHaveBeenCalledWith('2026-06-09')
     expect(mockedBackend.recalculateDay).toHaveBeenCalledTimes(1)
   })
 
