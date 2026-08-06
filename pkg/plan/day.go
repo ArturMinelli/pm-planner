@@ -5,6 +5,8 @@ import (
 	"math"
 	"sort"
 	"time"
+
+	"pm-cli/pkg/message"
 )
 
 // ClockSlot holds a single HH:MM time value and whether it came from a real punch.
@@ -48,7 +50,7 @@ type Summary struct {
 	JourneySpanSecs []int64
 	TotalSpanSecs   int64
 	OvertimeSecs    int64
-	Warnings        []string
+	Warnings        []message.Message
 }
 
 // addDurationToHHMM parses hhmm as "15:04", adds duration, and returns the result in "15:04" format.
@@ -267,7 +269,7 @@ func Summarize(day Day, target time.Duration, date time.Time) Summary {
 		JourneySpanSecs: make([]int64, len(day.Journeys)),
 	}
 
-	var warnings []string
+	var warnings []message.Message
 
 	for journeyIndex, journey := range day.Journeys {
 		entryTime, entryErr := parseClock(journey.Entry.Time, date)
@@ -278,10 +280,11 @@ func Summarize(day Day, target time.Duration, date time.Time) Summary {
 		}
 
 		if exitTime.Before(entryTime) {
-			warnings = append(warnings, fmt.Sprintf(
-				"journey %d: exit %s is before entry %s",
-				journeyIndex+1, journey.Exit.Time, journey.Entry.Time,
-			))
+			warnings = append(warnings, message.New(message.KeyErrorsPlannerJourneyExitBeforeEntry, map[string]string{
+				"journey": fmt.Sprintf("%d", journeyIndex+1),
+				"exit":    journey.Exit.Time,
+				"entry":   journey.Entry.Time,
+			}))
 			continue
 		}
 
@@ -298,11 +301,12 @@ func Summarize(day Day, target time.Duration, date time.Time) Summary {
 			continue
 		}
 		if nextEntryTime.Before(exitTime) {
-			warnings = append(warnings, fmt.Sprintf(
-				"journey %d entry %s is before journey %d exit %s",
-				journeyIndex+2, nextJourney.Entry.Time,
-				journeyIndex+1, journey.Exit.Time,
-			))
+			warnings = append(warnings, message.New(message.KeyErrorsPlannerJourneyEntryBeforeExit, map[string]string{
+				"journey":      fmt.Sprintf("%d", journeyIndex+2),
+				"entry":        nextJourney.Entry.Time,
+				"prevJourney":  fmt.Sprintf("%d", journeyIndex+1),
+				"prevExit":     journey.Exit.Time,
+			}))
 		}
 	}
 

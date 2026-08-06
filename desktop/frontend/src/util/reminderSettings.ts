@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import type { ReminderSettings } from '../types'
 
 export const DEFAULT_REMINDER_LEADS = [15, 5] as const
@@ -31,17 +32,17 @@ export function normalizeReminderSettings(
     autostart: enabled && Boolean(settings?.autostart),
     lead_minutes: leadMinutes && leadMinutes.length > 0
       ? [...new Set(leadMinutes.map((value) => Math.trunc(value)))].sort(
-          (a, b) => b - a,
+          (left, right) => right - left,
         )
       : defaults.lead_minutes,
     native_notifications: true,
   }
 }
 
-export function formatReminderLead(minutes: number): string {
+export function formatReminderLead(translate: TFunction, minutes: number): string {
   if (minutes % 60 === 0) {
     const hours = minutes / 60
-    return `${hours} ${hours === 1 ? 'hora' : 'horas'}`
+    return `${hours} ${translate(hours === 1 ? 'common.hour' : 'common.hours')}`
   }
-  return `${minutes} min`
+  return `${minutes} ${translate('common.minutes')}`
 }

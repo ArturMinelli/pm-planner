@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import type { UpdateStatus } from '../types'
 
 const isoDateParts = /^(\d{4})-(\d{2})-(\d{2})/
@@ -10,7 +11,7 @@ export function browserUpdateStatus(): UpdateStatus {
     commitDate: '',
     behind: 0,
     dirty: false,
-    blockers: ['Atualizações só funcionam dentro do app desktop.'],
+    blockers: [{ key: 'common.desktopOnlyUpdates' }],
     updateAvailable: false,
   }
 }
@@ -22,21 +23,29 @@ export function formatCommitDate(commitDate: string): string {
   return `${parts[3]}/${parts[2]}/${parts[1]}`
 }
 
-export function formatInstalledVersion(status: UpdateStatus | null): string {
-  if (!status) return 'Verifique para descobrir'
-  if (!status.isGit) return 'Desconhecida (instalação sem git)'
-  if (!status.commitSha) return 'Desconhecida'
+export function formatInstalledVersion(
+  translate: TFunction,
+  status: UpdateStatus | null,
+): string {
+  if (!status) return translate('settings.updates.unknownVersion')
+  if (!status.isGit) return translate('settings.updates.unknownGitless')
+  if (!status.commitSha) return translate('settings.updates.unknown')
 
   const date = formatCommitDate(status.commitDate)
   return date ? `${status.commitSha} (${date})` : status.commitSha
 }
 
 /** Summarizes a check result. Only meaningful once blockers have been ruled out. */
-export function describeUpdateAvailability(status: UpdateStatus): string {
+export function describeUpdateAvailability(
+  translate: TFunction,
+  status: UpdateStatus,
+): string {
   if (!status.isGit) {
-    return 'Não é possível comparar versões. Atualizar reinstala a partir do código mais recente.'
+    return translate('settings.updates.cannotCompare')
   }
-  if (status.behind === 1) return '1 atualização disponível.'
-  if (status.behind > 1) return `${status.behind} atualizações disponíveis.`
-  return 'PM Planner está atualizado.'
+  if (status.behind === 1) return translate('settings.updates.oneAvailable')
+  if (status.behind > 1) {
+    return translate('settings.updates.manyAvailable', { count: status.behind })
+  }
+  return translate('settings.updates.upToDate')
 }

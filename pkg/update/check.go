@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"pm-cli/pkg/message"
 )
 
 const remoteBranch = "origin/main"
@@ -22,7 +24,7 @@ type Status struct {
 	CommitDate      string   `json:"commitDate"`
 	Behind          int      `json:"behind"`
 	Dirty           bool     `json:"dirty"`
-	Blockers        []string `json:"blockers"`
+	Blockers        []message.Message `json:"blockers"`
 	UpdateAvailable bool     `json:"updateAvailable"`
 }
 
@@ -41,7 +43,9 @@ func Check(ctx context.Context) (*Status, error) {
 	root, err := ResolveInstallRoot()
 	if err != nil {
 		return &Status{
-			Blockers: []string{"Instalação do PM Planner não encontrada no disco. Execute o setup novamente."},
+			Blockers: []message.Message{
+				message.New(message.KeyUpdateBlockersInstallNotFound, nil),
+			},
 		}, nil
 	}
 
@@ -56,12 +60,15 @@ func Check(ctx context.Context) (*Status, error) {
 func check(ctx context.Context, env environment) *Status {
 	status := &Status{Root: env.root, IsGit: env.isGit}
 
-	for _, tool := range []struct{ name, reason string }{
-		{"go", "Go não encontrado no PATH — necessário para compilar o PM Planner."},
-		{"node", "Node.js não encontrado no PATH — necessário para compilar o frontend."},
+	for _, tool := range []struct {
+		name string
+		key  string
+	}{
+		{"go", message.KeyUpdateBlockersGoNotFound},
+		{"node", message.KeyUpdateBlockersNodeNotFound},
 	} {
 		if _, err := env.lookPath(tool.name); err != nil {
-			status.Blockers = append(status.Blockers, tool.reason)
+			status.Blockers = append(status.Blockers, message.New(tool.key, nil))
 		}
 	}
 
@@ -80,19 +87,25 @@ func check(ctx context.Context, env environment) *Status {
 	if dirty, err := env.run(ctx, env.root, "git", "status", "--porcelain"); err == nil {
 		status.Dirty = strings.TrimSpace(dirty) != ""
 		if status.Dirty {
-			status.Blockers = append(status.Blockers, fmt.Sprintf(
-				"Há alterações locais não commitadas em %s. Faça commit ou stash antes de atualizar.", env.root))
+			status.Blockers = append(status.Blockers, message.New(message.KeyUpdateBlockersDirtyWorkingTree, map[string]string{
+				"root": env.root,
+			}))
 		}
 	}
 
 	if _, err := env.run(ctx, env.root, "git", "fetch", "origin", "--prune"); err != nil {
-		status.Blockers = append(status.Blockers, "Não foi possível consultar o repositório remoto: "+firstLine(err.Error()))
+		status.Blockers = append(status.Blockers, message.New(message.KeyUpdateBlockersFetchFailed, map[string]string{
+			"detail": firstLine(err.Error()),
+		}))
 		return status
 	}
 
 	behind, err := env.run(ctx, env.root, "git", "rev-list", "--count", "HEAD.."+remoteBranch)
 	if err != nil {
-		status.Blockers = append(status.Blockers, "Não foi possível comparar com "+remoteBranch+": "+firstLine(err.Error()))
+		status.Blockers = append(status.Blockers, message.New(message.KeyUpdateBlockersCompareFailed, map[string]string{
+			"branch": remoteBranch,
+			"detail": firstLine(err.Error()),
+		}))
 		return status
 	}
 	status.Behind = parseCount(behind)

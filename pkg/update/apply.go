@@ -11,15 +11,17 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"pm-cli/pkg/message"
 )
 
 // Result is the outcome an applied update leaves behind for the relaunched app.
 type Result struct {
-	OK         bool   `json:"ok"`
-	Message    string `json:"message"`
-	LogPath    string `json:"logPath"`
-	Commit     string `json:"commit"`
-	FinishedAt string `json:"finishedAt"`
+	OK         bool            `json:"ok"`
+	Message    message.Message `json:"message"`
+	LogPath    string          `json:"logPath"`
+	Commit     string          `json:"commit"`
+	FinishedAt string          `json:"finishedAt"`
 }
 
 // ApplyOptions tunes how the update script is run.
@@ -85,12 +87,18 @@ func Apply(ctx context.Context, options ApplyOptions) (*Result, error) {
 		FinishedAt: time.Now().Format(time.RFC3339),
 	}
 	if runErr == nil {
-		result.Message = "PM Planner atualizado com sucesso."
 		if result.Commit != "" {
-			result.Message = "PM Planner atualizado para " + result.Commit + "."
+			result.Message = message.New(message.KeyUpdateResultSuccessCommit, map[string]string{
+				"commit": result.Commit,
+			})
+		} else {
+			result.Message = message.New(message.KeyUpdateResultSuccess, nil)
 		}
 	} else {
-		result.Message = "A atualização falhou: " + firstLine(runErr.Error()) + ". Detalhes em " + logPath
+		result.Message = message.New(message.KeyUpdateResultFailed, map[string]string{
+			"detail":  firstLine(runErr.Error()),
+			"logPath": logPath,
+		})
 	}
 
 	if err := WriteResult(result); err != nil {

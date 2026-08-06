@@ -65,19 +65,21 @@ describe('SettingsPage', () => {
     })
   }
 
-  it('stacks Account, Planner, and Reminders sections in single-column order', async () => {
+  it('stacks Language, Account, Planner, and Reminders sections in single-column order', async () => {
     await renderPage()
 
     const grid = container.querySelector('.settings-grid')
     expect(grid).not.toBeNull()
-    expect(grid?.children.length).toBe(3)
-    expect(grid?.textContent).toContain('Conta e Sessão')
+    expect(grid?.children.length).toBe(4)
+    expect(grid?.textContent).toContain('Language')
+    expect(grid?.textContent).toContain('Account and session')
     expect(grid?.textContent).toContain('Planner')
-    expect(grid?.textContent).toContain('Lembretes de Jornada')
+    expect(grid?.textContent).toContain('Journey reminders')
 
     const sections = Array.from(grid!.children)
-    expect(sections[0].textContent).toContain('Conta e Sessão')
-    expect(sections[1].textContent).toContain('Planner')
-    expect(sections[2].textContent).toContain('Lembretes de Jornada')
+    expect(sections[0].textContent).toContain('Language')
+    expect(sections[1].textContent).toContain('Account and session')
+    expect(sections[2].textContent).toContain('Planner')
+    expect(sections[3].textContent).toContain('Journey reminders')
   })
 })

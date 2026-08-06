@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"pm-cli/pkg/config"
+	"pm-cli/pkg/message"
 	"pm-cli/pkg/reminder"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -40,8 +41,11 @@ type nativeNotifier interface {
 }
 
 func (a desktopAlerter) SendReminder(ctx context.Context, event reminder.ScheduledReminder, settings config.Reminders) error {
-	title := fmt.Sprintf("%s em %d min", event.SlotLabel, event.LeadMinutes)
-	body := fmt.Sprintf("Horário recomendado: %s", event.SlotTime.Format("15:04"))
+	file, _ := config.Read("")
+	locale := config.ResolveLocale(file)
+	slotLabel := localizedSlotLabel(locale, event.SlotKey)
+	title := message.ReminderTitle(locale, slotLabel, event.LeadMinutes)
+	body := message.ReminderBody(locale, event.SlotTime.Format("15:04"))
 
 	var errs []error
 	sent := false
@@ -119,14 +123,26 @@ func (a *App) SaveReminderSettings(settings config.Reminders) error {
 
 func (a *App) RequestNotificationPermission() (*NotificationPermissionStatus, error) {
 	if a.ctx == nil {
-		return &NotificationPermissionStatus{Available: false, Authorized: false, Detail: "runtime indisponível"}, nil
+		file, _ := config.Read("")
+		locale := config.ResolveLocale(file)
+		return &NotificationPermissionStatus{
+			Available:  false,
+			Authorized: false,
+			Detail:     message.TranslateNotification(locale, message.KeyRemindersRuntimeUnavailable, nil),
+		}, nil
 	}
 	if err := wailsruntime.InitializeNotifications(a.ctx); err != nil {
 		return nil, err
 	}
 	available := wailsruntime.IsNotificationAvailable(a.ctx)
 	if !available {
-		return &NotificationPermissionStatus{Available: false, Authorized: false, Detail: "notificações não disponíveis"}, nil
+		file, _ := config.Read("")
+		locale := config.ResolveLocale(file)
+		return &NotificationPermissionStatus{
+			Available: false,
+			Authorized: false,
+			Detail: message.TranslateNotification(locale, message.KeyRemindersNotAvailable, nil),
+		}, nil
 	}
 	authorized, err := wailsruntime.RequestNotificationAuthorization(a.ctx)
 	if err != nil {
@@ -137,7 +153,13 @@ func (a *App) RequestNotificationPermission() (*NotificationPermissionStatus, er
 
 func (a *App) notificationPermissionStatus() NotificationPermissionStatus {
 	if a.ctx == nil {
-		return NotificationPermissionStatus{Available: false, Authorized: false, Detail: "runtime indisponível"}
+		file, _ := config.Read("")
+		locale := config.ResolveLocale(file)
+		return NotificationPermissionStatus{
+			Available:  false,
+			Authorized: false,
+			Detail:     message.TranslateNotification(locale, message.KeyRemindersRuntimeUnavailable, nil),
+		}
 	}
 	if err := wailsruntime.InitializeNotifications(a.ctx); err != nil {
 		return NotificationPermissionStatus{Available: false, Authorized: false, Detail: err.Error()}
@@ -215,4 +237,15 @@ func stopDaemon() error {
 	}
 	removeDaemonPID()
 	return nil
+}
+
+func localizedSlotLabel(locale, slotKey string) string {
+	isExit := strings.HasPrefix(slotKey, "out")
+	numberPart := strings.TrimPrefix(slotKey, "in")
+	numberPart = strings.TrimPrefix(numberPart, "out")
+	journeyNumber, err := strconv.Atoi(numberPart)
+	if err != nil || journeyNumber < 1 {
+		return slotKey
+	}
+	return message.SlotLabel(locale, journeyNumber-1, isExit)
 }

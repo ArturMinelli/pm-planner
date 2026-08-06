@@ -1,0 +1,185 @@
+{
+  "common": {
+    "skipToContent": "Pular para conteúdo",
+    "closeNotice": "Fechar aviso",
+    "saving": "Salvando...",
+    "date": "Data",
+    "total": "Total",
+    "add": "Adicionar",
+    "remove": "Remover",
+    "minutes": "minutos",
+    "hours": "horas",
+    "hour": "hora",
+    "browserMode": "Modo navegador: use o app desktop para carregar dados reais da API.",
+    "desktopOnlyConfig": "Configurações são gravadas pelo app desktop. Use pm-desktop aqui.",
+    "desktopOnlyAuth": "Autenticação só funciona dentro do desktop.",
+    "desktopOnlyUpdates": "Atualizações só funcionam dentro do app desktop."
+  },
+  "nav": {
+    "journey": "Jornada",
+    "settings": "Configurações"
+  },
+  "planner": {
+    "title": "Planejar jornada",
+    "description": "Veja e ajuste os horários do dia. O horário calculado preenche a meta automaticamente.",
+    "dayTimes": "Horários do dia",
+    "none": "(nenhum)",
+    "addJourney": "+ Adicionar jornada",
+    "summary": "Resumo",
+    "selectDateHint": "Selecione uma data para ver metas e totais.",
+    "loadingSummary": "Carregando resumo",
+    "loadingJourneys": "Carregando marcações",
+    "dailyTarget": "Meta do dia",
+    "journeyOrdinal": "{{ordinal}} jornada",
+    "overtime": "Hora extra",
+    "timeBank": "Banco de horas",
+    "alternativeTime": "Horário alternativo",
+    "balanceUnavailableNote": "Saldo indisponível; horário normal mantido.",
+    "useBankEarly": "Usa {{duration}} do banco para sair mais cedo.",
+    "workExtraCredit": "Trabalhe {{duration}} a mais para gerar crédito.",
+    "entry": "Entrada {{number}}",
+    "exit": "Saída {{number}}",
+    "removeJourney": "Remover {{ordinal}} jornada",
+    "cannotRemoveRegistered": "Não é possível remover uma jornada com marcações registradas",
+    "calculateHint": "Clique para calcular pela meta do dia",
+    "registeredHint": "Marcação registrada no PontoMais",
+    "balanceUnavailable": "Saldo indisponível",
+    "bankBadge": "Banco {{balance}}",
+    "balanceTooltipUse": "Usa {{used}} do banco para sair {{used}} mais cedo. Saldo estimado: {{remaining}}.",
+    "balanceTooltipCredit": "Trabalhe {{extra}} a mais para gerar {{credit}} de crédito a {{multiplier}}x. Saldo estimado: {{remaining}}.",
+    "balanceTooltipCapped": " Limite diário de {{cap}} aplicado.",
+    "balanceTooltipUnavailable": "O horário normal continua válido. Recarregue o dia para tentar consultar o saldo novamente.",
+    "calculatedAria": "{{label}} calculada: {{time}}. Clique para desativar o cálculo automático",
+    "registeredCannotCalculate": "Marcações registradas não podem ser calculadas",
+    "disableAutoCalculate": "Desativar cálculo automático",
+    "alternativeAria": "{{label}} alternativa: {{time}}",
+    "datePicker": {
+      "chooseDate": "Escolher data",
+      "previousMonth": "Mês anterior",
+      "nextMonth": "Próximo mês"
+    }
+  },
+  "settings": {
+    "title": "Configurações",
+    "description": "Usa o mesmo arquivo de configuração da CLI, resolvido por <code>pm</code> em cada plataforma.",
+    "browserHint": "Modo navegador: edição apenas local; gravar/API exige o shell Wails.",
+    "language": {
+      "title": "Idioma",
+      "description": "Escolha o idioma do app. A alteração é aplicada imediatamente.",
+      "english": "English",
+      "portuguese": "Português (Brasil)",
+      "save": "Salvar idioma",
+      "saved": "Idioma atualizado."
+    },
+    "account": {
+      "title": "Conta e sessão",
+      "loginLabel": "Login (e-mail ou CPF)",
+      "passwordLabel": "Senha",
+      "save": "Salvar conta",
+      "test": "Testar login",
+      "saved": "Conta salva no arquivo de configuração compartilhado.",
+      "testSuccess": "Credenciais válidas.",
+      "testMissing": "Informe login (e-mail ou CPF) e senha para testar."
+    },
+    "planner": {
+      "title": "Planner",
+      "intro": "Âncoras usadas para atribuir batidas aos quatro campos e preencher Entrada 1 quando não há registro correspondente.",
+      "factoryDefault": "Padrão de fábrica: {{times}}. Intervalo mínimo de 15 minutos entre horários consecutivos.",
+      "maxDailyExtraLabel": "Limite diário de trabalho extra (horas)",
+      "maxDailyExtraHint": "Limita apenas a saída alternativa para pagar saldo negativo. O padrão é 3 horas.",
+      "creditMultiplierLabel": "Multiplicador de crédito do banco de horas",
+      "creditMultiplierHint": "Taxa de crédito para saldo negativo: 1 hora trabalhada extra gera este múltiplo em crédito. Padrão: 1,5x. Intervalo: 1,0 a 3,0.",
+      "restoreDefaults": "Restaurar padrões",
+      "save": "Salvar planner",
+      "saved": "Configurações do planner salvas no arquivo compartilhado.",
+      "dailyLimitError": "O limite diário deve estar entre 1 minuto e 24 horas.",
+      "multiplierError": "O multiplicador de crédito deve estar entre 1,0 e 3,0."
+    },
+    "reminders": {
+      "title": "Lembretes de jornada",
+      "enable": "Ativar lembretes",
+      "autostart": "Iniciar com o sistema",
+      "notifyBefore": "Avisar antes",
+      "notifyBeforeHint": "Adicione quantos avisos quiser, de 1 minuto até 4 horas antes. Mantenha pelo menos um.",
+      "unitLabel": "Unidade do aviso",
+      "amountPlaceholderMinutes": "Ex.: 30",
+      "amountPlaceholderHours": "Ex.: 2",
+      "configuredNotices": "Avisos configurados",
+      "removeNotice": "Remover aviso de {{lead}}",
+      "removeNoticeDisabled": "Adicione outro aviso antes de remover este",
+      "removeNoticeTitle": "Remover aviso",
+      "save": "Salvar lembretes",
+      "saved": "Lembretes salvos e daemon sincronizado.",
+      "browserDetail": "Modo navegador"
+    },
+    "updates": {
+      "title": "Atualizações",
+      "intro": "Verifique se há uma versão mais recente e atualize quando quiser.",
+      "installedVersion": "Versão instalada",
+      "check": "Verificar atualizações",
+      "checking": "Verificando...",
+      "updateNow": "Atualizar agora",
+      "updating": "Atualizando...",
+      "restartHint": "O app será fechado e reaberto automaticamente ao final da atualização.",
+      "starting": "Atualizando: o app será fechado e reaberto automaticamente.",
+      "unknownVersion": "Verifique para descobrir",
+      "unknownGitless": "Desconhecida (instalação sem git)",
+      "unknown": "Desconhecida",
+      "cannotCompare": "Não é possível comparar versões. Atualizar reinstala a partir do código mais recente.",
+      "oneAvailable": "1 atualização disponível.",
+      "manyAvailable": "{{count}} atualizações disponíveis.",
+      "upToDate": "PM Planner está atualizado."
+    }
+  },
+  "errors": {
+    "generic": "Algo deu errado. Tente novamente.",
+    "desktopShellRequired": "Esta página deve rodar dentro do shell desktop do PM.",
+    "auth": {
+      "missing_credentials": "Informe login (e-mail ou CPF) e senha.",
+      "login_failed": "Falha no login. Verifique suas credenciais.",
+      "session_invalid": "Sessão expirada ou inválida. Faça login novamente."
+    },
+    "balance": {
+      "unavailable": "Não foi possível carregar o saldo do banco de horas."
+    },
+    "planner": {
+      "load_fallback": "Não foi possível carregar o dia; usando padrões do planner.",
+      "journey_exit_before_entry": "Jornada {{journey}}: saída {{exit}} é anterior à entrada {{entry}}.",
+      "journey_entry_before_exit": "Entrada da jornada {{journey}} ({{entry}}) é anterior à saída da jornada {{prevJourney}} ({{prevExit}})."
+    },
+    "validation": {
+      "loginRequired": "Informe o login (e-mail ou CPF).",
+      "loginKind": "Use um e-mail ou CPF.",
+      "invalidEmail": "Informe um e-mail válido.",
+      "invalidCpf": "Informe um CPF válido.",
+      "detectedEmail": "Detectado: e-mail",
+      "detectedCpf": "Detectado: CPF",
+      "invalidAnchorTime": "{{label}}: horário inválido (use HH:MM).",
+      "anchorsNotIncreasing": "Os horários devem ser estritamente crescentes.",
+      "anchorsMinGap": "Deixe pelo menos {{minutes}} minutos entre horários consecutivos."
+    }
+  },
+  "update": {
+    "blockers": {
+      "install_not_found": "Instalação do PM Planner não encontrada no disco. Execute o setup novamente.",
+      "pm_not_found": "CLI pm não encontrada. Execute o setup novamente para reinstalá-la.",
+      "go_not_found": "Go não encontrado no PATH — necessário para compilar o PM Planner.",
+      "node_not_found": "Node.js não encontrado no PATH — necessário para compilar o frontend.",
+      "dirty_working_tree": "Há alterações locais não commitadas em {{root}}. Faça commit ou stash antes de atualizar.",
+      "fetch_failed": "Não foi possível consultar o repositório remoto: {{detail}}",
+      "compare_failed": "Não foi possível comparar com {{branch}}: {{detail}}",
+      "check_failed": "Não foi possível verificar atualizações: {{detail}}"
+    },
+    "result": {
+      "success": "PM Planner atualizado com sucesso.",
+      "success_commit": "PM Planner atualizado para {{commit}}.",
+      "failed": "A atualização falhou: {{detail}}. Detalhes em {{logPath}}."
+    }
+  },
+  "reminders": {
+    "slot_in_minutes": "{{slot}} em {{minutes}} min",
+    "recommended_time": "Horário recomendado: {{time}}",
+    "runtime_unavailable": "Runtime indisponível",
+    "not_available": "Notificações não disponíveis"
+  }
+}

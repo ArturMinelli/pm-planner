@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Button, Card, Field, Stack } from '../../components/ui'
 import { loginCredentialFieldMeta } from '../../util/loginCredential'
 
@@ -22,10 +23,11 @@ export default function AccountSettingsForm({
   onSave,
   onTest,
 }: AccountSettingsFormProps) {
+  const { t } = useTranslation()
   const loginMeta = loginCredentialFieldMeta(login)
 
   return (
-    <Card title="Conta e Sessão">
+    <Card title={t('settings.account.title')}>
       <form
         className="form-stack"
         onSubmit={(event) => {
@@ -36,8 +38,8 @@ export default function AccountSettingsForm({
         <Stack>
           <Field
             id="settings-login"
-            label="Login (e-mail ou CPF)"
-            hint={loginMeta.hint}
+            label={t('settings.account.loginLabel')}
+            hint={loginMeta.hintKey ? t(loginMeta.hintKey) : undefined}
           >
             <input
               id="settings-login"
@@ -50,7 +52,7 @@ export default function AccountSettingsForm({
               onChange={(event) => onLoginChange(event.target.value)}
             />
           </Field>
-          <Field id="settings-password" label="Senha">
+          <Field id="settings-password" label={t('settings.account.passwordLabel')}>
             <input
               id="settings-password"
               name="password"
@@ -68,7 +70,7 @@ export default function AccountSettingsForm({
             disabled={busy}
             aria-busy={busy}
           >
-            {busy ? 'Salvando...' : 'Salvar Conta'}
+            {busy ? t('common.saving') : t('settings.account.save')}
           </Button>
           <Button
             type="button"
@@ -77,7 +79,7 @@ export default function AccountSettingsForm({
             disabled={busy || !canTest}
             aria-busy={busy}
           >
-            Testar Login
+            {t('settings.account.test')}
           </Button>
         </div>
       </form>

@@ -29,12 +29,12 @@ describe('PlannerJourneyList', () => {
       />,
     )
 
-    expect(html).toContain('1ª Jornada')
-    expect(html).toContain('2ª Jornada')
-    expect(html).toContain('Entrada 1')
-    expect(html).toContain('Saída 1')
-    expect(html).toContain('Entrada 2')
-    expect(html).toContain('Saída 2')
+    expect(html).toContain('1 journey')
+    expect(html).toContain('2 journey')
+    expect(html).toContain('Entry 1')
+    expect(html).toContain('Exit 1')
+    expect(html).toContain('Entry 2')
+    expect(html).toContain('Exit 2')
   })
 
   it('shows the originals line when provided', () => {
@@ -82,7 +82,7 @@ describe('PlannerJourneyList', () => {
       />,
     )
 
-    expect(html).toContain('Adicionar jornada')
+    expect(html).toContain('Add journey')
   })
 
   it('marks the solved exit journey with an active calculator button', () => {
@@ -114,7 +114,7 @@ describe('PlannerJourneyList', () => {
     )
 
     expect(html).toContain('disabled')
-    expect(html).toContain('Não é possível remover')
+    expect(html).toContain('Cannot remove')
   })
 
   it('shows skeleton placeholders while loading', () => {
@@ -132,8 +132,8 @@ describe('PlannerJourneyList', () => {
     )
 
     expect(html).toContain('skeleton')
-    expect(html).toContain('Carregando marcações')
-    expect(html).not.toContain('Entrada 1')
+    expect(html).toContain('Loading stamps')
+    expect(html).not.toContain('Entry 1')
     expect(html).toContain('disabled')
   })
 
@@ -148,7 +148,15 @@ describe('PlannerJourneyList', () => {
           journeySpanSecs: [],
           totalSpanSecs: 0,
           overtimeSecs: 0,
-          warnings: ['journey 2 entry 13:30 is before journey 1 exit 14:00'],
+          warnings: [{
+            key: 'errors.planner.journey_entry_before_exit',
+            params: {
+              journey: '2',
+              entry: '13:30',
+              prevJourney: '1',
+              prevExit: '14:00',
+            },
+          }],
         }}
         onAddJourney={noop}
         onRemoveJourney={noop}
@@ -157,7 +165,7 @@ describe('PlannerJourneyList', () => {
       />,
     )
 
-    expect(html).toContain('journey 2 entry 13:30 is before journey 1 exit 14:00')
+    expect(html).toContain('Journey 2 entry 13:30 is before journey 1 exit 14:00')
     expect(html).toContain('planner-warning')
   })
 
@@ -175,7 +183,7 @@ describe('PlannerJourneyList', () => {
       />,
     )
 
-    expect(html).toContain('Entrada 1')
+    expect(html).toContain('Entry 1')
     expect(html).not.toContain('skeleton')
     expect(html).not.toContain('disabled=""')
   })

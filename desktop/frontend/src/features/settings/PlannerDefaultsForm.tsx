@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import PlannerTimeInput from '../../components/PlannerTimeInput'
 import { Button, Card, Field } from '../../components/ui'
 import {
@@ -7,6 +8,8 @@ import {
 } from '../../util/plannerDefaults'
 import {
   adjustPlannerAnchor,
+  anchorLabelKey,
+  anchorLabelParams,
   type PlannerAnchorTimes,
 } from '../../util/plannerTimes'
 
@@ -23,12 +26,7 @@ type PlannerDefaultsFormProps = {
   onSave: () => void
 }
 
-const ANCHOR_FIELDS: Array<{ field: AnchorField; label: string }> = [
-  { field: 'in1', label: 'Entrada 1' },
-  { field: 'out1', label: 'Saída 1' },
-  { field: 'in2', label: 'Entrada 2' },
-  { field: 'out2', label: 'Saída 2' },
-]
+const ANCHOR_FIELDS: AnchorField[] = ['in1', 'out1', 'in2', 'out2']
 
 export default function PlannerDefaultsForm({
   anchors,
@@ -40,18 +38,11 @@ export default function PlannerDefaultsForm({
   onBalanceCreditMultiplierChange,
   onSave,
 }: PlannerDefaultsFormProps) {
+  const { t } = useTranslation()
   const builtins = builtinPlannerAnchors()
 
   return (
-    <Card
-      title="Planner"
-      intro={
-        <>
-          Âncoras usadas para atribuir batidas aos quatro campos e preencher
-          Entrada 1 quando não há registro correspondente.
-        </>
-      }
-    >
+    <Card title={t('settings.planner.title')} intro={t('settings.planner.intro')}>
       <form
         className="form-stack"
         onSubmit={(event) => {
@@ -60,8 +51,12 @@ export default function PlannerDefaultsForm({
         }}
       >
         <div className="planner-anchor-grid">
-          {ANCHOR_FIELDS.map(({ field, label }) => (
-            <Field key={field} id={`settings-anchor-${field}`} label={label}>
+          {ANCHOR_FIELDS.map((field, index) => (
+            <Field
+              key={field}
+              id={`settings-anchor-${field}`}
+              label={t(anchorLabelKey(index), anchorLabelParams(index))}
+            >
               <PlannerTimeInput
                 id={`settings-anchor-${field}`}
                 name={`planner_${field}`}
@@ -76,14 +71,14 @@ export default function PlannerDefaultsForm({
           ))}
         </div>
         <small className="hint">
-          Padrão de fábrica: {builtins.in1}, {builtins.out1}, {builtins.in2},{' '}
-          {builtins.out2}. Intervalo mínimo de 15 minutos entre horários
-          consecutivos.
+          {t('settings.planner.factoryDefault', {
+            times: `${builtins.in1}, ${builtins.out1}, ${builtins.in2}, ${builtins.out2}`,
+          })}
         </small>
         <Field
           id="settings-max-daily-extra"
-          label="Limite Diário de Trabalho Extra (Horas)"
-          hint="Limita apenas a saída alternativa para pagar saldo negativo. O padrão é 3 horas."
+          label={t('settings.planner.maxDailyExtraLabel')}
+          hint={t('settings.planner.maxDailyExtraHint')}
         >
           <input
             id="settings-max-daily-extra"
@@ -100,8 +95,8 @@ export default function PlannerDefaultsForm({
         </Field>
         <Field
           id="settings-balance-credit-multiplier"
-          label="Multiplicador de Crédito do Banco de Horas"
-          hint="Taxa de crédito para saldo negativo: 1 hora trabalhada extra gera este múltiplo em crédito. Padrão: 1,5x. Intervalo: 1,0 a 3,0."
+          label={t('settings.planner.creditMultiplierLabel')}
+          hint={t('settings.planner.creditMultiplierHint')}
         >
           <input
             id="settings-balance-credit-multiplier"
@@ -131,7 +126,7 @@ export default function PlannerDefaultsForm({
             }}
             disabled={busy}
           >
-            Restaurar Padrões
+            {t('settings.planner.restoreDefaults')}
           </Button>
           <Button
             type="submit"
@@ -139,7 +134,7 @@ export default function PlannerDefaultsForm({
             disabled={busy}
             aria-busy={busy}
           >
-            {busy ? 'Salvando...' : 'Salvar Planner'}
+            {busy ? t('common.saving') : t('settings.planner.save')}
           </Button>
         </div>
       </form>

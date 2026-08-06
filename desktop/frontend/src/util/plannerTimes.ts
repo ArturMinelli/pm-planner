@@ -17,20 +17,37 @@ export type PlannerAnchorTimes = {
 
 const hhmmRe = /^(\d{2}):(\d{2})$/
 
-export function parseHHMM(s: string): number | null {
-  const m = hhmmRe.exec(s.trim())
-  if (!m) return null
-  const h = Number(m[1])
-  const min = Number(m[2])
-  if (h < 0 || h > 23 || min < 0 || min > 59) return null
-  return h * 60 + min
+export const ANCHOR_FIELD_KEYS = ['in1', 'out1', 'in2', 'out2'] as const
+export const ANCHOR_LABEL_KEYS = [
+  'planner.entry',
+  'planner.exit',
+  'planner.entry',
+  'planner.exit',
+] as const
+
+export function anchorLabelKey(index: number): string {
+  return ANCHOR_LABEL_KEYS[index]
 }
 
-export function formatMinutes(m: number): string {
-  const clamped = Math.max(DAY_START, Math.min(DAY_END, m))
-  const h = Math.floor(clamped / 60)
-  const min = clamped % 60
-  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+export function anchorLabelParams(index: number): Record<string, string> {
+  const number = index < 2 ? '1' : '2'
+  return { number }
+}
+
+export function parseHHMM(value: string): number | null {
+  const match = hhmmRe.exec(value.trim())
+  if (!match) return null
+  const hours = Number(match[1])
+  const minutes = Number(match[2])
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null
+  return hours * 60 + minutes
+}
+
+export function formatMinutes(minutes: number): string {
+  const clamped = Math.max(DAY_START, Math.min(DAY_END, minutes))
+  const hours = Math.floor(clamped / 60)
+  const mins = clamped % 60
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
 }
 
 export function addMinutes(hhmm: string, delta: number): string | null {
@@ -39,8 +56,8 @@ export function addMinutes(hhmm: string, delta: number): string | null {
   return formatMinutes(base + delta)
 }
 
-function clampMinutes(m: number): number {
-  return Math.max(DAY_START, Math.min(DAY_END, m))
+function clampMinutes(minutes: number): number {
+  return Math.max(DAY_START, Math.min(DAY_END, minutes))
 }
 
 function forwardCascade(
@@ -48,24 +65,24 @@ function forwardCascade(
   out1: number,
   in2: number,
 ): [number, number, number] {
-  let a = in1
-  let b = out1
-  let c = in2
+  let firstIn = in1
+  let firstOut = out1
+  let secondIn = in2
 
-  if (b < a + MIN_GAP_MINUTES) b = a + MIN_GAP_MINUTES
-  if (c < b + MIN_GAP_MINUTES) c = b + MIN_GAP_MINUTES
+  if (firstOut < firstIn + MIN_GAP_MINUTES) firstOut = firstIn + MIN_GAP_MINUTES
+  if (secondIn < firstOut + MIN_GAP_MINUTES) secondIn = firstOut + MIN_GAP_MINUTES
 
-  if (c > DAY_END) {
-    c = DAY_END
-    if (b > c - MIN_GAP_MINUTES) b = c - MIN_GAP_MINUTES
-    if (a > b - MIN_GAP_MINUTES) a = b - MIN_GAP_MINUTES
-    a = clampMinutes(a)
-    b = clampMinutes(b)
-    if (b < a + MIN_GAP_MINUTES) b = Math.min(DAY_END, a + MIN_GAP_MINUTES)
-    if (c < b + MIN_GAP_MINUTES) c = Math.min(DAY_END, b + MIN_GAP_MINUTES)
+  if (secondIn > DAY_END) {
+    secondIn = DAY_END
+    if (firstOut > secondIn - MIN_GAP_MINUTES) firstOut = secondIn - MIN_GAP_MINUTES
+    if (firstIn > firstOut - MIN_GAP_MINUTES) firstIn = firstOut - MIN_GAP_MINUTES
+    firstIn = clampMinutes(firstIn)
+    firstOut = clampMinutes(firstOut)
+    if (firstOut < firstIn + MIN_GAP_MINUTES) firstOut = Math.min(DAY_END, firstIn + MIN_GAP_MINUTES)
+    if (secondIn < firstOut + MIN_GAP_MINUTES) secondIn = Math.min(DAY_END, firstOut + MIN_GAP_MINUTES)
   }
 
-  return [a, b, c]
+  return [firstIn, firstOut, secondIn]
 }
 
 export function enforcePlannerOrder(times: PlannerTimes): PlannerTimes {
@@ -75,11 +92,11 @@ export function enforcePlannerOrder(times: PlannerTimes): PlannerTimes {
 
   if (in1 === null || out1 === null || in2 === null) return times
 
-  const [a, b, c] = forwardCascade(in1, out1, in2)
+  const [firstIn, firstOut, secondIn] = forwardCascade(in1, out1, in2)
   return {
-    in1: formatMinutes(a),
-    out1: formatMinutes(b),
-    in2: formatMinutes(c),
+    in1: formatMinutes(firstIn),
+    out1: formatMinutes(firstOut),
+    in2: formatMinutes(secondIn),
   }
 }
 
@@ -102,29 +119,29 @@ function forwardCascadeFour(
   in2: number,
   out2: number,
 ): [number, number, number, number] {
-  let a = in1
-  let b = out1
-  let c = in2
-  let d = out2
+  let firstIn = in1
+  let firstOut = out1
+  let secondIn = in2
+  let secondOut = out2
 
-  if (b < a + MIN_GAP_MINUTES) b = a + MIN_GAP_MINUTES
-  if (c < b + MIN_GAP_MINUTES) c = b + MIN_GAP_MINUTES
-  if (d < c + MIN_GAP_MINUTES) d = c + MIN_GAP_MINUTES
+  if (firstOut < firstIn + MIN_GAP_MINUTES) firstOut = firstIn + MIN_GAP_MINUTES
+  if (secondIn < firstOut + MIN_GAP_MINUTES) secondIn = firstOut + MIN_GAP_MINUTES
+  if (secondOut < secondIn + MIN_GAP_MINUTES) secondOut = secondIn + MIN_GAP_MINUTES
 
-  if (d > DAY_END) {
-    d = DAY_END
-    if (c > d - MIN_GAP_MINUTES) c = d - MIN_GAP_MINUTES
-    if (b > c - MIN_GAP_MINUTES) b = c - MIN_GAP_MINUTES
-    if (a > b - MIN_GAP_MINUTES) a = b - MIN_GAP_MINUTES
-    a = clampMinutes(a)
-    b = clampMinutes(b)
-    c = clampMinutes(c)
-    if (b < a + MIN_GAP_MINUTES) b = Math.min(DAY_END, a + MIN_GAP_MINUTES)
-    if (c < b + MIN_GAP_MINUTES) c = Math.min(DAY_END, b + MIN_GAP_MINUTES)
-    if (d < c + MIN_GAP_MINUTES) d = Math.min(DAY_END, c + MIN_GAP_MINUTES)
+  if (secondOut > DAY_END) {
+    secondOut = DAY_END
+    if (secondIn > secondOut - MIN_GAP_MINUTES) secondIn = secondOut - MIN_GAP_MINUTES
+    if (firstOut > secondIn - MIN_GAP_MINUTES) firstOut = secondIn - MIN_GAP_MINUTES
+    if (firstIn > firstOut - MIN_GAP_MINUTES) firstIn = firstOut - MIN_GAP_MINUTES
+    firstIn = clampMinutes(firstIn)
+    firstOut = clampMinutes(firstOut)
+    secondIn = clampMinutes(secondIn)
+    if (firstOut < firstIn + MIN_GAP_MINUTES) firstOut = Math.min(DAY_END, firstIn + MIN_GAP_MINUTES)
+    if (secondIn < firstOut + MIN_GAP_MINUTES) secondIn = Math.min(DAY_END, firstOut + MIN_GAP_MINUTES)
+    if (secondOut < secondIn + MIN_GAP_MINUTES) secondOut = Math.min(DAY_END, secondIn + MIN_GAP_MINUTES)
   }
 
-  return [a, b, c, d]
+  return [firstIn, firstOut, secondIn, secondOut]
 }
 
 export function enforceAnchorOrder(times: PlannerAnchorTimes): PlannerAnchorTimes {
@@ -135,12 +152,12 @@ export function enforceAnchorOrder(times: PlannerAnchorTimes): PlannerAnchorTime
 
   if (in1 === null || out1 === null || in2 === null || out2 === null) return times
 
-  const [a, b, c, d] = forwardCascadeFour(in1, out1, in2, out2)
+  const [firstIn, firstOut, secondIn, secondOut] = forwardCascadeFour(in1, out1, in2, out2)
   return {
-    in1: formatMinutes(a),
-    out1: formatMinutes(b),
-    in2: formatMinutes(c),
-    out2: formatMinutes(d),
+    in1: formatMinutes(firstIn),
+    out1: formatMinutes(firstOut),
+    in2: formatMinutes(secondIn),
+    out2: formatMinutes(secondOut),
   }
 }
 
@@ -198,25 +215,35 @@ export function enforceJourneyOrder(
   return result
 }
 
-export function validatePlannerAnchors(times: PlannerAnchorTimes): string | null {
-  const labels = ['Entrada 1', 'Saída 1', 'Entrada 2', 'Saída 2'] as const
-  const keys = ['in1', 'out1', 'in2', 'out2'] as const
-  const mins: number[] = []
+export type PlannerAnchorValidationError =
+  | { key: 'errors.validation.invalidAnchorTime'; params: { label: string } }
+  | { key: 'errors.validation.anchorsNotIncreasing' }
+  | { key: 'errors.validation.anchorsMinGap'; params: { minutes: string } }
 
-  for (let i = 0; i < keys.length; i++) {
-    const m = parseHHMM(times[keys[i]])
-    if (m === null) {
-      return `${labels[i]}: horário inválido (use HH:MM).`
+export function validatePlannerAnchors(times: PlannerAnchorTimes): PlannerAnchorValidationError | null {
+  const keys = ANCHOR_FIELD_KEYS
+  const minutes: number[] = []
+
+  for (let index = 0; index < keys.length; index++) {
+    const parsed = parseHHMM(times[keys[index]])
+    if (parsed === null) {
+      return {
+        key: 'errors.validation.invalidAnchorTime',
+        params: { label: `${index + 1}` },
+      }
     }
-    mins.push(m)
+    minutes.push(parsed)
   }
 
-  for (let i = 1; i < mins.length; i++) {
-    if (mins[i] <= mins[i - 1]) {
-      return 'Os horários devem ser estritamente crescentes.'
+  for (let index = 1; index < minutes.length; index++) {
+    if (minutes[index] <= minutes[index - 1]) {
+      return { key: 'errors.validation.anchorsNotIncreasing' }
     }
-    if (mins[i] - mins[i - 1] < MIN_GAP_MINUTES) {
-      return `Deixe pelo menos ${MIN_GAP_MINUTES} minutos entre horários consecutivos.`
+    if (minutes[index] - minutes[index - 1] < MIN_GAP_MINUTES) {
+      return {
+        key: 'errors.validation.anchorsMinGap',
+        params: { minutes: String(MIN_GAP_MINUTES) },
+      }
     }
   }
 

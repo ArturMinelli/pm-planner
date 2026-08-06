@@ -69,7 +69,7 @@ func TestFetchPlannerPayloadKeepsPlanningWhenBalanceFails(t *testing.T) {
 	if payload.Balance != nil {
 		t.Fatalf("expected no balance: %#v", payload.Balance)
 	}
-	if payload.BalanceError == "" {
+	if payload.BalanceError == nil {
 		t.Fatal("expected balance error")
 	}
 	if !payload.SolvedSlot.Valid() || payload.SolvedSlot.JourneyIndex >= len(payload.Journeys) || payload.Journeys[payload.SolvedSlot.JourneyIndex].Exit.Time == "" {
@@ -221,10 +221,10 @@ func TestBuildDefaultsPlannerPayloadShape(t *testing.T) {
 	if payload.BaseTargetSecs != int64(defaultPlannerTarget.Seconds()) {
 		t.Fatalf("base target: %d", payload.BaseTargetSecs)
 	}
-	if payload.Balance != nil || payload.BalanceError != "" {
-		t.Fatalf("defaults should omit balance: %#v / %q", payload.Balance, payload.BalanceError)
+	if payload.Balance != nil || payload.BalanceError != nil {
+		t.Fatalf("defaults should omit balance: %#v / %#v", payload.Balance, payload.BalanceError)
 	}
-	if payload.OriginalsLine != "(nenhum)" {
+	if payload.OriginalsLine != "" {
 		t.Fatalf("originals: %q", payload.OriginalsLine)
 	}
 	if len(payload.OriginalTimes) != 0 {
@@ -244,8 +244,8 @@ func TestBuildDefaultsPlannerPayloadShape(t *testing.T) {
 	if !payload.SolvedSlot.Valid() || payload.SolvedSlot.JourneyIndex != 1 || payload.SolvedSlot.IsEntry {
 		t.Fatalf("solved slot: %#v", payload.SolvedSlot)
 	}
-	if payload.LoadWarning != "" {
-		t.Fatalf("builder should not set load warning: %q", payload.LoadWarning)
+	if payload.LoadWarning != nil {
+		t.Fatalf("builder should not set load warning: %#v", payload.LoadWarning)
 	}
 }
 
@@ -258,7 +258,7 @@ func TestFormatOriginalStampStrings(t *testing.T) {
 		{
 			name:   "empty",
 			stamps: nil,
-			want:   "(nenhum)",
+			want:   "",
 		},
 		{
 			name:   "single stamp",

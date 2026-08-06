@@ -23,22 +23,24 @@ type PlannerAnchors struct {
 
 // File mirrors ~/.config/pm/config.yaml keys used by pm-cli.
 type File struct {
-	Login                  string          `json:"login" yaml:"login"`
-	Password               string          `json:"password" yaml:"password"`
-	MaxDailyExtraMinutes   int             `json:"max_daily_extra_minutes,omitempty" yaml:"max_daily_extra_minutes,omitempty"`
-	BalanceCreditMultiplier float64        `json:"balance_credit_multiplier,omitempty" yaml:"balance_credit_multiplier,omitempty"`
-	Planner                *PlannerAnchors `json:"planner,omitempty" yaml:"planner,omitempty"`
-	Reminders              *Reminders      `json:"reminders,omitempty" yaml:"reminders,omitempty"`
+	Login                   string          `json:"login" yaml:"login"`
+	Password                string          `json:"password" yaml:"password"`
+	Locale                  string          `json:"locale,omitempty" yaml:"locale,omitempty"`
+	MaxDailyExtraMinutes    int             `json:"max_daily_extra_minutes,omitempty" yaml:"max_daily_extra_minutes,omitempty"`
+	BalanceCreditMultiplier float64         `json:"balance_credit_multiplier,omitempty" yaml:"balance_credit_multiplier,omitempty"`
+	Planner                 *PlannerAnchors `json:"planner,omitempty" yaml:"planner,omitempty"`
+	Reminders               *Reminders      `json:"reminders,omitempty" yaml:"reminders,omitempty"`
 }
 
 type fileRaw struct {
-	Login                  string          `yaml:"login"`
-	Email                  string          `yaml:"email"`
-	Password               string          `yaml:"password"`
-	MaxDailyExtraMinutes   int             `yaml:"max_daily_extra_minutes,omitempty"`
-	BalanceCreditMultiplier float64        `yaml:"balance_credit_multiplier,omitempty"`
-	Planner                *PlannerAnchors `yaml:"planner,omitempty"`
-	Reminders              *Reminders      `yaml:"reminders,omitempty"`
+	Login                   string          `yaml:"login"`
+	Email                   string          `yaml:"email"`
+	Password                string          `yaml:"password"`
+	Locale                  string          `yaml:"locale,omitempty"`
+	MaxDailyExtraMinutes    int             `yaml:"max_daily_extra_minutes,omitempty"`
+	BalanceCreditMultiplier float64         `yaml:"balance_credit_multiplier,omitempty"`
+	Planner                 *PlannerAnchors `yaml:"planner,omitempty"`
+	Reminders               *Reminders      `yaml:"reminders,omitempty"`
 }
 
 func resolveLogin(login, legacyEmail string) string {
@@ -120,6 +122,7 @@ func Read(cfgFileOverride string) (*File, error) {
 	f := &File{
 		Login:                   resolveLogin(raw.Login, raw.Email),
 		Password:                raw.Password,
+		Locale:                  raw.Locale,
 		MaxDailyExtraMinutes:    raw.MaxDailyExtraMinutes,
 		BalanceCreditMultiplier: raw.BalanceCreditMultiplier,
 		Planner:                 raw.Planner,
@@ -145,6 +148,9 @@ func Save(cfgFileOverride string, f *File) error {
 		}
 	}
 	if f != nil {
+		if err := ValidateLocale(f.Locale); err != nil {
+			return err
+		}
 		if _, err := ResolveMaxDailyExtraWork(f); err != nil {
 			return fmt.Errorf("max_daily_extra_minutes: %w", err)
 		}

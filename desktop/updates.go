@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"pm-cli/pkg/message"
 	"pm-cli/pkg/update"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -27,8 +28,8 @@ const (
 func (a *App) CheckForUpdate() (*update.Status, error) {
 	binary, err := update.ResolvePMBinary()
 	if err != nil {
-		return &update.Status{Blockers: []string{
-			"CLI pm não encontrada. Execute o setup novamente para reinstalá-la.",
+		return &update.Status{Blockers: []message.Message{
+			message.New(message.KeyUpdateBlockersPMNotFound, nil),
 		}}, nil
 	}
 
@@ -38,14 +39,16 @@ func (a *App) CheckForUpdate() (*update.Status, error) {
 
 	output, err := runPM(ctx, binary, "update", "--check", "--json")
 	if err != nil {
-		return &update.Status{Blockers: []string{
-			"Não foi possível verificar atualizações: " + err.Error(),
+		return &update.Status{Blockers: []message.Message{
+			message.New(message.KeyUpdateBlockersCheckFailed, map[string]string{
+				"detail": err.Error(),
+			}),
 		}}, nil
 	}
 
 	status := &update.Status{}
 	if err := json.Unmarshal(output, status); err != nil {
-		return nil, fmt.Errorf("resposta inesperada de pm update --check: %w", err)
+		return nil, fmt.Errorf("unexpected pm update --check response: %w", err)
 	}
 	return status, nil
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"pm-cli/pkg/message"
 	"pm-cli/pkg/update"
 )
 
@@ -76,7 +77,7 @@ func applyUpdate(command *cobra.Command, relaunch bool) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintln(command.OutOrStdout(), result.Message)
+	fmt.Fprintln(command.OutOrStdout(), message.ResultEnglish(result.Message))
 	if !result.OK {
 		return errors.New("atualização falhou")
 	}
@@ -101,7 +102,7 @@ func printStatus(out io.Writer, status *update.Status, asJSON bool) error {
 	}
 
 	for _, blocker := range status.Blockers {
-		fmt.Fprintf(out, "! %s\n", blocker)
+		fmt.Fprintf(out, "! %s\n", message.BlockerEnglish(blocker))
 	}
 	if len(status.Blockers) > 0 {
 		return nil

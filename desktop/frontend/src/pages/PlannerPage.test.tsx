@@ -40,7 +40,7 @@ function samplePayload(overrides: Partial<PlannerPayload> = {}): PlannerPayload 
       },
     ],
     solvedSlot: { journeyIndex: 1, isEntry: false },
-    originalsLine: '(nenhum)',
+    originalsLine: '',
     ...overrides,
   }
 }
@@ -98,8 +98,8 @@ describe('PlannerPage', () => {
     expect(mockedBackend.loadPlanner).toHaveBeenCalledTimes(1)
     expect(mockedBackend.loadPlanner).toHaveBeenCalledWith('2026-06-09')
     expect(mockedBackend.recalculateDay).toHaveBeenCalledTimes(1)
-    expect(container.textContent).toContain('Meta do Dia')
-    expect(container.textContent).toContain('Entrada 1')
+    expect(container.textContent).toContain('Daily target')
+    expect(container.textContent).toContain('Entry 1')
     expect(container.textContent).not.toContain('Carregar Dia')
   })
 
@@ -130,17 +130,17 @@ describe('PlannerPage', () => {
   })
 
   it('shows a warning banner when the payload includes loadWarning', async () => {
-    const warning =
-      'Não foi possível carregar o dia; usando padrões do planner.'
     mockedBackend.loadPlanner.mockResolvedValue(
-      samplePayload({ loadWarning: warning }),
+      samplePayload({
+        loadWarning: { key: 'errors.planner.load_fallback' },
+      }),
     )
 
     await renderPage()
 
-    expect(container.textContent).toContain(warning)
+    expect(container.textContent).toContain('Could not load the day')
     expect(container.querySelector('.banner.error')).toBeNull()
-    expect(container.textContent).toContain('Entrada 1')
+    expect(container.textContent).toContain('Entry 1')
   })
 
   it('shows a browser banner without fetching when Wails is unavailable', async () => {
@@ -149,7 +149,7 @@ describe('PlannerPage', () => {
     await renderPage()
 
     expect(mockedBackend.loadPlanner).not.toHaveBeenCalled()
-    expect(container.textContent).toContain('Modo navegador')
+    expect(container.textContent).toContain('Browser mode')
   })
 
   it('renders journey list and summary inside a two-column grid', async () => {
@@ -158,7 +158,7 @@ describe('PlannerPage', () => {
     const grid = container.querySelector('.grid-2')
     expect(grid).not.toBeNull()
     expect(grid?.children.length).toBe(2)
-    expect(grid?.textContent).toContain('Entrada 1')
-    expect(grid?.textContent).toContain('Meta do Dia')
+    expect(grid?.textContent).toContain('Entry 1')
+    expect(grid?.textContent).toContain('Daily target')
   })
 })

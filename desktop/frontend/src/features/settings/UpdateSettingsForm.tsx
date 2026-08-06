@@ -1,5 +1,7 @@
+import { useTranslation } from 'react-i18next'
 import type { UpdateStatus } from '../../types'
 import { Banner, Button, Card, StatRow } from '../../components/ui'
+import { messageKey, translateMessage } from '../../i18n/translateMessage'
 import {
   describeUpdateAvailability,
   formatInstalledVersion,
@@ -22,32 +24,34 @@ export default function UpdateSettingsForm({
   onCheck,
   onUpdate,
 }: UpdateSettingsFormProps) {
+  const { t } = useTranslation()
   const blockers = status?.blockers ?? []
   const canUpdate = !!status?.updateAvailable && !updating && canUseRuntime
 
   return (
     <Card
-      title="Atualizações"
-      intro="Verifique se há uma versão mais recente e atualize quando quiser."
+      title={t('settings.updates.title')}
+      intro={t('settings.updates.intro')}
     >
       <div className="stat-list">
-        <StatRow label="Versão instalada" value={formatInstalledVersion(status)} />
+        <StatRow
+          label={t('settings.updates.installedVersion')}
+          value={formatInstalledVersion(t, status)}
+        />
       </div>
 
       {blockers.map((blocker) => (
-        <Banner tone="error" key={blocker}>
-          {blocker}
+        <Banner tone="error" key={messageKey(blocker)}>
+          {translateMessage(t, blocker)}
         </Banner>
       ))}
 
       {status && blockers.length === 0 ? (
-        <p className="muted">{describeUpdateAvailability(status)}</p>
+        <p className="muted">{describeUpdateAvailability(t, status)}</p>
       ) : null}
 
       {canUpdate ? (
-        <p className="hint">
-          O app será fechado e reaberto automaticamente ao final da atualização.
-        </p>
+        <p className="hint">{t('settings.updates.restartHint')}</p>
       ) : null}
 
       <div className="btn-row">
@@ -57,7 +61,7 @@ export default function UpdateSettingsForm({
           aria-busy={checking}
           onClick={onCheck}
         >
-          {checking ? 'Verificando...' : 'Verificar Atualizações'}
+          {checking ? t('settings.updates.checking') : t('settings.updates.check')}
         </Button>
         <Button
           variant="primary"
@@ -65,7 +69,7 @@ export default function UpdateSettingsForm({
           aria-busy={updating}
           onClick={onUpdate}
         >
-          {updating ? 'Atualizando...' : 'Atualizar Agora'}
+          {updating ? t('settings.updates.updating') : t('settings.updates.updateNow')}
         </Button>
       </div>
     </Card>

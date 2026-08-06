@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Journey, PlannerPayload, PlannerSummary, SolvedSlot } from '../types'
 import * as backend from '../services/backend'
+import { translateMessage } from '../i18n/translateMessage'
 import { localDateYYYYMMDD } from '../util/timeFormat'
 import {
   applyInstantSuggestions,
@@ -17,6 +19,7 @@ import PlannerJourneyList from '../features/planner/PlannerJourneyList'
 const DEFAULT_BREAK_MINUTES = 60
 
 export default function PlannerPage() {
+  const { t } = useTranslation()
   const [date, setDate] = useState(localDateYYYYMMDD)
   const [fetching, setFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -201,12 +204,13 @@ export default function PlannerPage() {
           })
           if (cancelled || requestId !== fetchRequestRef.current) return
           setSummary(initialSummary)
-        } catch (_error) {
+        } catch {
           // summary recalculation is optional on first load
         }
       } catch (caughtError) {
         if (cancelled || requestId !== fetchRequestRef.current) return
-        setError(caughtError instanceof Error ? caughtError.message : String(caughtError))
+        const message = caughtError instanceof Error ? caughtError.message : String(caughtError)
+        setError(message.startsWith('errors.') ? t(message) : message)
       } finally {
         if (cancelled || requestId !== fetchRequestRef.current) return
         setFetching(false)
@@ -218,19 +222,20 @@ export default function PlannerPage() {
     return () => {
       cancelled = true
     }
-  }, [date, hasRuntime])
+  }, [date, hasRuntime, t])
 
   const timesDisabled = fetching
-  const originalsLine = loaded?.originalsLine
+  const originalsLine = loaded?.originalsLine || t('planner.none')
   const isToday = loaded?.date === localDateYYYYMMDD()
+  const loadWarning = translateMessage(t, loaded?.loadWarning)
 
   return (
     <Page>
       <PageHeader
-        title="Planejar Jornada"
-        description="Veja e ajuste os horários do dia. O horário calculada preenche a meta automaticamente."
+        title={t('planner.title')}
+        description={t('planner.description')}
         actions={
-          <Field id="planner-date" label="Data" className="page-header-date">
+          <Field id="planner-date" label={t('common.date')} className="page-header-date">
             <PlannerDatePicker
               id="planner-date"
               value={date}
@@ -242,13 +247,9 @@ export default function PlannerPage() {
       />
 
       <Stack>
-        {!hasRuntime ? (
-          <Banner>
-            Modo navegador: use o app desktop para carregar dados reais da API.
-          </Banner>
-        ) : null}
+        {!hasRuntime ? <Banner>{t('common.browserMode')}</Banner> : null}
 
-        {loaded?.loadWarning ? <Banner>{loaded.loadWarning}</Banner> : null}
+        {loadWarning ? <Banner>{loadWarning}</Banner> : null}
 
         {error ? <Banner tone="error">{error}</Banner> : null}
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"pm-cli/pkg/message"
 	"pm-cli/pkg/update"
 )
 
@@ -38,8 +39,10 @@ func TestPrintStatusHumanReadable(t *testing.T) {
 		},
 		{
 			name:   "blocked",
-			status: update.Status{Root: "/root", IsGit: true, Dirty: true, Blockers: []string{"Há alterações locais"}},
-			want:   "! Há alterações locais",
+			status: update.Status{Root: "/root", IsGit: true, Dirty: true, Blockers: []message.Message{
+				message.New(message.KeyUpdateBlockersDirtyWorkingTree, nil),
+			}},
+			want:   "! Uncommitted local changes",
 		},
 	}
 

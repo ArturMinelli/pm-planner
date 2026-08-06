@@ -9,6 +9,7 @@ import (
 
 	"pm-cli/pkg/api"
 	"pm-cli/pkg/config"
+	"pm-cli/pkg/message"
 	"pm-cli/pkg/plan"
 )
 
@@ -19,12 +20,12 @@ type PlannerPayload struct {
 	Date           string                  `json:"date"`
 	BaseTargetSecs int64                   `json:"baseTargetSecs"`
 	Balance        *plan.BalanceAdjustment `json:"balance,omitempty"`
-	BalanceError   string                  `json:"balanceError,omitempty"`
+	BalanceError   *message.Message          `json:"balanceError,omitempty"`
 	OriginalTimes  []string                `json:"originalTimes"`
 	Journeys       []plan.Journey          `json:"journeys"`
 	SolvedSlot     plan.SolvedSlot         `json:"solvedSlot"`
 	OriginalsLine  string                  `json:"originalsLine"`
-	LoadWarning    string                  `json:"loadWarning,omitempty"`
+	LoadWarning    *message.Message          `json:"loadWarning,omitempty"`
 }
 
 // PlannerSummary is returned when recalculating from editable journey inputs.
@@ -35,7 +36,7 @@ type PlannerSummary struct {
 	TotalSpanSecs   int64          `json:"totalSpanSecs"`
 	OvertimeSecs    int64          `json:"overtimeSecs"`
 	AlternativeTime string         `json:"alternativeTime,omitempty"`
-	Warnings        []string       `json:"warnings,omitempty"`
+	Warnings        []message.Message `json:"warnings,omitempty"`
 }
 
 // FetchPlannerPayload loads the work day and builds suggestion fields for the desktop planner.
@@ -86,9 +87,10 @@ func FetchPlannerPayload(ctx context.Context, client *api.Client, dateStr string
 		balanceCreditMultiplier = config.DefaultBalanceCreditMultiplier
 	}
 	var balanceAdjustment *plan.BalanceAdjustment
-	var balanceErr string
+	var balanceErr *message.Message
 	if balance, err := client.FetchEmployeeBalance(ctx); err != nil {
-		balanceErr = err.Error()
+		classified := message.FromError(err)
+		balanceErr = &classified
 	} else {
 		adjustment := plan.CalculateBalanceAdjustment(baseTarget, maxDailyExtraWork, balance.TimeBalanceSecs, date, time.Now().In(loc), balanceCreditMultiplier)
 		balanceAdjustment = &adjustment
@@ -162,7 +164,7 @@ func BuildDefaultsPlannerPayload(dateStr string) (*PlannerPayload, error) {
 		OriginalTimes:  []string{},
 		Journeys:       day.Journeys,
 		SolvedSlot:     solvedSlot,
-		OriginalsLine:  "(nenhum)",
+		OriginalsLine:  "",
 	}, nil
 }
 
@@ -219,7 +221,7 @@ func FormatOriginalStamps(stamps []time.Time) string {
 // FormatOriginalStampStrings formats HH:mm stamps as one journey per line (entry — exit).
 func FormatOriginalStampStrings(stamps []string) string {
 	if len(stamps) == 0 {
-		return "(nenhum)"
+		return ""
 	}
 
 	lines := make([]string, 0, (len(stamps)+1)/2)

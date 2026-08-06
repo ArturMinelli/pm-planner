@@ -6,14 +6,27 @@ export interface PlannerAnchorsConfig {
   out2?: string
 }
 
+export type AppLocale = 'en' | 'pt-BR'
+
 /** Mirrors pm-cli pkg/config.File */
 export interface PmConfig {
   login: string
   password: string
+  locale?: AppLocale
   max_daily_extra_minutes?: number
   balance_credit_multiplier?: number
   planner?: PlannerAnchorsConfig
   reminders?: ReminderSettings
+}
+
+export interface LocalizedMessage {
+  key: string
+  params?: Record<string, string>
+}
+
+export interface AuthResult {
+  ok: boolean
+  error?: LocalizedMessage
 }
 
 export interface ClockSlot {
@@ -36,12 +49,12 @@ export interface PlannerPayload {
   date: string
   baseTargetSecs: number
   balance?: BalanceAdjustment
-  balanceError?: string
+  balanceError?: LocalizedMessage
   originalTimes: string[]
   journeys: Journey[]
   solvedSlot: SolvedSlot
   originalsLine: string
-  loadWarning?: string
+  loadWarning?: LocalizedMessage
 }
 
 export interface PlannerSummary {
@@ -51,7 +64,7 @@ export interface PlannerSummary {
   totalSpanSecs: number
   overtimeSecs: number
   alternativeTime?: string
-  warnings?: string[]
+  warnings?: LocalizedMessage[]
 }
 
 export interface RecalculateRequest {
@@ -104,14 +117,14 @@ export interface UpdateStatus {
   commitDate: string
   behind: number
   dirty: boolean
-  blockers: string[]
+  blockers: LocalizedMessage[]
   updateAvailable: boolean
 }
 
 /** Mirrors pm-cli pkg/update.Result */
 export interface UpdateResult {
   ok: boolean
-  message: string
+  message: LocalizedMessage
   logPath: string
   commit: string
   finishedAt: string

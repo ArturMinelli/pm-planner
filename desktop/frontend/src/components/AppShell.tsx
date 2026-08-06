@@ -1,10 +1,13 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 export default function AppShell() {
+  const { t } = useTranslation()
+
   return (
     <div className="app-root">
       <a className="skip-link" href="#main-content">
-        Pular para conteúdo
+        {t('common.skipToContent')}
       </a>
       <aside className="sidebar">
         <div className="brand">
@@ -20,10 +23,10 @@ export default function AppShell() {
         </div>
         <nav className="nav">
           <NavLink end className="nav-link" to="/">
-            Jornada
+            {t('nav.journey')}
           </NavLink>
           <NavLink className="nav-link" to="/settings">
-            Configurações
+            {t('nav.settings')}
           </NavLink>
         </nav>
       </aside>

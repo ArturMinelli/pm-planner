@@ -1,5 +1,6 @@
 import { useId } from 'react'
-import type { BalanceAdjustment, Journey, SolvedSlot } from '../../types'
+import { useTranslation } from 'react-i18next'
+import type { BalanceAdjustment, Journey, LocalizedMessage, SolvedSlot } from '../../types'
 import { isSlotSolved } from '../../util/plannerSuggestions'
 import PlannerSlotField from './PlannerSlotField'
 
@@ -8,16 +9,12 @@ type PlannerJourneyGroupProps = {
   journeyIndex: number
   solvedSlot: SolvedSlot
   balance?: BalanceAdjustment
-  balanceError?: string
+  balanceError?: LocalizedMessage
   alternativeTime?: string
   disabled?: boolean
   onUpdateTime: (journeyIndex: number, isEntry: boolean, time: string) => void
   onRemove: (journeyIndex: number) => void
   onToggleSolved: (journeyIndex: number, isEntry: boolean) => void
-}
-
-function portugueseOrdinal(position: number): string {
-  return `${position}ª`
 }
 
 export default function PlannerJourneyGroup({
@@ -32,9 +29,12 @@ export default function PlannerJourneyGroup({
   onRemove,
   onToggleSolved,
 }: PlannerJourneyGroupProps) {
+  const { t, i18n } = useTranslation()
   const entryInputId = useId()
   const exitInputId = useId()
-  const ordinal = portugueseOrdinal(journeyIndex + 1)
+  const position = journeyIndex + 1
+  const ordinal = i18n.language === 'pt-BR' ? `${position}ª` : String(position)
+  const journeyTitle = t('planner.journeyOrdinal', { ordinal })
   const isRegistered = journey.entry.registered || journey.exit.registered
   const entrySolved = isSlotSolved(solvedSlot, journeyIndex, true)
   const exitSolved = isSlotSolved(solvedSlot, journeyIndex, false)
@@ -42,14 +42,14 @@ export default function PlannerJourneyGroup({
   return (
     <div className="journey-group">
       <div className="journey-group-header">
-        <span className="journey-group-title">{ordinal} Jornada</span>
+        <span className="journey-group-title">{journeyTitle}</span>
         <button
           type="button"
           className="btn secondary journey-remove-btn"
           onClick={() => onRemove(journeyIndex)}
           disabled={disabled || isRegistered}
-          title={isRegistered ? 'Não é possível remover uma jornada com marcações registradas' : undefined}
-          aria-label={`Remover ${ordinal} Jornada`}
+          title={isRegistered ? t('planner.cannotRemoveRegistered') : undefined}
+          aria-label={t('planner.removeJourney', { ordinal })}
         >
           ✕
         </button>
@@ -60,7 +60,7 @@ export default function PlannerJourneyGroup({
           slot={journey.entry}
           isSolved={entrySolved}
           fieldId={entryInputId}
-          label={`Entrada ${journeyIndex + 1}`}
+          label={t('planner.entry', { number: String(position) })}
           balance={entrySolved ? balance : undefined}
           balanceError={entrySolved ? balanceError : undefined}
           alternativeTime={entrySolved ? alternativeTime : undefined}
@@ -73,7 +73,7 @@ export default function PlannerJourneyGroup({
           slot={journey.exit}
           isSolved={exitSolved}
           fieldId={exitInputId}
-          label={`Saída ${journeyIndex + 1}`}
+          label={t('planner.exit', { number: String(position) })}
           balance={exitSolved ? balance : undefined}
           balanceError={exitSolved ? balanceError : undefined}
           alternativeTime={exitSolved ? alternativeTime : undefined}

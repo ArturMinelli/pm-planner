@@ -4,14 +4,18 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"pm-cli/pkg/message"
 )
 
 func TestResultRoundTrip(t *testing.T) {
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 
 	written := &Result{
-		OK:         true,
-		Message:    "PM Planner atualizado para a1b2c3d.",
+		OK: true,
+		Message: message.New(message.KeyUpdateResultSuccessCommit, map[string]string{
+			"commit": "a1b2c3d",
+		}),
 		LogPath:    "/tmp/update.log",
 		Commit:     "a1b2c3d",
 		FinishedAt: "2026-08-05T10:00:00-03:00",
@@ -27,7 +31,7 @@ func TestResultRoundTrip(t *testing.T) {
 	if read == nil {
 		t.Fatal("expected a stored result")
 	}
-	if *read != *written {
+	if read.OK != written.OK || read.Message.Key != written.Message.Key || read.LogPath != written.LogPath {
 		t.Fatalf("read %+v, want %+v", *read, *written)
 	}
 }
@@ -35,7 +39,7 @@ func TestResultRoundTrip(t *testing.T) {
 func TestConsumeResultClearsTheFile(t *testing.T) {
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 
-	if err := WriteResult(&Result{OK: false, Message: "falhou"}); err != nil {
+	if err := WriteResult(&Result{OK: false, Message: message.New(message.KeyUpdateResultFailed, nil)}); err != nil {
 		t.Fatalf("WriteResult: %v", err)
 	}
 	if _, err := ConsumeResult(); err != nil {

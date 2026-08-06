@@ -3,6 +3,7 @@ import type {
   HTMLAttributes,
   ReactNode,
 } from 'react'
+import { useTranslation } from 'react-i18next'
 
 type BannerTone = 'info' | 'success' | 'error'
 type ButtonVariant = 'primary' | 'secondary'
@@ -96,6 +97,7 @@ export function Toast({
   children: ReactNode
   onDismiss?: () => void
 }) {
+  const { t } = useTranslation()
   const role = tone === 'error' ? 'alert' : 'status'
   return (
     <div
@@ -108,7 +110,7 @@ export function Toast({
         <button
           type="button"
           className="toast-dismiss"
-          aria-label="Fechar aviso"
+          aria-label={t('common.closeNotice')}
           onClick={onDismiss}
         >
           x

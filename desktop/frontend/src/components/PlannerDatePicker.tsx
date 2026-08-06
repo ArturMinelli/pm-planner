@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { useTranslation } from 'react-i18next'
 import { formatYYYYMMDD, parseYYYYMMDD } from '../util/timeFormat'
 
 export type PlannerDatePickerProps = {
@@ -22,20 +23,6 @@ type CalendarDay = {
   outside: boolean
 }
 
-const longDatePtBr = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' })
-const monthTitlePtBr = new Intl.DateTimeFormat('pt-BR', {
-  month: 'long',
-  year: 'numeric',
-})
-const weekdayShortPtBr = new Intl.DateTimeFormat('pt-BR', {
-  weekday: 'short',
-})
-
-const WEEKDAYS = Array.from({ length: 7 }, (_, index) => {
-  const sunday = new Date(2024, 0, 7 + index)
-  return weekdayShortPtBr.format(sunday).replace('.', '')
-})
-
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1)
 }
@@ -48,19 +35,14 @@ function addMonths(date: Date, months: number): Date {
   return new Date(date.getFullYear(), date.getMonth() + months, 1)
 }
 
-function sameDay(a?: Date, b?: Date): boolean {
+function sameDay(left?: Date, right?: Date): boolean {
   return (
-    !!a &&
-    !!b &&
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
+    !!left &&
+    !!right &&
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
   )
-}
-
-function formatMonthTitle(date: Date): string {
-  const title = monthTitlePtBr.format(date)
-  return title.charAt(0).toLocaleUpperCase('pt-BR') + title.slice(1)
 }
 
 function buildCalendarDays(month: Date): CalendarDay[] {
@@ -83,6 +65,7 @@ export default function PlannerDatePicker({
   id: idProp,
   className,
 }: PlannerDatePickerProps) {
+  const { t, i18n } = useTranslation()
   const genId = useId()
   const baseId = idProp ?? genId
   const dialogId = `${baseId}-calendar`
@@ -96,10 +79,37 @@ export default function PlannerDatePicker({
   const [month, setMonth] = useState(() => startOfMonth(parsed ?? today))
   const [focusedDate, setFocusedDate] = useState(() => parsed ?? today)
 
+  const longDateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' }),
+    [i18n.language],
+  )
+  const monthTitleFormatter = useMemo(
+    () => new Intl.DateTimeFormat(i18n.language, { month: 'long', year: 'numeric' }),
+    [i18n.language],
+  )
+  const weekdayFormatter = useMemo(
+    () => new Intl.DateTimeFormat(i18n.language, { weekday: 'short' }),
+    [i18n.language],
+  )
+
+  const weekdays = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, index) => {
+        const sunday = new Date(2024, 0, 7 + index)
+        return weekdayFormatter.format(sunday).replace('.', '')
+      }),
+    [weekdayFormatter],
+  )
+
   const triggerLabel = useMemo(() => {
     if (!parsed) return value
-    return longDatePtBr.format(parsed)
-  }, [parsed, value])
+    return longDateFormatter.format(parsed)
+  }, [parsed, value, longDateFormatter])
+
+  const monthTitle = useMemo(() => {
+    const title = monthTitleFormatter.format(month)
+    return title.charAt(0).toLocaleUpperCase(i18n.language) + title.slice(1)
+  }, [month, monthTitleFormatter, i18n.language])
 
   const days = useMemo(() => buildCalendarDays(month), [month])
 
@@ -150,8 +160,8 @@ export default function PlannerDatePicker({
   useEffect(() => {
     if (!open) return
     const handler = (event: PointerEvent) => {
-      const el = wrapRef.current
-      if (el && !el.contains(event.target as Node)) close()
+      const element = wrapRef.current
+      if (element && !element.contains(event.target as Node)) close()
     }
     document.addEventListener('pointerdown', handler, true)
     return () => document.removeEventListener('pointerdown', handler, true)
@@ -197,24 +207,24 @@ export default function PlannerDatePicker({
           id={dialogId}
           className="planner-datepicker-popover"
           role="dialog"
-          aria-label="Escolher data"
+          aria-label={t('planner.datePicker.chooseDate')}
         >
           <div className="calendar-header">
             <button
               type="button"
               className="icon-btn"
-              aria-label="Mês anterior"
-              title="Mês anterior"
+              aria-label={t('planner.datePicker.previousMonth')}
+              title={t('planner.datePicker.previousMonth')}
               onClick={() => setMonth((current) => addMonths(current, -1))}
             >
               ‹
             </button>
-            <div className="calendar-title">{formatMonthTitle(month)}</div>
+            <div className="calendar-title">{monthTitle}</div>
             <button
               type="button"
               className="icon-btn"
-              aria-label="Próximo mês"
-              title="Próximo mês"
+              aria-label={t('planner.datePicker.nextMonth')}
+              title={t('planner.datePicker.nextMonth')}
               onClick={() => setMonth((current) => addMonths(current, 1))}
             >
               ›
@@ -223,7 +233,7 @@ export default function PlannerDatePicker({
           <div
             className="calendar-grid"
             role="grid"
-            aria-label={formatMonthTitle(month)}
+            aria-label={monthTitle}
             onKeyDown={(event) => {
               if (event.key === 'Escape') {
                 event.preventDefault()
@@ -253,7 +263,7 @@ export default function PlannerDatePicker({
               }
             }}
           >
-            {WEEKDAYS.map((weekday) => (
+            {weekdays.map((weekday) => (
               <div key={weekday} className="calendar-weekday" role="columnheader">
                 {weekday}
               </div>

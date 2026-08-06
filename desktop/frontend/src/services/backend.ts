@@ -1,4 +1,5 @@
 import type {
+  AuthResult,
   NotificationPermissionStatus,
   PlannerSummary,
   PmConfig,
@@ -21,7 +22,7 @@ import { browserUpdateStatus } from '../util/updateStatus'
 interface GoPmApp {
   GetConfig(): Promise<PmConfig>
   SaveConfig(c: PmConfig): Promise<void>
-  TestAuth(login: string, password: string): Promise<string>
+  TestAuth(login: string, password: string): Promise<AuthResult>
   LoadPlanner(date: string): Promise<PlannerPayload>
   RecalculateDay(request: RecalculateRequest): Promise<PlannerSummary>
   GetReminderStatus(): Promise<ReminderStatus>
@@ -42,9 +43,9 @@ export function hasWailsRuntime(): boolean {
 }
 
 function requireRuntime(): GoPmApp {
-  const a = goApp()
-  if (!a) throw new Error('This page must run inside the PM desktop shell.')
-  return a
+  const app = goApp()
+  if (!app) throw new Error('errors.desktopShellRequired')
+  return app
 }
 
 /** Safe for browser/dev preview — returns mock mode flag */
@@ -72,43 +73,44 @@ export async function getConfig(): Promise<PmConfig> {
       reminders: defaultReminderSettings(),
     }
   }
-  const c = await requireRuntime().GetConfig()
+  const config = await requireRuntime().GetConfig()
   return {
-    ...c,
-    planner: normalizePlanner(c.planner) ?? builtinPlannerAnchors(),
-    reminders: normalizeReminderSettings(c.reminders),
+    ...config,
+    planner: normalizePlanner(config.planner) ?? builtinPlannerAnchors(),
+    reminders: normalizeReminderSettings(config.reminders),
   }
 }
 
-export async function saveConfig(c: PmConfig): Promise<void> {
+export async function saveConfig(config: PmConfig): Promise<void> {
   const payload: PmConfig = {
-    login: c.login,
-    password: c.password,
+    login: config.login,
+    password: config.password,
+    locale: config.locale,
   }
   if (
-    typeof c.max_daily_extra_minutes === 'number' &&
-    Number.isFinite(c.max_daily_extra_minutes) &&
-    c.max_daily_extra_minutes > 0
+    typeof config.max_daily_extra_minutes === 'number' &&
+    Number.isFinite(config.max_daily_extra_minutes) &&
+    config.max_daily_extra_minutes > 0
   ) {
-    payload.max_daily_extra_minutes = Math.trunc(c.max_daily_extra_minutes)
+    payload.max_daily_extra_minutes = Math.trunc(config.max_daily_extra_minutes)
   }
   if (
-    typeof c.balance_credit_multiplier === 'number' &&
-    Number.isFinite(c.balance_credit_multiplier) &&
-    c.balance_credit_multiplier > 0
+    typeof config.balance_credit_multiplier === 'number' &&
+    Number.isFinite(config.balance_credit_multiplier) &&
+    config.balance_credit_multiplier > 0
   ) {
-    payload.balance_credit_multiplier = c.balance_credit_multiplier
+    payload.balance_credit_multiplier = config.balance_credit_multiplier
   }
-  if (c.planner) {
+  if (config.planner) {
     payload.planner = {
-      in1: c.planner.in1,
-      out1: c.planner.out1,
-      in2: c.planner.in2,
-      out2: c.planner.out2,
+      in1: config.planner.in1,
+      out1: config.planner.out1,
+      in2: config.planner.in2,
+      out2: config.planner.out2,
     }
   }
-  if (c.reminders) {
-    payload.reminders = normalizeReminderSettings(c.reminders)
+  if (config.reminders) {
+    payload.reminders = normalizeReminderSettings(config.reminders)
   }
   return requireRuntime().SaveConfig(payload)
 }
@@ -119,11 +121,10 @@ export async function mergeAndSave(patch: Partial<PmConfig>): Promise<void> {
   await saveConfig({ ...current, ...patch })
 }
 
-/** Empty string means success */
 export async function testAuth(
   login: string,
   password: string,
-): Promise<string> {
+): Promise<AuthResult> {
   return requireRuntime().TestAuth(login, password)
 }
 
@@ -143,7 +144,7 @@ export async function getReminderStatus(): Promise<ReminderStatus> {
       daemonRunning: false,
       notificationAvailable: false,
       notificationAuthorized: false,
-      notificationStatusDetail: 'Modo navegador',
+      notificationStatusDetail: 'settings.reminders.browserDetail',
     }
   }
   const status = await requireRuntime().GetReminderStatus()

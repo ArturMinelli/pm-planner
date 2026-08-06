@@ -13,7 +13,7 @@ const emailStrategy: LoginCredentialStrategy = {
   normalize: (raw) => raw.trim().toLowerCase(),
   validate: (normalized) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
-      return 'Informe um e-mail válido.'
+      return 'errors.validation.invalidEmail'
     }
     return null
   },
@@ -28,16 +28,16 @@ function isValidCPF(digits: string): boolean {
   if (/^(\d)\1{10}$/.test(digits)) return false
 
   let sum = 0
-  for (let i = 0; i < 9; i++) {
-    sum += Number(digits[i]) * (10 - i)
+  for (let index = 0; index < 9; index++) {
+    sum += Number(digits[index]) * (10 - index)
   }
   let remainder = (sum * 10) % 11
   if (remainder === 10) remainder = 0
   if (remainder !== Number(digits[9])) return false
 
   sum = 0
-  for (let i = 0; i < 10; i++) {
-    sum += Number(digits[i]) * (11 - i)
+  for (let index = 0; index < 10; index++) {
+    sum += Number(digits[index]) * (11 - index)
   }
   remainder = (sum * 10) % 11
   if (remainder === 10) remainder = 0
@@ -50,7 +50,7 @@ const cpfStrategy: LoginCredentialStrategy = {
   normalize: (raw) => stripDigits(raw),
   validate: (normalized) => {
     if (!isValidCPF(normalized)) {
-      return 'Informe um CPF válido.'
+      return 'errors.validation.invalidCpf'
     }
     return null
   },
@@ -67,11 +67,11 @@ export function resolveLoginStrategy(raw: string): LoginCredentialStrategy | nul
 export function validateLoginCredential(raw: string): string | null {
   const trimmed = raw.trim()
   if (!trimmed) {
-    return 'Informe o login (e-mail ou CPF).'
+    return 'errors.validation.loginRequired'
   }
   const strategy = resolveLoginStrategy(trimmed)
   if (!strategy) {
-    return 'Use um e-mail ou CPF.'
+    return 'errors.validation.loginKind'
   }
   return strategy.validate(strategy.normalize(trimmed))
 }
@@ -84,14 +84,14 @@ export function normalizeLoginCredential(raw: string): string {
 
 export function loginCredentialFieldMeta(raw: string): {
   inputMode: 'email' | 'numeric' | 'text'
-  hint?: string
+  hintKey?: string
 } {
   const strategy = resolveLoginStrategy(raw)
   if (!strategy) {
     return { inputMode: 'text' }
   }
   if (strategy.kind === 'email') {
-    return { inputMode: 'email', hint: 'Detectado: e-mail' }
+    return { inputMode: 'email', hintKey: 'errors.validation.detectedEmail' }
   }
-  return { inputMode: 'numeric', hint: 'Detectado: CPF' }
+  return { inputMode: 'numeric', hintKey: 'errors.validation.detectedCpf' }
 }

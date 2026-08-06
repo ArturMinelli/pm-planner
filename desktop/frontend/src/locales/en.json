@@ -1,0 +1,185 @@
+{
+  "common": {
+    "skipToContent": "Skip to content",
+    "closeNotice": "Close notice",
+    "saving": "Saving...",
+    "date": "Date",
+    "total": "Total",
+    "add": "Add",
+    "remove": "Remove",
+    "minutes": "minutes",
+    "hours": "hours",
+    "hour": "hour",
+    "browserMode": "Browser mode: use the desktop app to load real API data.",
+    "desktopOnlyConfig": "Settings are saved by the desktop app. Use pm-desktop here.",
+    "desktopOnlyAuth": "Authentication only works inside the desktop app.",
+    "desktopOnlyUpdates": "Updates only work inside the desktop app."
+  },
+  "nav": {
+    "journey": "Journey",
+    "settings": "Settings"
+  },
+  "planner": {
+    "title": "Plan journey",
+    "description": "View and adjust the day's times. The calculated time fills the target automatically.",
+    "dayTimes": "Day times",
+    "none": "(none)",
+    "addJourney": "+ Add journey",
+    "summary": "Summary",
+    "selectDateHint": "Select a date to see targets and totals.",
+    "loadingSummary": "Loading summary",
+    "loadingJourneys": "Loading stamps",
+    "dailyTarget": "Daily target",
+    "journeyOrdinal": "{{ordinal}} journey",
+    "overtime": "Overtime",
+    "timeBank": "Time bank",
+    "alternativeTime": "Alternative time",
+    "balanceUnavailableNote": "Balance unavailable; normal time kept.",
+    "useBankEarly": "Uses {{duration}} from the bank to leave earlier.",
+    "workExtraCredit": "Work {{duration}} more to generate credit.",
+    "entry": "Entry {{number}}",
+    "exit": "Exit {{number}}",
+    "removeJourney": "Remove {{ordinal}} journey",
+    "cannotRemoveRegistered": "Cannot remove a journey with registered stamps",
+    "calculateHint": "Click to calculate from the daily target",
+    "registeredHint": "Stamp registered in PontoMais",
+    "balanceUnavailable": "Balance unavailable",
+    "bankBadge": "Bank {{balance}}",
+    "balanceTooltipUse": "Uses {{used}} from the bank to leave {{used}} earlier. Estimated balance: {{remaining}}.",
+    "balanceTooltipCredit": "Work {{extra}} more to generate {{credit}} credit at {{multiplier}}x. Estimated balance: {{remaining}}.",
+    "balanceTooltipCapped": " Daily extra-work cap of {{cap}} applied.",
+    "balanceTooltipUnavailable": "Normal time remains valid. Reload the day to try fetching the balance again.",
+    "calculatedAria": "{{label}} calculated: {{time}}. Click to disable automatic calculation",
+    "registeredCannotCalculate": "Registered stamps cannot be calculated",
+    "disableAutoCalculate": "Disable automatic calculation",
+    "alternativeAria": "{{label}} alternative: {{time}}",
+    "datePicker": {
+      "chooseDate": "Choose date",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Uses the same config file as the CLI, resolved by <code>pm</code> on each platform.",
+    "browserHint": "Browser mode: local editing only; saving/API requires the Wails shell.",
+    "language": {
+      "title": "Language",
+      "description": "Choose the app language. Changes apply immediately.",
+      "english": "English",
+      "portuguese": "Portuguese (Brazil)",
+      "save": "Save language",
+      "saved": "Language updated."
+    },
+    "account": {
+      "title": "Account and session",
+      "loginLabel": "Login (email or CPF)",
+      "passwordLabel": "Password",
+      "save": "Save account",
+      "test": "Test login",
+      "saved": "Account saved to the shared config file.",
+      "testSuccess": "Valid credentials.",
+      "testMissing": "Enter login (email or CPF) and password to test."
+    },
+    "planner": {
+      "title": "Planner",
+      "intro": "Anchors assign stamps to the four fields and fill Entry 1 when there is no matching record.",
+      "factoryDefault": "Factory default: {{times}}. Minimum 15-minute gap between consecutive times.",
+      "maxDailyExtraLabel": "Daily extra-work limit (hours)",
+      "maxDailyExtraHint": "Limits only the alternative exit to pay negative balance. Default is 3 hours.",
+      "creditMultiplierLabel": "Time bank credit multiplier",
+      "creditMultiplierHint": "Credit rate for negative balance: 1 extra hour worked generates this multiple in credit. Default: 1.5x. Range: 1.0 to 3.0.",
+      "restoreDefaults": "Restore defaults",
+      "save": "Save planner",
+      "saved": "Planner settings saved to the shared config file.",
+      "dailyLimitError": "Daily limit must be between 1 minute and 24 hours.",
+      "multiplierError": "Credit multiplier must be between 1.0 and 3.0."
+    },
+    "reminders": {
+      "title": "Journey reminders",
+      "enable": "Enable reminders",
+      "autostart": "Start with the system",
+      "notifyBefore": "Notify before",
+      "notifyBeforeHint": "Add as many notices as you want, from 1 minute to 4 hours before. Keep at least one.",
+      "unitLabel": "Notice unit",
+      "amountPlaceholderMinutes": "e.g. 30",
+      "amountPlaceholderHours": "e.g. 2",
+      "configuredNotices": "Configured notices",
+      "removeNotice": "Remove {{lead}} notice",
+      "removeNoticeDisabled": "Add another notice before removing this one",
+      "removeNoticeTitle": "Remove notice",
+      "save": "Save reminders",
+      "saved": "Reminders saved and daemon synchronized.",
+      "browserDetail": "Browser mode"
+    },
+    "updates": {
+      "title": "Updates",
+      "intro": "Check for a newer version and update when you want.",
+      "installedVersion": "Installed version",
+      "check": "Check for updates",
+      "checking": "Checking...",
+      "updateNow": "Update now",
+      "updating": "Updating...",
+      "restartHint": "The app will close and reopen automatically when the update finishes.",
+      "starting": "Updating: the app will close and reopen automatically.",
+      "unknownVersion": "Check to discover",
+      "unknownGitless": "Unknown (non-git install)",
+      "unknown": "Unknown",
+      "cannotCompare": "Cannot compare versions. Updating reinstalls from the latest code.",
+      "oneAvailable": "1 update available.",
+      "manyAvailable": "{{count}} updates available.",
+      "upToDate": "PM Planner is up to date."
+    }
+  },
+  "errors": {
+    "generic": "Something went wrong. Try again.",
+    "desktopShellRequired": "This page must run inside the PM desktop shell.",
+    "auth": {
+      "missing_credentials": "Enter login (email or CPF) and password.",
+      "login_failed": "Login failed. Check your credentials.",
+      "session_invalid": "Session expired or invalid. Sign in again."
+    },
+    "balance": {
+      "unavailable": "Could not load time bank balance."
+    },
+    "planner": {
+      "load_fallback": "Could not load the day; using planner defaults.",
+      "journey_exit_before_entry": "Journey {{journey}}: exit {{exit}} is before entry {{entry}}.",
+      "journey_entry_before_exit": "Journey {{journey}} entry {{entry}} is before journey {{prevJourney}} exit {{prevExit}}."
+    },
+    "validation": {
+      "loginRequired": "Enter login (email or CPF).",
+      "loginKind": "Use an email or CPF.",
+      "invalidEmail": "Enter a valid email.",
+      "invalidCpf": "Enter a valid CPF.",
+      "detectedEmail": "Detected: email",
+      "detectedCpf": "Detected: CPF",
+      "invalidAnchorTime": "{{label}}: invalid time (use HH:MM).",
+      "anchorsNotIncreasing": "Times must be strictly increasing.",
+      "anchorsMinGap": "Leave at least {{minutes}} minutes between consecutive times."
+    }
+  },
+  "update": {
+    "blockers": {
+      "install_not_found": "PM Planner installation not found on disk. Run setup again.",
+      "pm_not_found": "pm CLI not found. Run setup again to reinstall it.",
+      "go_not_found": "Go not found on PATH — required to build PM Planner.",
+      "node_not_found": "Node.js not found on PATH — required to build the frontend.",
+      "dirty_working_tree": "Uncommitted local changes in {{root}}. Commit or stash before updating.",
+      "fetch_failed": "Could not fetch from remote repository: {{detail}}",
+      "compare_failed": "Could not compare with {{branch}}: {{detail}}",
+      "check_failed": "Could not check for updates: {{detail}}"
+    },
+    "result": {
+      "success": "PM Planner updated successfully.",
+      "success_commit": "PM Planner updated to {{commit}}.",
+      "failed": "Update failed: {{detail}}. See {{logPath}} for details."
+    }
+  },
+  "reminders": {
+    "slot_in_minutes": "{{slot}} in {{minutes}} min",
+    "recommended_time": "Recommended time: {{time}}",
+    "runtime_unavailable": "Runtime unavailable",
+    "not_available": "Notifications unavailable"
+  }
+}

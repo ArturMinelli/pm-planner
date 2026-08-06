@@ -21,7 +21,7 @@ describe('PlannerSummaryPanel', () => {
             },
           ],
           solvedSlot: { journeyIndex: 1, isEntry: false },
-          originalsLine: '(nenhum)',
+          originalsLine: '',
         }}
         summary={{
           journeys: [
@@ -42,10 +42,10 @@ describe('PlannerSummaryPanel', () => {
       />,
     )
 
-    expect(html).toContain('Meta do Dia')
-    expect(html).toContain('1ª Jornada')
-    expect(html).toContain('2ª Jornada')
-    expect(html).toContain('Hora Extra')
+    expect(html).toContain('Daily target')
+    expect(html).toContain('1 journey')
+    expect(html).toContain('2 journey')
+    expect(html).toContain('Overtime')
     expect(html).not.toContain('Ajuste do Banco')
     expect(html).not.toContain('Meta Planejada')
   })
@@ -55,8 +55,8 @@ describe('PlannerSummaryPanel', () => {
       <PlannerSummaryPanel loaded={null} summary={null} />,
     )
 
-    expect(html).toContain('Selecione uma data')
-    expect(html).not.toContain('Meta do Dia')
+    expect(html).toContain('Select a date')
+    expect(html).not.toContain('Daily target')
   })
 
   it('shows skeleton placeholders while loading', () => {
@@ -65,9 +65,9 @@ describe('PlannerSummaryPanel', () => {
     )
 
     expect(html).toContain('skeleton')
-    expect(html).toContain('Carregando resumo')
-    expect(html).not.toContain('Selecione uma data')
-    expect(html).not.toContain('Meta do Dia')
+    expect(html).toContain('Loading summary')
+    expect(html).not.toContain('Select a date')
+    expect(html).not.toContain('Daily target')
   })
 
   it('shows summary stats after load', () => {
@@ -92,7 +92,7 @@ describe('PlannerSummaryPanel', () => {
             },
           ],
           solvedSlot: { journeyIndex: 2, isEntry: false },
-          originalsLine: '(nenhum)',
+          originalsLine: '',
         }}
         summary={{
           journeys: [
@@ -117,8 +117,8 @@ describe('PlannerSummaryPanel', () => {
       />,
     )
 
-    expect(html).toContain('1ª Jornada')
-    expect(html).toContain('2ª Jornada')
-    expect(html).toContain('3ª Jornada')
+    expect(html).toContain('1 journey')
+    expect(html).toContain('2 journey')
+    expect(html).toContain('3 journey')
   })
 })

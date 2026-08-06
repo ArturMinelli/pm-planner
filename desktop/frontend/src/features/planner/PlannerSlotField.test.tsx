@@ -30,16 +30,16 @@ describe('PlannerSlotField', () => {
         slot={slot()}
         isSolved={false}
         fieldId="exit-0"
-        label="Saída 1"
+        label="Exit 1"
         onTimeChange={noop}
         onToggleSolved={noop}
       />,
     )
 
-    expect(html).toContain('Saída 1')
+    expect(html).toContain('Exit 1')
     expect(html).toContain('value="18:00"')
     expect(html).toContain('clockout-time-wrap calculable')
-    expect(html).toContain('Clique para calcular pela meta do dia')
+    expect(html).toContain('Click to calculate from the daily target')
     expect(html).not.toContain('calculada-time')
     expect(html).not.toContain('calculator-btn')
     expect(html).not.toContain('calculada-badge')
@@ -51,7 +51,7 @@ describe('PlannerSlotField', () => {
         slot={slot({ time: '18:00' })}
         isSolved={true}
         fieldId="exit-0"
-        label="Saída 1"
+        label="Exit 1"
         onTimeChange={noop}
         onToggleSolved={noop}
       />,
@@ -60,7 +60,7 @@ describe('PlannerSlotField', () => {
     expect(html).toContain('calculada-time')
     expect(html).toContain('18:00')
     expect(html).toMatch(/<button[^>]*class="calculada-time"/)
-    expect(html).toContain('Desativar cálculo automático')
+    expect(html).toContain('Disable automatic calculation')
     expect(html).not.toContain('calculator-btn')
     expect(html).not.toContain('calculada-badge')
     expect(html).not.toContain('slot-solved')
@@ -72,7 +72,7 @@ describe('PlannerSlotField', () => {
         slot={slot()}
         isSolved={true}
         fieldId="exit-0"
-        label="Saída 1"
+        label="Exit 1"
         balance={adjustment()}
         alternativeTime="21:00"
         onTimeChange={noop}
@@ -80,10 +80,10 @@ describe('PlannerSlotField', () => {
       />,
     )
 
-    expect(html).toContain('Banco -08:00')
-    expect(html).toContain('Saída 1 alternativa: 21:00')
+    expect(html).toContain('Bank -08:00')
+    expect(html).toContain('Exit 1 alternative: 21:00')
     expect(html).toContain('1.5x')
-    expect(html).toContain('Limite diário de 03:00 aplicado')
+    expect(html).toContain('Daily extra-work cap of 03:00 applied')
     expect(html).toMatch(
       /calculada-timebox[\s\S]*calculada-time[\s\S]*calculada-time-alt alternative-clockout/,
     )
@@ -95,7 +95,7 @@ describe('PlannerSlotField', () => {
         slot={slot({ registered: true })}
         isSolved={false}
         fieldId="exit-0"
-        label="Saída 1"
+        label="Exit 1"
         onTimeChange={noop}
         onToggleSolved={noop}
       />,
@@ -103,7 +103,7 @@ describe('PlannerSlotField', () => {
 
     expect(html).toContain('value="18:00"')
     expect(html).toContain('clockout-time-wrap registered')
-    expect(html).toContain('Marcação registrada no PontoMais')
+    expect(html).toContain('Stamp registered in PontoMais')
     expect(html).not.toContain('registered-badge')
     expect(html).not.toContain('>registrada<')
     expect(html).not.toContain('calculada-time')
@@ -116,7 +116,7 @@ describe('PlannerSlotField', () => {
         slot={slot({ registered: true })}
         isSolved={false}
         fieldId="exit-0"
-        label="Saída 1"
+        label="Exit 1"
         onTimeChange={noop}
         onToggleSolved={noop}
       />,
@@ -133,7 +133,7 @@ describe('PlannerSlotField', () => {
         slot={slot({ registered: true })}
         isSolved={true}
         fieldId="exit-0"
-        label="Saída 1"
+        label="Exit 1"
         balance={adjustment()}
         alternativeTime="21:00"
         onTimeChange={noop}
@@ -145,9 +145,9 @@ describe('PlannerSlotField', () => {
     expect(html).toContain('slot-status-badges')
     expect(html).toContain('clockout-values')
     expect(html).toContain('clockout-values-primary')
-    expect(html).toMatch(/<label[^>]*>Saída 1<\/label>/)
+    expect(html).toMatch(/<label[^>]*>Exit 1<\/label>/)
     expect(html).toMatch(
-      /slot-field-header[\s\S]*<label[^>]*>Saída 1<\/label>[\s\S]*slot-status-badges[\s\S]*balance-badge/,
+      /slot-field-header[\s\S]*<label[^>]*>Exit 1<\/label>[\s\S]*slot-status-badges[\s\S]*balance-badge/,
     )
     expect(html).not.toContain('calculada-badge')
     expect(html).toMatch(
@@ -161,7 +161,7 @@ describe('PlannerSlotField', () => {
         slot={slot()}
         isSolved={false}
         fieldId="entry-0"
-        label="Entrada 1"
+        label="Entry 1"
         onTimeChange={noop}
         onToggleSolved={noop}
       />,
@@ -171,14 +171,14 @@ describe('PlannerSlotField', () => {
         slot={slot()}
         isSolved={true}
         fieldId="exit-0"
-        label="Saída 1"
+        label="Exit 1"
         onTimeChange={noop}
         onToggleSolved={noop}
       />,
     )
 
-    expect(entryHtml).toMatch(/<label[^>]*>Entrada 1<\/label>/)
-    expect(exitHtml).toMatch(/<label[^>]*>Saída 1<\/label>/)
+    expect(entryHtml).toMatch(/<label[^>]*>Entry 1<\/label>/)
+    expect(exitHtml).toMatch(/<label[^>]*>Exit 1<\/label>/)
     expect(entryHtml).toContain('slot-field')
     expect(exitHtml).toContain('calculada-time')
     expect(exitHtml).not.toContain('calculada-badge')
@@ -190,7 +190,7 @@ describe('PlannerSlotField', () => {
         slot={slot({ time: '18:00' })}
         isSolved={true}
         fieldId="exit-1"
-        label="Saída 2"
+        label="Exit 2"
         balance={adjustment()}
         alternativeTime="19:43"
         onTimeChange={noop}
@@ -198,11 +198,11 @@ describe('PlannerSlotField', () => {
       />,
     )
 
-    expect(html).toMatch(/<label[^>]*for="exit-1"[^>]*>Saída 2<\/label>/)
+    expect(html).toMatch(/<label[^>]*for="exit-1"[^>]*>Exit 2<\/label>/)
     expect(html).toMatch(
-      /slot-field-header[\s\S]*<label[^>]*>Saída 2<\/label>[\s\S]*slot-status-badges[\s\S]*balance-badge/,
+      /slot-field-header[\s\S]*<label[^>]*>Exit 2<\/label>[\s\S]*slot-status-badges[\s\S]*balance-badge/,
     )
-    expect(html).not.toMatch(/<label[^>]*>Saída<\/label>/)
+    expect(html).not.toMatch(/<label[^>]*>Exit<\/label>/)
     expect(html).not.toMatch(/<label[^>]*>2<\/label>/)
   })
 })

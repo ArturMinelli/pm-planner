@@ -1,6 +1,8 @@
 import { useId, useState, type MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import PlannerTimeInput from '../../components/PlannerTimeInput'
-import type { BalanceAdjustment, ClockSlot } from '../../types'
+import type { BalanceAdjustment, ClockSlot, LocalizedMessage } from '../../types'
+import { translateMessage } from '../../i18n/translateMessage'
 import {
   formatDurationMinutes,
   formatSignedRoundedMinutes,
@@ -12,23 +14,11 @@ type PlannerSlotFieldProps = {
   fieldId: string
   label: string
   balance?: BalanceAdjustment
-  balanceError?: string
+  balanceError?: LocalizedMessage
   alternativeTime?: string
   disabled?: boolean
   onTimeChange: (time: string) => void
   onToggleSolved: () => void
-}
-
-function tooltipCopy(balance: BalanceAdjustment): string {
-  if (balance.targetAdjustmentSecs < 0) {
-    const used = formatDurationMinutes(-balance.targetAdjustmentSecs)
-    return `Usa ${used} do banco para sair ${used} mais cedo. Saldo estimado: ${formatSignedRoundedMinutes(balance.remainingBalanceSecs)}.`
-  }
-
-  const cappedNote = balance.capped
-    ? ` Limite diário de ${formatDurationMinutes(balance.targetAdjustmentSecs)} aplicado.`
-    : ''
-  return `Trabalhe ${formatDurationMinutes(balance.targetAdjustmentSecs)} a mais para gerar ${formatSignedRoundedMinutes(balance.estimatedBalanceChangeSecs)} de crédito a ${balance.multiplier.toFixed(1)}x. Saldo estimado: ${formatSignedRoundedMinutes(balance.remainingBalanceSecs)}.${cappedNote}`
 }
 
 export default function PlannerSlotField({
@@ -43,6 +33,7 @@ export default function PlannerSlotField({
   onTimeChange,
   onToggleSolved,
 }: PlannerSlotFieldProps) {
+  const { t } = useTranslation()
   const tooltipId = useId()
   const [tooltipOpen, setTooltipOpen] = useState(false)
   const [inputFocused, setInputFocused] = useState(false)
@@ -54,14 +45,25 @@ export default function PlannerSlotField({
   )
   const unavailable = !balance && Boolean(balanceError)
   const tone = balance && balance.targetAdjustmentSecs < 0 ? 'positive' : 'debt'
+
   const tooltipText = balance
-    ? tooltipCopy(balance)
-    : 'O horário normal continua válido. Recarregue o dia para tentar consultar o saldo novamente.'
+    ? balance.targetAdjustmentSecs < 0
+      ? t('planner.balanceTooltipUse', {
+          used: formatDurationMinutes(-balance.targetAdjustmentSecs),
+          remaining: formatSignedRoundedMinutes(balance.remainingBalanceSecs),
+        })
+      : `${t('planner.balanceTooltipCredit', {
+          extra: formatDurationMinutes(balance.targetAdjustmentSecs),
+          credit: formatSignedRoundedMinutes(balance.estimatedBalanceChangeSecs),
+          multiplier: balance.multiplier.toFixed(1),
+          remaining: formatSignedRoundedMinutes(balance.remainingBalanceSecs),
+        })}${balance.capped ? t('planner.balanceTooltipCapped', { cap: formatDurationMinutes(balance.targetAdjustmentSecs) }) : ''}`
+    : translateMessage(t, balanceError) ?? t('planner.balanceTooltipUnavailable')
 
   const showBalanceBadge = isSolved && (hasAlternative || unavailable)
   const canCalculate = !slot.registered
-  const calculateHint = 'Clique para calcular pela meta do dia'
-  const registeredHint = 'Marcação registrada no PontoMais'
+  const calculateHint = t('planner.calculateHint')
+  const registeredHint = t('planner.registeredHint')
 
   function handleTimeWrapClick(event: MouseEvent<HTMLDivElement>) {
     if (isSolved || !canCalculate || disabled || inputFocused) return
@@ -88,8 +90,10 @@ export default function PlannerSlotField({
                 onBlur={() => setTooltipOpen(false)}
               >
                 {unavailable
-                  ? 'Saldo indisponível'
-                  : `Banco ${formatSignedRoundedMinutes(balance?.balanceSecs ?? 0)}`}
+                  ? t('planner.balanceUnavailable')
+                  : t('planner.bankBadge', {
+                      balance: formatSignedRoundedMinutes(balance?.balanceSecs ?? 0),
+                    })}
               </button>
               <span
                 id={tooltipId}
@@ -110,13 +114,13 @@ export default function PlannerSlotField({
                 type="button"
                 id={fieldId}
                 className="calculada-time"
-                aria-label={`${label} calculada: ${slot.time}. Clique para desativar o cálculo automático`}
+                aria-label={t('planner.calculatedAria', { label, time: slot.time })}
                 onClick={onToggleSolved}
                 disabled={disabled || !canCalculate}
                 title={
                   !canCalculate
-                    ? 'Marcações registradas não podem ser calculadas'
-                    : 'Desativar cálculo automático'
+                    ? t('planner.registeredCannotCalculate')
+                    : t('planner.disableAutoCalculate')
                 }
               >
                 {slot.time}
@@ -124,7 +128,7 @@ export default function PlannerSlotField({
               {hasAlternative ? (
                 <output
                   className={`calculada-time-alt alternative-clockout ${tone}`}
-                  aria-label={`${label} alternativa: ${alternativeTime}`}
+                  aria-label={t('planner.alternativeAria', { label, time: alternativeTime ?? '' })}
                 >
                   {alternativeTime}
                 </output>

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"pm-cli/pkg/message"
 )
 
 type fakeCommand struct {
@@ -99,7 +101,7 @@ func TestCheckBlocksOnDirtyWorkingTree(t *testing.T) {
 	if status.UpdateAvailable {
 		t.Fatal("dirty tree must not offer an update")
 	}
-	if len(status.Blockers) != 1 || !strings.Contains(status.Blockers[0], "alterações locais") {
+	if len(status.Blockers) != 1 || status.Blockers[0].Key != message.KeyUpdateBlockersDirtyWorkingTree {
 		t.Fatalf("blockers = %v", status.Blockers)
 	}
 }
@@ -124,10 +126,10 @@ func TestCheckBlocksWhenRemoteIsUnreachable(t *testing.T) {
 	if status.UpdateAvailable {
 		t.Fatal("unreachable remote must not offer an update")
 	}
-	if len(status.Blockers) != 1 || !strings.Contains(status.Blockers[0], "could not resolve host") {
+	if len(status.Blockers) != 1 || status.Blockers[0].Key != message.KeyUpdateBlockersFetchFailed {
 		t.Fatalf("blockers = %v", status.Blockers)
 	}
-	if strings.Contains(status.Blockers[0], "\n") {
+	if status.Blockers[0].Params["detail"] == "" || strings.Contains(status.Blockers[0].Params["detail"], "\n") {
 		t.Fatalf("blocker should be a single line: %q", status.Blockers[0])
 	}
 }

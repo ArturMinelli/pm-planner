@@ -18,27 +18,23 @@ describe('loginCredential', () => {
 
   it('validates email', () => {
     expect(validateLoginCredential('user@example.com')).toBeNull()
-    expect(validateLoginCredential('not-an-email')).toBe('Use um e-mail ou CPF.')
-    expect(validateLoginCredential('user@')).toBe('Informe um e-mail válido.')
+    expect(validateLoginCredential('not-an-email')).toBe('errors.validation.loginKind')
+    expect(validateLoginCredential('user@')).toBe('errors.validation.invalidEmail')
   })
 
   it('validates cpf', () => {
     expect(validateLoginCredential('529.982.247-25')).toBeNull()
     expect(validateLoginCredential('52998224725')).toBeNull()
-    expect(validateLoginCredential('123')).toBe('Informe um CPF válido.')
+    expect(validateLoginCredential('123')).toBe('errors.validation.invalidCpf')
     expect(validateLoginCredential('111.111.111-11')).toBe(
-      'Informe um CPF válido.',
+      'errors.validation.invalidCpf',
     )
   })
 
   it('rejects empty and unknown formats', () => {
-    expect(validateLoginCredential('')).toBe(
-      'Informe o login (e-mail ou CPF).',
-    )
-    expect(validateLoginCredential('   ')).toBe(
-      'Informe o login (e-mail ou CPF).',
-    )
-    expect(validateLoginCredential('abc-def')).toBe('Use um e-mail ou CPF.')
+    expect(validateLoginCredential('')).toBe('errors.validation.loginRequired')
+    expect(validateLoginCredential('   ')).toBe('errors.validation.loginRequired')
+    expect(validateLoginCredential('abc-def')).toBe('errors.validation.loginKind')
   })
 
   it('normalizes credentials', () => {
@@ -51,11 +47,11 @@ describe('loginCredential', () => {
   it('provides field metadata', () => {
     expect(loginCredentialFieldMeta('user@example.com')).toEqual({
       inputMode: 'email',
-      hint: 'Detectado: e-mail',
+      hintKey: 'errors.validation.detectedEmail',
     })
     expect(loginCredentialFieldMeta('52998224725')).toEqual({
       inputMode: 'numeric',
-      hint: 'Detectado: CPF',
+      hintKey: 'errors.validation.detectedCpf',
     })
     expect(loginCredentialFieldMeta('')).toEqual({ inputMode: 'text' })
   })

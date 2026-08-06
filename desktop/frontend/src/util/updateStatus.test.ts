@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import i18n from '../i18n'
 import type { UpdateStatus } from '../types'
 import {
   describeUpdateAvailability,
@@ -33,47 +34,43 @@ describe('formatCommitDate', () => {
 })
 
 describe('formatInstalledVersion', () => {
+  const translate = i18n.t.bind(i18n)
+
   it('shows the short SHA and its date', () => {
-    expect(formatInstalledVersion(status())).toBe('a1b2c3d (03/08/2026)')
+    expect(formatInstalledVersion(translate, status())).toBe('a1b2c3d (03/08/2026)')
   })
 
   it('falls back to the SHA alone when the date is missing', () => {
-    expect(formatInstalledVersion(status({ commitDate: '' }))).toBe('a1b2c3d')
+    expect(formatInstalledVersion(translate, status({ commitDate: '' }))).toBe('a1b2c3d')
   })
 
   it('marks tarball installs as unknown', () => {
-    expect(formatInstalledVersion(status({ isGit: false }))).toContain(
-      'sem git',
-    )
+    expect(formatInstalledVersion(translate, status({ isGit: false }))).toContain('git')
   })
 
   it('prompts for a check before anything is known', () => {
-    expect(formatInstalledVersion(null)).toBe('Verifique para descobrir')
+    expect(formatInstalledVersion(translate, null)).toBe('Check to discover')
   })
 })
 
 describe('describeUpdateAvailability', () => {
+  const translate = i18n.t.bind(i18n)
+
   it('reports being up to date', () => {
-    expect(describeUpdateAvailability(status())).toBe(
-      'PM Planner está atualizado.',
-    )
+    expect(describeUpdateAvailability(translate, status())).toBe('PM Planner is up to date.')
   })
 
   it('uses the singular for a single commit', () => {
-    expect(describeUpdateAvailability(status({ behind: 1 }))).toBe(
-      '1 atualização disponível.',
-    )
+    expect(describeUpdateAvailability(translate, status({ behind: 1 }))).toBe('1 update available.')
   })
 
   it('uses the plural beyond one commit', () => {
-    expect(describeUpdateAvailability(status({ behind: 5 }))).toBe(
-      '5 atualizações disponíveis.',
-    )
+    expect(describeUpdateAvailability(translate, status({ behind: 5 }))).toBe('5 updates available.')
   })
 
   it('explains that tarball installs cannot be compared', () => {
-    expect(describeUpdateAvailability(status({ isGit: false }))).toContain(
-      'Não é possível comparar versões',
+    expect(describeUpdateAvailability(translate, status({ isGit: false }))).toContain(
+      'Cannot compare versions',
     )
   })
 })

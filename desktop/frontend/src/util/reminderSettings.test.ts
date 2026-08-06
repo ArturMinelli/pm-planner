@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import i18n from '../i18n'
 import {
   defaultReminderSettings,
   formatReminderLead,
@@ -32,8 +33,9 @@ describe('reminderSettings', () => {
   })
 
   it('formats lead times for display', () => {
-    expect(formatReminderLead(15)).toBe('15 min')
-    expect(formatReminderLead(60)).toBe('1 hora')
-    expect(formatReminderLead(120)).toBe('2 horas')
+    const translate = i18n.t.bind(i18n)
+    expect(formatReminderLead(translate, 15)).toBe('15 minutes')
+    expect(formatReminderLead(translate, 60)).toBe('1 hour')
+    expect(formatReminderLead(translate, 120)).toBe('2 hours')
   })
 })

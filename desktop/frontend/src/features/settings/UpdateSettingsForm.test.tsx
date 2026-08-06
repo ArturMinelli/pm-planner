@@ -35,8 +35,8 @@ describe('UpdateSettingsForm', () => {
   it('asks for a check before anything is known', () => {
     const html = render()
 
-    expect(html).toContain('Verificar Atualizações')
-    expect(html).toContain('Verifique para descobrir')
+    expect(html).toContain('Check for updates')
+    expect(html).toContain('Check to discover')
     expect(html).toContain('disabled=""')
   })
 
@@ -44,27 +44,30 @@ describe('UpdateSettingsForm', () => {
     const html = render({ status: status({ behind: 2, updateAvailable: true }) })
 
     expect(html).toContain('a1b2c3d (03/08/2026)')
-    expect(html).toContain('2 atualizações disponíveis.')
-    expect(html).toContain('fechado e reaberto automaticamente')
+    expect(html).toContain('2 updates available.')
+    expect(html).toContain('close and reopen automatically')
   })
 
   it('keeps the update button disabled when up to date', () => {
     const html = render({ status: status() })
 
-    expect(html).toContain('PM Planner está atualizado.')
-    expect(html).not.toContain('fechado e reaberto automaticamente')
+    expect(html).toContain('PM Planner is up to date.')
+    expect(html).not.toContain('close and reopen automatically')
   })
 
   it('surfaces blockers instead of the availability summary', () => {
     const html = render({
       status: status({
         dirty: true,
-        blockers: ['Há alterações locais não commitadas em /home/user/pm-planner.'],
+        blockers: [{
+          key: 'update.blockers.dirty_working_tree',
+          params: { root: '/home/user/pm-planner' },
+        }],
       }),
     })
 
-    expect(html).toContain('Há alterações locais não commitadas')
-    expect(html).not.toContain('PM Planner está atualizado.')
+    expect(html).toContain('Uncommitted local changes')
+    expect(html).not.toContain('PM Planner is up to date.')
   })
 
   it('reports progress while the update starts', () => {
@@ -73,7 +76,7 @@ describe('UpdateSettingsForm', () => {
       updating: true,
     })
 
-    expect(html).toContain('Atualizando...')
+    expect(html).toContain('Updating...')
     expect(html).toContain('aria-busy="true"')
   })
 })

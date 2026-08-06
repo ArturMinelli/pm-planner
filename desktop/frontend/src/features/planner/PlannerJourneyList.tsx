@@ -1,5 +1,7 @@
+import { useTranslation } from 'react-i18next'
 import { Card } from '../../components/ui'
-import type { BalanceAdjustment, Journey, PlannerSummary, SolvedSlot } from '../../types'
+import type { BalanceAdjustment, Journey, LocalizedMessage, PlannerSummary, SolvedSlot } from '../../types'
+import { messageKey, translateMessage } from '../../i18n/translateMessage'
 import PlannerJourneyGroup from './PlannerJourneyGroup'
 
 type PlannerJourneyListProps = {
@@ -7,7 +9,7 @@ type PlannerJourneyListProps = {
   journeys: Journey[]
   solvedSlot: SolvedSlot
   balance?: BalanceAdjustment
-  balanceError?: string
+  balanceError?: LocalizedMessage
   summary?: PlannerSummary | null
   originalsLine?: string
   disabled?: boolean
@@ -17,11 +19,11 @@ type PlannerJourneyListProps = {
   onToggleSolved: (journeyIndex: number, isEntry: boolean) => void
 }
 
-function JourneyListSkeleton() {
+function JourneyListSkeleton({ label }: { label: string }) {
   return (
     <>
       <div className="skeleton skeleton-line" style={{ width: '42%' }} aria-hidden="true" />
-      <div className="journey-list" aria-busy="true" aria-label="Carregando marcações">
+      <div className="journey-list" aria-busy="true" aria-label={label}>
         <div className="skeleton skeleton-block journey-skeleton" aria-hidden="true" />
         <div className="skeleton skeleton-block journey-skeleton" aria-hidden="true" />
       </div>
@@ -43,12 +45,13 @@ export default function PlannerJourneyList({
   onUpdateJourney,
   onToggleSolved,
 }: PlannerJourneyListProps) {
+  const { t } = useTranslation()
   const alternativeTime = summary?.alternativeTime
 
   return (
-    <Card title="Horários do dia" stretch>
+    <Card title={t('planner.dayTimes')} stretch>
       {loading ? (
-        <JourneyListSkeleton />
+        <JourneyListSkeleton label={t('planner.loadingJourneys')} />
       ) : (
         <>
           {originalsLine ? (
@@ -58,8 +61,8 @@ export default function PlannerJourneyList({
           {summary?.warnings?.length ? (
             <ul className="planner-warnings" aria-live="polite">
               {summary.warnings.map((warning) => (
-                <li key={warning} className="planner-warning">
-                  {warning}
+                <li key={messageKey(warning)} className="planner-warning">
+                  {translateMessage(t, warning)}
                 </li>
               ))}
             </ul>
@@ -92,7 +95,7 @@ export default function PlannerJourneyList({
           onClick={onAddJourney}
           disabled={disabled}
         >
-          + Adicionar jornada
+          {t('planner.addJourney')}
         </button>
       </div>
     </Card>
