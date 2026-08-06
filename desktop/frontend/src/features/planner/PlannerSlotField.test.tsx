@@ -141,16 +141,17 @@ describe('PlannerSlotField', () => {
       />,
     )
 
+    expect(html).toContain('slot-field-header')
     expect(html).toContain('slot-status-badges')
     expect(html).toContain('clockout-values')
     expect(html).toContain('clockout-values-primary')
     expect(html).toMatch(/<label[^>]*>Saída 1<\/label>/)
     expect(html).toMatch(
-      /slot-status-badges[\s\S]*balance-badge/,
+      /slot-field-header[\s\S]*<label[^>]*>Saída 1<\/label>[\s\S]*slot-status-badges[\s\S]*balance-badge/,
     )
     expect(html).not.toContain('calculada-badge')
     expect(html).toMatch(
-      /slot-status-badges[\s\S]*balance-badge[\s\S]*clockout-tooltip/,
+      /slot-field-header[\s\S]*balance-badge[\s\S]*clockout-tooltip/,
     )
   })
 
@@ -199,7 +200,7 @@ describe('PlannerSlotField', () => {
 
     expect(html).toMatch(/<label[^>]*for="exit-1"[^>]*>Saída 2<\/label>/)
     expect(html).toMatch(
-      /<label[^>]*>Saída 2<\/label>[\s\S]*slot-status-badges[\s\S]*balance-badge/,
+      /slot-field-header[\s\S]*<label[^>]*>Saída 2<\/label>[\s\S]*slot-status-badges[\s\S]*balance-badge/,
     )
     expect(html).not.toMatch(/<label[^>]*>Saída<\/label>/)
     expect(html).not.toMatch(/<label[^>]*>2<\/label>/)

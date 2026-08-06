@@ -71,35 +71,37 @@ export default function PlannerSlotField({
 
   return (
     <div className="field slot-field">
-      <label htmlFor={fieldId}>{label}</label>
-      {showBalanceBadge ? (
-        <div className="slot-status-badges">
-          <span className="clockout-tooltip-wrap">
-            <button
-              type="button"
-              className={`balance-badge ${unavailable ? 'unavailable' : tone}`}
-              aria-describedby={tooltipId}
-              aria-expanded={tooltipOpen}
-              onClick={() => setTooltipOpen((open) => !open)}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') setTooltipOpen(false)
-              }}
-              onBlur={() => setTooltipOpen(false)}
-            >
-              {unavailable
-                ? 'Saldo indisponível'
-                : `Banco ${formatSignedRoundedMinutes(balance?.balanceSecs ?? 0)}`}
-            </button>
-            <span
-              id={tooltipId}
-              role="tooltip"
-              className={`clockout-tooltip ${tooltipOpen ? 'open' : ''}`}
-            >
-              {tooltipText}
+      <div className="slot-field-header">
+        <label htmlFor={fieldId}>{label}</label>
+        {showBalanceBadge ? (
+          <div className="slot-status-badges">
+            <span className="clockout-tooltip-wrap">
+              <button
+                type="button"
+                className={`balance-badge ${unavailable ? 'unavailable' : tone}`}
+                aria-describedby={tooltipId}
+                aria-expanded={tooltipOpen}
+                onClick={() => setTooltipOpen((open) => !open)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') setTooltipOpen(false)
+                }}
+                onBlur={() => setTooltipOpen(false)}
+              >
+                {unavailable
+                  ? 'Saldo indisponível'
+                  : `Banco ${formatSignedRoundedMinutes(balance?.balanceSecs ?? 0)}`}
+              </button>
+              <span
+                id={tooltipId}
+                role="tooltip"
+                className={`clockout-tooltip ${tooltipOpen ? 'open' : ''}`}
+              >
+                {tooltipText}
+              </span>
             </span>
-          </span>
-        </div>
-      ) : null}
+          </div>
+        ) : null}
+      </div>
       <div className="clockout-values">
         <div className="clockout-values-primary">
           {isSolved ? (

@@ -733,11 +733,26 @@ input[readonly] {
   font-size: 0.8rem;
 }
 
+.slot-field-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.slot-field-header > label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .slot-status-badges {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.3rem;
+  flex: 0 1 auto;
+  margin-left: auto;
   min-width: 0;
 }
 
@@ -925,7 +940,7 @@ input[readonly] {
   container-type: inline-size;
 }
 
-.slot-field > label {
+.slot-field-header > label {
   white-space: nowrap;
   overflow-wrap: normal;
   word-break: keep-all;
@@ -950,11 +965,6 @@ input[readonly] {
 }
 
 @container (max-width: 10rem) {
-  .slot-status-badges {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   .calculada-time-alt {
     padding: 0.15rem 0.35rem;
     font-size: 0.72rem;
