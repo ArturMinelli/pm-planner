@@ -48,11 +48,7 @@ export default function PlannerDefaultsForm({
       intro={
         <>
           Âncoras usadas para atribuir batidas aos quatro campos e preencher
-          Entrada 1 quando não há registro correspondente. A CLI{' '}
-          <code className="pill" translate="no">
-            pm plan
-          </code>{' '}
-          usa os mesmos valores.
+          Entrada 1 quando não há registro correspondente.
         </>
       }
     >

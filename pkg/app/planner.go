@@ -38,7 +38,7 @@ type PlannerSummary struct {
 	Warnings        []string       `json:"warnings,omitempty"`
 }
 
-// FetchPlannerPayload loads the work day and builds suggestion fields (same pipeline as CLI `pm plan`).
+// FetchPlannerPayload loads the work day and builds suggestion fields for the desktop planner.
 func FetchPlannerPayload(ctx context.Context, client *api.Client, dateStr string) (*PlannerPayload, error) {
 	if dateStr == "" {
 		dateStr = time.Now().Format("2006-01-02")

@@ -22,7 +22,6 @@ O PM Planner é um auxiliar do PontoMais que permite planejar os horários de po
 - [Configuração](#configuração)
 - [Usando a CLI](#usando-a-cli)
   - [Listar um Dia de Trabalho](#listar-um-dia-de-trabalho)
-  - [Planejar um Dia de Trabalho](#planejar-um-dia-de-trabalho)
   - [Versão](#versão)
   - [Atualizar](#atualizar)
 - [Usando o App Desktop (GUI)](#usando-o-app-desktop-gui)
@@ -421,7 +420,7 @@ reminders:
 | --- | --- |
 | `login` / `password` | Credenciais de login do PontoMais (e-mail ou CPF). O campo legado `email` ainda é lido se `login` estiver ausente. |
 | `max_daily_extra_minutes` | Limite de trabalho extra usado para calcular a saída alternativa de quitação de saldo negativo. Padrão: 180 minutos. |
-| `planner.in1/out1/in2/out2` | Horários âncora padrão para os quatro campos de ponto. Usados tanto pelo `pm plan` quanto pelo planner do app desktop como sugestão inicial para o dia. |
+| `planner.in1/out1/in2/out2` | Horários âncora padrão para os quatro campos de ponto. Usados pelo planner do app desktop como sugestão inicial para o dia. |
 | `reminders.*` | Lembretes opt-in do app desktop. Quando ativados, `pm-desktop --daemon` verifica os horários recomendados e dispara notificações nativas. `lead_minutes` aceita vários avisos personalizados entre 1 e 240 minutos. |
 
 Os headers de autenticação são armazenados em cache como `session.json` no mesmo diretório e reutilizados até expirarem. O identificador do colaborador descoberto automaticamente pela API também é guardado nesse arquivo protegido; se ficar inválido, o PM Planner o descobre novamente.
@@ -444,29 +443,6 @@ pm list --date 2026-06-03      # data específica (AAAA-MM-DD)
 ```
 
 A saída é o registro JSON do dia de trabalho da API do PontoMais, útil para depuração ou scripts.
-
-### Planejar um Dia de Trabalho
-
-Carrega um dia de trabalho e edita interativamente os quatro campos de horário de ponto:
-
-```bash
-pm plan                        # hoje, UI interativa Bubble Tea
-pm plan --date 2026-06-03      # data específica
-pm plan --live=false           # usa o formulário huh mais simples em vez do TUI
-```
-
-O planner:
-1. Busca o dia de trabalho na API.
-2. Mapeia os registros de ponto existentes para **Entrada 1**, **Saída 1**, **Entrada 2** e **Saída 2** usando os horários âncora configurados.
-3. Busca o saldo atual do banco de horas e, somente para hoje, calcula uma **Saída 2 alternativa**.
-4. Permite editar os três primeiros campos; a **Saída 2 normal** e a alternativa são recalculadas juntas.
-5. Exibe um resumo da jornada normal: meta do dia, jornadas, total trabalhado e horas extras.
-
-Quando o saldo é negativo, cada minuto extra trabalhado gera `1,5x` de crédito no banco. Por exemplo, uma dívida de `01:30` exige `01:00` de trabalho extra. O planner limita esse trabalho extra ao valor configurado em `max_daily_extra_minutes`, cujo padrão é `03:00` por dia. Saldo positivo é usado na proporção `1:1` para oferecer uma saída mais cedo. Para datas passadas ou futuras, não é exibida uma alternativa.
-
-Na CLI, a **Saída 2** sempre representa a jornada normal. Quando aplicável, uma única linha `Saída 2 alternativa: HH:MM (banco ±HH:MM)` aparece logo abaixo. Se a consulta do banco falhar hoje, o planejamento normal continua e uma mensagem curta informa a indisponibilidade.
-
-Os horários âncora padrão (`08:00`, `12:00`, `13:30`, `18:00`) são os valores iniciais quando não há ponto correspondente. Altere-os no `config.yaml` ou pela página de Configurações do app desktop.
 
 ### Versão
 
@@ -511,7 +487,7 @@ O app tem duas páginas acessíveis pela barra lateral.
 
 ### Página do Planner
 
-Esta é a tela principal, equivalente ao `pm plan` no terminal.
+Esta é a tela principal do app.
 
 1. **Selecione uma data** usando o seletor de datas no topo. Por padrão, é o dia atual.
 2. Clique em **Carregar Dia** para buscar os dados do dia de trabalho na API do PontoMais.
@@ -547,7 +523,7 @@ Clique no ícone de configurações na barra lateral para configurar o app.
 - Defina o **Limite Diário de Trabalho Extra** usado pela saída alternativa ao pagar saldo negativo. O padrão é 3 horas.
 - Horários consecutivos devem ter pelo menos 15 minutos de diferença.
 - Clique em **Restaurar Padrões** para voltar a `08:00 / 12:00 / 13:30 / 18:00` e ao limite de 3 horas.
-- Clique em **Salvar Planner** para persistir no `config.yaml`. Esses valores também são utilizados pelo `pm plan` na CLI.
+- Clique em **Salvar Planner** para persistir no `config.yaml`.
 
 **Lembretes de Jornada:**
 
@@ -606,6 +582,6 @@ bin/pm project clean
 | `linux/386` tenta linkar contra GTK/WebKit 64 bits | Use `pm project build desktop`; o comando força `GOARCH=amd64` no Linux x86\_64, a menos que `--force-go-host` seja passado |
 | Assets do frontend ausentes em tempo de execução | Execute `pm project build desktop` sem `--skip-frontend` |
 | App desktop exibe banner "Modo navegador" | O frontend foi aberto em um navegador comum em vez de pelo `pm-desktop`; chamadas reais à API só funcionam dentro do shell Wails |
-| Erro de autenticação no `pm plan` ou `pm list` | Verifique o `config.yaml` com login (e-mail ou CPF) e senha corretos; use Configurações → **Testar Login** no app desktop para verificar |
+| Erro de autenticação no `pm list` | Verifique o `config.yaml` com login (e-mail ou CPF) e senha corretos; use Configurações → **Testar Login** no app desktop para verificar |
 | `gcc` não encontrado no Windows | Instale o [TDM-GCC](https://jmeubank.github.io/tdm-gcc/) e certifique-se de que está no `PATH` |
 | WebView2 não encontrado no Windows | Baixe e instale o [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2) da Microsoft |
