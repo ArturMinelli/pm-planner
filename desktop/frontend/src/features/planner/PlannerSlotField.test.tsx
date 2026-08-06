@@ -67,7 +67,7 @@ describe('PlannerSlotField', () => {
     expect(html).not.toContain('slot-solved')
   })
 
-  it('shows balance badge and alternative time inline inside the calculated card', () => {
+  it('shows alternative time with balance tooltip inside the calculated card', () => {
     const html = renderToStaticMarkup(
       <PlannerSlotField
         slot={slot()}
@@ -81,12 +81,12 @@ describe('PlannerSlotField', () => {
       />,
     )
 
-    expect(html).toContain('Banco -08:00')
+    expect(html).not.toContain('Banco -08:00')
     expect(html).toContain('Exit 1 alternativa: 21:00')
     expect(html).toContain('1.5x')
     expect(html).toContain('Limite diário de 03:00 aplicado')
     expect(html).toMatch(
-      /slot-field-card calculated[\s\S]*calculada-time[\s\S]*calculada-time-alt alternative-clockout/,
+      /slot-field-card calculated[\s\S]*calculada-time[\s\S]*calculada-time-alt alternative-clockout[\s\S]*clockout-tooltip/,
     )
   })
 
@@ -128,7 +128,7 @@ describe('PlannerSlotField', () => {
     expect(html).not.toContain('>registrada<')
   })
 
-  it('structures label and badge rows for responsive wrapping', () => {
+  it('structures label and tooltip rows for responsive wrapping', () => {
     const html = renderToStaticMarkup(
       <PlannerSlotField
         slot={slot({ registered: true })}
@@ -143,16 +143,14 @@ describe('PlannerSlotField', () => {
     )
 
     expect(html).toContain('slot-field-header')
-    expect(html).toContain('slot-status-badges')
+    expect(html).not.toContain('slot-status-badges')
+    expect(html).not.toContain('balance-badge')
     expect(html).toContain('clockout-values')
     expect(html).toContain('clockout-values-primary')
     expect(html).toMatch(/<label[^>]*>Exit 1<\/label>/)
-    expect(html).toMatch(
-      /slot-field-header[\s\S]*<label[^>]*>Exit 1<\/label>[\s\S]*slot-status-badges[\s\S]*balance-badge/,
-    )
     expect(html).not.toContain('calculada-badge')
     expect(html).toMatch(
-      /slot-field-header[\s\S]*balance-badge[\s\S]*clockout-tooltip/,
+      /calculada-time-alt alternative-clockout[\s\S]*clockout-tooltip/,
     )
   })
 
@@ -185,7 +183,7 @@ describe('PlannerSlotField', () => {
     expect(exitHtml).not.toContain('calculada-badge')
   })
 
-  it('keeps multi-digit exit labels intact beside status badge markup', () => {
+  it('keeps multi-digit exit labels intact beside alternative time markup', () => {
     const html = renderToStaticMarkup(
       <PlannerSlotField
         slot={slot({ time: '18:00' })}
@@ -201,7 +199,7 @@ describe('PlannerSlotField', () => {
 
     expect(html).toMatch(/<label[^>]*for="exit-1"[^>]*>Exit 2<\/label>/)
     expect(html).toMatch(
-      /slot-field-header[\s\S]*<label[^>]*>Exit 2<\/label>[\s\S]*slot-status-badges[\s\S]*balance-badge/,
+      /slot-field-header[\s\S]*<label[^>]*>Exit 2<\/label>[\s\S]*calculada-time-alt alternative-clockout/,
     )
     expect(html).not.toMatch(/<label[^>]*>Exit<\/label>/)
     expect(html).not.toMatch(/<label[^>]*>2<\/label>/)

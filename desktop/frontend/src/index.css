@@ -836,16 +836,6 @@ input[readonly] {
   background: var(--ok-bg);
 }
 
-.slot-status-badges {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem;
-  flex: 0 1 auto;
-  margin-left: auto;
-  min-width: 0;
-}
-
 .clockout-time-wrap.registered {
   padding: 0;
   border: 0;
@@ -1047,14 +1037,14 @@ input[readonly] {
   box-shadow: var(--focus);
 }
 
-.alternative-clockout,
-.balance-badge {
+.alternative-clockout {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
   font-variant-numeric: tabular-nums;
   font-weight: 780;
+  cursor: help;
 }
 
 .calculada-time-alt.alternative-clockout {
@@ -1068,33 +1058,17 @@ input[readonly] {
   }
 }
 
-.balance-badge {
-  min-height: 1.45rem;
-  padding: 0.1rem 0.42rem;
-  border: 0;
-  cursor: help;
-  font-size: 0.72rem;
-  line-height: 1.2;
-}
-
-.alternative-clockout.positive,
-.balance-badge.positive {
+.alternative-clockout.positive {
   color: var(--ok);
   background: var(--ok-bg);
 }
 
-.alternative-clockout.debt,
-.balance-badge.debt {
+.alternative-clockout.debt {
   color: var(--warning);
   background: var(--warning-bg);
 }
 
-.balance-badge.unavailable {
-  color: var(--muted);
-  background: var(--panel-soft);
-}
-
-.balance-badge:focus-visible {
+.alternative-clockout:focus-visible {
   outline: none;
   box-shadow: var(--focus);
 }

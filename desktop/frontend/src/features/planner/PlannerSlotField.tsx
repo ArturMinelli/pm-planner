@@ -1,8 +1,7 @@
 import { useId, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import PlannerTimeInput from '../../components/PlannerTimeInput'
-import type { BalanceAdjustment, ClockSlot, LocalizedMessage } from '../../types'
-import { translateMessage } from '../../i18n/translateMessage'
+import type { BalanceAdjustment, ClockSlot } from '../../types'
 import {
   formatDurationMinutes,
   formatSignedRoundedMinutes,
@@ -14,7 +13,6 @@ type PlannerSlotFieldProps = {
   fieldId: string
   label: string
   balance?: BalanceAdjustment
-  balanceError?: LocalizedMessage
   alternativeTime?: string
   disabled?: boolean
   onTimeChange: (time: string) => void
@@ -49,7 +47,6 @@ export default function PlannerSlotField({
   fieldId,
   label,
   balance,
-  balanceError,
   alternativeTime,
   disabled,
   onTimeChange,
@@ -65,7 +62,6 @@ export default function PlannerSlotField({
       balance.targetAdjustmentSecs !== 0 &&
       alternativeTime,
   )
-  const unavailable = !balance && Boolean(balanceError)
   const tone = balance && balance.targetAdjustmentSecs < 0 ? 'positive' : 'debt'
 
   const tooltipText = balance
@@ -80,9 +76,7 @@ export default function PlannerSlotField({
           multiplier: balance.multiplier.toFixed(1),
           remaining: formatSignedRoundedMinutes(balance.remainingBalanceSecs),
         })}${balance.capped ? t('planner.balanceTooltipCapped', { cap: formatDurationMinutes(balance.targetAdjustmentSecs) }) : ''}`
-    : translateMessage(t, balanceError) ?? t('planner.balanceTooltipUnavailable')
-
-  const showBalanceBadge = isSolved && (hasAlternative || unavailable)
+    : ''
   const canCalculate = !slot.registered
   const calculateHint = t('planner.calculateHint')
   const registeredHint = t('planner.registeredHint')
@@ -180,27 +174,6 @@ export default function PlannerSlotField({
               </span>
             )}
           </div>
-          {showBalanceBadge ? (
-            <div className="slot-status-badges">
-              <span className="clockout-tooltip-wrap">
-                <span
-                  className={`balance-badge ${unavailable ? 'unavailable' : tone}`}
-                  aria-describedby={tooltipId}
-                  tabIndex={0}
-                  role="note"
-                >
-                  {unavailable
-                    ? t('planner.balanceUnavailable')
-                    : t('planner.bankBadge', {
-                        balance: formatSignedRoundedMinutes(balance?.balanceSecs ?? 0),
-                      })}
-                </span>
-                <span id={tooltipId} role="tooltip" className="clockout-tooltip">
-                  {tooltipText}
-                </span>
-              </span>
-            </div>
-          ) : null}
         </div>
         <div className="clockout-values">
           <div className="clockout-values-primary">
@@ -210,12 +183,20 @@ export default function PlannerSlotField({
                   {slot.time}
                 </span>
                 {hasAlternative ? (
-                  <output
-                    className={`calculada-time-alt alternative-clockout ${tone}`}
-                    aria-label={t('planner.alternativeAria', { label, time: alternativeTime ?? '' })}
-                  >
-                    {alternativeTime}
-                  </output>
+                  <span className="clockout-tooltip-wrap">
+                    <output
+                      className={`calculada-time-alt alternative-clockout ${tone}`}
+                      aria-label={t('planner.alternativeAria', { label, time: alternativeTime ?? '' })}
+                      aria-describedby={tooltipId}
+                      tabIndex={0}
+                      role="note"
+                    >
+                      {alternativeTime}
+                    </output>
+                    <span id={tooltipId} role="tooltip" className="clockout-tooltip">
+                      {tooltipText}
+                    </span>
+                  </span>
                 ) : null}
               </div>
             ) : (

@@ -260,7 +260,6 @@ export default function PlannerPage() {
             journeys={journeys}
             solvedSlot={solvedSlot}
             balance={loaded?.balance}
-            balanceError={isToday ? loaded?.balanceError : undefined}
             summary={summary}
             originalsLine={originalsLine}
             disabled={timesDisabled}

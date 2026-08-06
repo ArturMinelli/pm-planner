@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../components/ui'
-import type { BalanceAdjustment, Journey, LocalizedMessage, PlannerSummary, SolvedSlot } from '../../types'
+import type { BalanceAdjustment, Journey, PlannerSummary, SolvedSlot } from '../../types'
 import { messageKey, translateMessage } from '../../i18n/translateMessage'
 import PlannerJourneyGroup from './PlannerJourneyGroup'
 
@@ -9,7 +9,6 @@ type PlannerJourneyListProps = {
   journeys: Journey[]
   solvedSlot: SolvedSlot
   balance?: BalanceAdjustment
-  balanceError?: LocalizedMessage
   summary?: PlannerSummary | null
   originalsLine?: string
   disabled?: boolean
@@ -36,7 +35,6 @@ export default function PlannerJourneyList({
   journeys,
   solvedSlot,
   balance,
-  balanceError,
   summary,
   originalsLine,
   disabled,
@@ -76,7 +74,6 @@ export default function PlannerJourneyList({
                 journeyIndex={index}
                 solvedSlot={solvedSlot}
                 balance={balance}
-                balanceError={balanceError}
                 alternativeTime={alternativeTime}
                 disabled={disabled}
                 onUpdateTime={onUpdateJourney}

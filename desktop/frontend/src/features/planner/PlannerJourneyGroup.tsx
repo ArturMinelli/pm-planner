@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { BalanceAdjustment, Journey, LocalizedMessage, SolvedSlot } from '../../types'
+import type { BalanceAdjustment, Journey, SolvedSlot } from '../../types'
 import { isSlotSolved } from '../../util/plannerSuggestions'
 import PlannerSlotField from './PlannerSlotField'
 
@@ -9,7 +9,6 @@ type PlannerJourneyGroupProps = {
   journeyIndex: number
   solvedSlot: SolvedSlot
   balance?: BalanceAdjustment
-  balanceError?: LocalizedMessage
   alternativeTime?: string
   disabled?: boolean
   onUpdateTime: (journeyIndex: number, isEntry: boolean, time: string) => void
@@ -22,7 +21,6 @@ export default function PlannerJourneyGroup({
   journeyIndex,
   solvedSlot,
   balance,
-  balanceError,
   alternativeTime,
   disabled,
   onUpdateTime,
@@ -62,7 +60,6 @@ export default function PlannerJourneyGroup({
           fieldId={entryInputId}
           label={t('planner.entry', { number: String(position) })}
           balance={entrySolved ? balance : undefined}
-          balanceError={entrySolved ? balanceError : undefined}
           alternativeTime={entrySolved ? alternativeTime : undefined}
           disabled={disabled}
           onTimeChange={(time) => onUpdateTime(journeyIndex, true, time)}
@@ -77,7 +74,6 @@ export default function PlannerJourneyGroup({
           fieldId={exitInputId}
           label={t('planner.exit', { number: String(position) })}
           balance={exitSolved ? balance : undefined}
-          balanceError={exitSolved ? balanceError : undefined}
           alternativeTime={exitSolved ? alternativeTime : undefined}
           disabled={disabled}
           onTimeChange={(time) => onUpdateTime(journeyIndex, false, time)}
