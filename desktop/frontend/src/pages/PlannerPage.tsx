@@ -160,13 +160,11 @@ export default function PlannerPage() {
     [rawJourneys, solvedSlot, commitPlannerState],
   )
 
-  useEffect(() => {
-    if (!config) return
+  const loadPlannerDay = useCallback(
+    async (cancelRef?: { cancelled: boolean }) => {
+      if (!config) return
 
-    const requestId = ++fetchRequestRef.current
-    let cancelled = false
-
-    const fetchDay = async () => {
+      const requestId = ++fetchRequestRef.current
       setFetching(true)
       setError(null)
       setLoaded(null)
@@ -177,7 +175,7 @@ export default function PlannerPage() {
 
       try {
         const payload = await backend.loadPlanner(date)
-        if (cancelled || requestId !== fetchRequestRef.current) return
+        if (cancelRef?.cancelled || requestId !== fetchRequestRef.current) return
 
         baseAnchorsRef.current = [...resolvePlannerAnchorsArray(config.planner)]
 
@@ -204,28 +202,35 @@ export default function PlannerPage() {
             journeys: instantJourneys,
             solvedSlot: instantSlot,
           })
-          if (cancelled || requestId !== fetchRequestRef.current) return
+          if (cancelRef?.cancelled || requestId !== fetchRequestRef.current) return
           setSummary(initialSummary)
         } catch {
           // summary recalculation is optional on first load
         }
       } catch (caughtError) {
-        if (cancelled || requestId !== fetchRequestRef.current) return
+        if (cancelRef?.cancelled || requestId !== fetchRequestRef.current) return
         const message = caughtError instanceof Error ? caughtError.message : String(caughtError)
         setError(message.startsWith('errors.') ? t(message) : message)
       } finally {
-        if (!cancelled && requestId === fetchRequestRef.current) {
+        if (!cancelRef?.cancelled && requestId === fetchRequestRef.current) {
           setFetching(false)
         }
       }
-    }
+    },
+    [config, date, t],
+  )
 
-    void fetchDay()
-
+  useEffect(() => {
+    const cancelRef = { cancelled: false }
+    void loadPlannerDay(cancelRef)
     return () => {
-      cancelled = true
+      cancelRef.cancelled = true
     }
-  }, [config, configRevision, date, t])
+  }, [loadPlannerDay, configRevision])
+
+  const handleRefresh = useCallback(() => {
+    void loadPlannerDay()
+  }, [loadPlannerDay])
 
   const timesDisabled = fetching
   const originalsLine = loaded?.originalsLine || t('planner.none')
@@ -239,12 +244,40 @@ export default function PlannerPage() {
         description={t('planner.description')}
         actions={
           <Field id="planner-date" label={t('common.date')} className="page-header-date">
-            <PlannerDatePicker
-              id="planner-date"
-              value={date}
-              onChange={setDate}
-              disabled={fetching}
-            />
+            <div className="planner-date-picker-row">
+              <PlannerDatePicker
+                id="planner-date"
+                value={date}
+                onChange={setDate}
+                disabled={fetching}
+              />
+              <button
+                type="button"
+                className="icon-btn planner-refresh-btn"
+                aria-label={t('planner.refresh')}
+                title={t('planner.refresh')}
+                disabled={fetching}
+                onClick={handleRefresh}
+              >
+                <svg
+                  className="planner-refresh-icon"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path
+                    d="M13.65 2.35A6.5 6.5 0 0 0 2.9 4.1M2.35 2.35v2.75h2.75M2.35 13.65A6.5 6.5 0 0 0 13.1 11.9M13.65 13.65v-2.75h-2.75"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.35"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
           </Field>
         }
       />

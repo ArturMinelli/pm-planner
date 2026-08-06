@@ -170,6 +170,24 @@ describe('PlannerPage', () => {
     expect(mockedBackend.recalculateDay).toHaveBeenCalledTimes(1)
   })
 
+  it('re-fetches the current date when refresh is clicked', async () => {
+    await renderPage()
+
+    mockedBackend.loadPlanner.mockClear()
+    mockedBackend.recalculateDay.mockClear()
+
+    await act(async () => {
+      container
+        .querySelector('.planner-refresh-btn')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      await flushPromises()
+    })
+
+    expect(mockedBackend.loadPlanner).toHaveBeenCalledTimes(1)
+    expect(mockedBackend.loadPlanner).toHaveBeenCalledWith('2026-06-09')
+    expect(mockedBackend.recalculateDay).toHaveBeenCalledTimes(1)
+  })
+
   it('re-fetches when config revision changes', async () => {
     await renderPage()
 

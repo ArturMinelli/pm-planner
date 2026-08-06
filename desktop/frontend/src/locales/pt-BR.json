@@ -51,6 +51,7 @@
     "registeredCannotCalculate": "Marcações registradas não podem ser calculadas",
     "disableAutoCalculate": "Desativar cálculo automático",
     "alternativeAria": "{{label}} alternativa: {{time}}",
+    "refresh": "Recarregar dia",
     "datePicker": {
       "chooseDate": "Escolher data",
       "previousMonth": "Mês anterior",

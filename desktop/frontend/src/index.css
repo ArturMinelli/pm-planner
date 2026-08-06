@@ -1111,6 +1111,31 @@ input[readonly] {
   transform: translateY(0);
 }
 
+.planner-date-picker-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.45rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.planner-date-picker-row .planner-date-picker-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.planner-refresh-btn {
+  flex: 0 0 auto;
+  width: 2.58rem;
+  min-height: 2.58rem;
+  height: auto;
+  align-self: stretch;
+}
+
+.planner-refresh-icon {
+  display: block;
+}
+
 .planner-date-picker-field {
   position: relative;
   width: 100%;
