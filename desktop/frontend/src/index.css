@@ -596,16 +596,19 @@ input[readonly] {
 
 .journey-list {
   display: grid;
-  gap: 0.75rem;
+  gap: 0;
 }
 
 .journey-group {
-  padding: 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--panel-soft);
+  padding: 0.65rem 0;
   display: grid;
-  gap: 0.75rem;
+  gap: 0.6rem;
+}
+
+.journey-group + .journey-group {
+  border-top: 1px solid var(--border);
+  margin-top: 0.25rem;
+  padding-top: 0.85rem;
 }
 
 .journey-group-header {
@@ -616,15 +619,25 @@ input[readonly] {
 }
 
 .journey-group-title {
-  font-size: 0.9rem;
-  font-weight: 760;
+  font-size: 0.82rem;
+  font-weight: 700;
   color: var(--muted);
 }
 
 .journey-group-fields {
   display: grid;
-  gap: 0.65rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  gap: 0.5rem;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.journey-slot-connector {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  opacity: 0.45;
+  user-select: none;
 }
 
 .calculada-timebox {
@@ -635,6 +648,8 @@ input[readonly] {
   align-items: center;
   gap: 0.4rem;
   padding: 0.15rem 0.2rem;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--panel-soft) 50%, transparent);
 }
 
 .calculada-timebox .calculada-time {
@@ -643,7 +658,7 @@ input[readonly] {
   width: auto;
   min-height: 0;
   justify-content: flex-start;
-  padding: 0.15rem 0.2rem;
+  padding: 0.15rem 0.45rem;
   border: 0;
   background: transparent;
 }
@@ -653,10 +668,10 @@ input[readonly] {
   width: 100%;
   min-height: 2.58rem;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 0.45rem 0.65rem;
   border: 0;
-  font-size: 1.15rem;
+  font-size: 1.08rem;
   font-weight: 760;
   font-variant-numeric: tabular-nums;
   color: var(--accent-strong);
@@ -756,6 +771,10 @@ input[readonly] {
 }
 
 .slot-mode-indicator.auto-pill {
+  position: absolute;
+  top: 0;
+  right: 0.45rem;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   min-height: 1.35rem;
@@ -763,14 +782,17 @@ input[readonly] {
   border: 1px solid var(--accent);
   border-radius: 999px;
   color: var(--accent-strong);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  background: var(--accent-soft);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 .slot-field-card {
+  position: relative;
   display: grid;
   gap: 0.45rem;
   width: 100%;
@@ -778,17 +800,19 @@ input[readonly] {
   padding: 0.55rem 0.62rem 0.62rem;
   border: 1px solid transparent;
   border-radius: var(--radius);
+  background: color-mix(in srgb, var(--panel-soft) 65%, transparent);
+  box-shadow: var(--shadow);
+  transition:
+    background 150ms ease,
+    border-color 150ms ease;
 }
 
 .slot-field-card.interactive.calculable {
-  border-style: dashed;
-  border-color: var(--border-strong);
   cursor: pointer;
 }
 
 .slot-field-card.interactive.calculable:hover {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel-soft));
 }
 
 .slot-field-card.interactive.calculated {
@@ -799,6 +823,7 @@ input[readonly] {
 
 .slot-field-card.interactive.calculated:hover {
   border-color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel-soft));
 }
 
 .slot-field-card.interactive.calculated:focus-visible {
@@ -807,7 +832,7 @@ input[readonly] {
 }
 
 .slot-field-card.registered {
-  border-color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 22%, transparent);
   background: var(--ok-bg);
 }
 
@@ -1003,6 +1028,23 @@ input[readonly] {
 
 .clockout-values input {
   width: 100%;
+}
+
+.planner-slot-time-input {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--panel-soft) 80%, transparent);
+  font-size: 1.08rem;
+  font-weight: 760;
+}
+
+.planner-slot-time-input:hover:not(:disabled) {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--panel-soft) 100%, transparent);
+}
+
+.planner-slot-time-input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: var(--focus);
 }
 
 .alternative-clockout,
@@ -1225,6 +1267,11 @@ input[readonly] {
 
   .journey-group-fields {
     grid-template-columns: 1fr;
+  }
+
+  .journey-slot-connector {
+    justify-self: center;
+    transform: rotate(90deg);
   }
 
   .settings-check-grid {

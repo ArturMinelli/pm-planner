@@ -69,6 +69,8 @@ export default function PlannerJourneyGroup({
           onToggleSolved={() => onToggleSolved(journeyIndex, true)}
         />
 
+        <span className="journey-slot-connector" aria-hidden="true">→</span>
+
         <PlannerSlotField
           slot={journey.exit}
           isSolved={exitSolved}

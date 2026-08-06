@@ -154,6 +154,9 @@ export default function PlannerSlotField({
         role={isSolved && canToggleCalculate ? 'button' : undefined}
         tabIndex={isSolved && canToggleCalculate ? 0 : undefined}
       >
+        {showAutoPill ? (
+          <span className="slot-mode-indicator auto-pill">{t('planner.calculateModeAuto')}</span>
+        ) : null}
         <div className="slot-field-header">
           <div className="slot-field-label-row">
             {showCalculatorIcon ? (
@@ -166,9 +169,6 @@ export default function PlannerSlotField({
               >
                 <CalculatorIcon />
               </button>
-            ) : null}
-            {showAutoPill ? (
-              <span className="slot-mode-indicator auto-pill">{t('planner.calculateModeAuto')}</span>
             ) : null}
             {labelLinksToInput ? (
               <label htmlFor={fieldId} className="slot-field-label" id={labelId}>
@@ -225,6 +225,7 @@ export default function PlannerSlotField({
                 value={slot.time}
                 onChange={onTimeChange}
                 disabled={disabled}
+                className="planner-slot-time-input"
                 aria-labelledby={labelId}
                 onFocus={() => setInputFocused(true)}
                 onBlur={() => setInputFocused(false)}
