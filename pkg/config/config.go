@@ -151,6 +151,7 @@ func Save(cfgFileOverride string, f *File) error {
 		if err := ValidateLocale(f.Locale); err != nil {
 			return err
 		}
+		f.Locale = LocalePTBR
 		if _, err := ResolveMaxDailyExtraWork(f); err != nil {
 			return fmt.Errorf("max_daily_extra_minutes: %w", err)
 		}

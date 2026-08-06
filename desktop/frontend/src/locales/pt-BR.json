@@ -60,14 +60,6 @@
   "settings": {
     "title": "Configurações",
     "description": "Usa o mesmo arquivo de configuração da CLI, resolvido por <code>pm</code> em cada plataforma.",
-    "language": {
-      "title": "Idioma",
-      "description": "Escolha o idioma do app. A alteração é aplicada imediatamente.",
-      "english": "English",
-      "portuguese": "Português (Brasil)",
-      "save": "Salvar idioma",
-      "saved": "Idioma atualizado."
-    },
     "account": {
       "title": "Conta e sessão",
       "loginLabel": "Login (e-mail ou CPF)",

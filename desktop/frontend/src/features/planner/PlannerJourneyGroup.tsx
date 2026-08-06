@@ -29,11 +29,11 @@ export default function PlannerJourneyGroup({
   onRemove,
   onToggleSolved,
 }: PlannerJourneyGroupProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const entryInputId = useId()
   const exitInputId = useId()
   const position = journeyIndex + 1
-  const ordinal = i18n.language === 'pt-BR' ? `${position}ª` : String(position)
+  const ordinal = `${position}ª`
   const journeyTitle = t('planner.journeyOrdinal', { ordinal })
   const isRegistered = journey.entry.registered || journey.exit.registered
   const entrySolved = isSlotSolved(solvedSlot, journeyIndex, true)

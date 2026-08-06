@@ -49,7 +49,7 @@ describe('formatInstalledVersion', () => {
   })
 
   it('prompts for a check before anything is known', () => {
-    expect(formatInstalledVersion(translate, null)).toBe('Check to discover')
+    expect(formatInstalledVersion(translate, null)).toBe('Verifique para descobrir')
   })
 })
 
@@ -57,20 +57,20 @@ describe('describeUpdateAvailability', () => {
   const translate = i18n.t.bind(i18n)
 
   it('reports being up to date', () => {
-    expect(describeUpdateAvailability(translate, status())).toBe('PM Planner is up to date.')
+    expect(describeUpdateAvailability(translate, status())).toBe('PM Planner está atualizado.')
   })
 
   it('uses the singular for a single commit', () => {
-    expect(describeUpdateAvailability(translate, status({ behind: 1 }))).toBe('1 update available.')
+    expect(describeUpdateAvailability(translate, status({ behind: 1 }))).toBe('1 atualização disponível.')
   })
 
   it('uses the plural beyond one commit', () => {
-    expect(describeUpdateAvailability(translate, status({ behind: 5 }))).toBe('5 updates available.')
+    expect(describeUpdateAvailability(translate, status({ behind: 5 }))).toBe('5 atualizações disponíveis.')
   })
 
   it('explains that tarball installs cannot be compared', () => {
     expect(describeUpdateAvailability(translate, status({ isGit: false }))).toContain(
-      'Cannot compare versions',
+      'Não é possível comparar versões',
     )
   })
 })

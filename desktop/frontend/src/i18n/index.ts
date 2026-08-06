@@ -1,40 +1,32 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
-import en from '../locales/en.json'
 import ptBR from '../locales/pt-BR.json'
 
-export const supportedLocales = ['en', 'pt-BR'] as const
-export type AppLocale = (typeof supportedLocales)[number]
+export const appLocale = 'pt-BR' as const
+export type AppLocale = typeof appLocale
 
-export const defaultLocale: AppLocale = 'pt-BR'
-
-function syncDocumentLanguage(locale: string) {
-  document.documentElement.lang = locale
+function syncDocumentLanguage() {
+  document.documentElement.lang = appLocale
 }
 
-export async function initI18n(locale: AppLocale = defaultLocale) {
+export async function initI18n() {
   if (i18n.isInitialized) {
-    await i18n.changeLanguage(locale)
-    syncDocumentLanguage(locale)
+    await i18n.changeLanguage(appLocale)
+    syncDocumentLanguage()
     return i18n
   }
 
   await i18n.use(initReactI18next).init({
     resources: {
-      en: { translation: en },
       'pt-BR': { translation: ptBR },
     },
-    lng: locale,
-    fallbackLng: defaultLocale,
+    lng: appLocale,
+    fallbackLng: appLocale,
     interpolation: { escapeValue: false },
   })
 
-  syncDocumentLanguage(locale)
+  syncDocumentLanguage()
   return i18n
-}
-
-export function isAppLocale(value: string): value is AppLocale {
-  return supportedLocales.includes(value as AppLocale)
 }
 
 export default i18n

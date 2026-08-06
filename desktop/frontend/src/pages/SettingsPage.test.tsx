@@ -65,21 +65,16 @@ describe('SettingsPage', () => {
     })
   }
 
-  it('stacks Language, Account, Planner, and Reminders sections in single-column order', async () => {
+  it('stacks Account, Planner, and Reminders sections in single-column order', async () => {
     await renderPage()
 
     const grid = container.querySelector('.settings-grid')
     expect(grid).not.toBeNull()
-    expect(grid?.children.length).toBe(4)
-    expect(grid?.textContent).toContain('Language')
-    expect(grid?.textContent).toContain('Account and session')
-    expect(grid?.textContent).toContain('Planner')
-    expect(grid?.textContent).toContain('Journey reminders')
+    expect(grid?.children.length).toBe(3)
 
     const sections = Array.from(grid!.children)
-    expect(sections[0].textContent).toContain('Language')
-    expect(sections[1].textContent).toContain('Account and session')
-    expect(sections[2].textContent).toContain('Planner')
-    expect(sections[3].textContent).toContain('Journey reminders')
+    expect(sections[0].querySelector('#settings-login')).not.toBeNull()
+    expect(sections[1].querySelector('#settings-anchor-in1')).not.toBeNull()
+    expect(sections[2].querySelector('#settings-reminder-lead-amount')).not.toBeNull()
   })
 })

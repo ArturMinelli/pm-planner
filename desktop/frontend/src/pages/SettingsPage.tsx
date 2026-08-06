@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import * as backend from '../services/backend'
-import type { AppLocale, ReminderSettings, UpdateStatus } from '../types'
+import type { ReminderSettings, UpdateStatus } from '../types'
 import {
   builtinPlannerAnchors,
   DEFAULT_BALANCE_CREDIT_MULTIPLIER,
@@ -20,10 +20,8 @@ import {
 } from '../util/loginCredential'
 import { defaultReminderSettings, normalizeReminderSettings } from '../util/reminderSettings'
 import { translateMessage } from '../i18n/translateMessage'
-import { defaultLocale, isAppLocale } from '../i18n'
 import { Page, PageHeader, Toast } from '../components/ui'
 import AccountSettingsForm from '../features/settings/AccountSettingsForm'
-import LanguageSettingsForm from '../features/settings/LanguageSettingsForm'
 import PlannerDefaultsForm from '../features/settings/PlannerDefaultsForm'
 import ReminderSettingsForm from '../features/settings/ReminderSettingsForm'
 import UpdateSettingsForm from '../features/settings/UpdateSettingsForm'
@@ -37,7 +35,6 @@ const TOAST_AUTO_DISMISS_MS = 4200
 
 export default function SettingsPage() {
   const { t } = useTranslation()
-  const [locale, setLocale] = useState<AppLocale>(defaultLocale)
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [maxDailyExtraHours, setMaxDailyExtraHours] = useState(
@@ -93,9 +90,6 @@ export default function SettingsPage() {
       try {
         const config = await backend.getConfig()
         const builtins = builtinPlannerAnchors()
-        if (config.locale && isAppLocale(config.locale)) {
-          setLocale(config.locale)
-        }
         setLogin(config.login ?? '')
         setPassword(config.password ?? '')
         setMaxDailyExtraHours(
@@ -293,14 +287,6 @@ export default function SettingsPage() {
       />
 
       <div className="settings-grid">
-        <LanguageSettingsForm
-          locale={locale}
-          busy={busy}
-          onLocaleChange={setLocale}
-          onSaved={() => showSuccess(t('settings.language.saved'))}
-          onError={showError}
-        />
-
         <AccountSettingsForm
           login={login}
           password={password}

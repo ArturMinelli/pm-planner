@@ -98,8 +98,8 @@ describe('PlannerPage', () => {
     expect(mockedBackend.loadPlanner).toHaveBeenCalledTimes(1)
     expect(mockedBackend.loadPlanner).toHaveBeenCalledWith('2026-06-09')
     expect(mockedBackend.recalculateDay).toHaveBeenCalledTimes(1)
-    expect(container.textContent).toContain('Daily target')
-    expect(container.textContent).toContain('Entry 1')
+    expect(container.textContent).toContain('Meta do dia')
+    expect(container.textContent).toContain('Entrada 1')
     expect(container.textContent).not.toContain('Carregar Dia')
   })
 
@@ -138,9 +138,9 @@ describe('PlannerPage', () => {
 
     await renderPage()
 
-    expect(container.textContent).toContain('Could not load the day')
+    expect(container.textContent).toContain('Não foi possível carregar o dia')
     expect(container.querySelector('.banner.error')).toBeNull()
-    expect(container.textContent).toContain('Entry 1')
+    expect(container.textContent).toContain('Entrada 1')
   })
 
   it('loads planner data when Wails is unavailable (HTTP transport)', async () => {
@@ -159,7 +159,7 @@ describe('PlannerPage', () => {
     const grid = container.querySelector('.grid-2')
     expect(grid).not.toBeNull()
     expect(grid?.children.length).toBe(2)
-    expect(grid?.textContent).toContain('Entry 1')
-    expect(grid?.textContent).toContain('Daily target')
+    expect(grid?.textContent).toContain('Entrada 1')
+    expect(grid?.textContent).toContain('Meta do dia')
   })
 })

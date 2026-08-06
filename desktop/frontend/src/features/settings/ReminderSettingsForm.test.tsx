@@ -19,10 +19,10 @@ describe('ReminderSettingsForm', () => {
       />,
     )
 
-    expect(html).toContain('Notify before')
-    expect(html).toContain('2 hours')
-    expect(html).toContain('15 minutes')
-    expect(html).toContain('Add')
+    expect(html).toContain('id="settings-reminder-lead-amount"')
+    expect(html).toContain('2 horas')
+    expect(html).toContain('15 minutos')
+    expect(html).toContain('reminder-lead-chip')
     expect(html).not.toContain('Notificação nativa')
     expect(html).not.toContain('Permitir Notificações')
     expect(html).not.toContain('Daemon ativo')

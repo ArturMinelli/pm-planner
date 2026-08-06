@@ -39,7 +39,7 @@ describe('PlannerSlotField', () => {
     expect(html).toContain('Exit 1')
     expect(html).toContain('value="18:00"')
     expect(html).toContain('slot-field-card calculable')
-    expect(html).toContain('Click this field to calculate from the daily target')
+    expect(html).toContain('Clique neste campo para calcular pela meta do dia')
     expect(html).toContain('slot-mode-indicator calculator')
     expect(html).not.toContain('calculada-time')
     expect(html).not.toContain('calculada-badge')
@@ -61,7 +61,7 @@ describe('PlannerSlotField', () => {
     expect(html).toContain('calculada-time')
     expect(html).toContain('18:00')
     expect(html).toContain('Auto')
-    expect(html).toContain('Disable automatic calculation')
+    expect(html).toContain('Desativar cálculo automático')
     expect(html).not.toContain('slot-mode-indicator calculator')
     expect(html).not.toContain('calculada-badge')
     expect(html).not.toContain('slot-solved')
@@ -81,10 +81,10 @@ describe('PlannerSlotField', () => {
       />,
     )
 
-    expect(html).toContain('Bank -08:00')
-    expect(html).toContain('Exit 1 alternative: 21:00')
+    expect(html).toContain('Banco -08:00')
+    expect(html).toContain('Exit 1 alternativa: 21:00')
     expect(html).toContain('1.5x')
-    expect(html).toContain('Daily extra-work cap of 03:00 applied')
+    expect(html).toContain('Limite diário de 03:00 aplicado')
     expect(html).toMatch(
       /slot-field-card calculated[\s\S]*calculada-time[\s\S]*calculada-time-alt alternative-clockout/,
     )
@@ -104,7 +104,7 @@ describe('PlannerSlotField', () => {
 
     expect(html).toContain('value="18:00"')
     expect(html).toContain('slot-field-card registered')
-    expect(html).toContain('Stamp registered in PontoMais')
+    expect(html).toContain('Marcação registrada no PontoMais')
     expect(html).not.toContain('registered-badge')
     expect(html).not.toContain('>registrada<')
     expect(html).not.toContain('calculada-time')

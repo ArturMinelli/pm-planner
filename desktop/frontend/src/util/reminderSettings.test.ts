@@ -34,8 +34,8 @@ describe('reminderSettings', () => {
 
   it('formats lead times for display', () => {
     const translate = i18n.t.bind(i18n)
-    expect(formatReminderLead(translate, 15)).toBe('15 minutes')
-    expect(formatReminderLead(translate, 60)).toBe('1 hour')
-    expect(formatReminderLead(translate, 120)).toBe('2 hours')
+    expect(formatReminderLead(translate, 15)).toBe('15 minutos')
+    expect(formatReminderLead(translate, 60)).toBe('1 hora')
+    expect(formatReminderLead(translate, 120)).toBe('2 horas')
   })
 })

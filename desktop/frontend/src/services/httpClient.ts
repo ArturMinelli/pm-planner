@@ -18,6 +18,7 @@ import {
   DEFAULT_MAX_DAILY_EXTRA_MINUTES,
 } from '../util/plannerDefaults'
 import { defaultReminderSettings, normalizeReminderSettings } from '../util/reminderSettings'
+import { appLocale } from '../i18n'
 
 const API_BASE = '/api'
 
@@ -78,7 +79,7 @@ export async function saveConfig(config: PmConfig): Promise<void> {
   const payload: PmConfig = {
     login: config.login,
     password: config.password,
-    locale: config.locale,
+    locale: appLocale,
   }
   if (
     typeof config.max_daily_extra_minutes === 'number' &&

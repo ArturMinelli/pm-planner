@@ -17,16 +17,9 @@ describe('PlannerDefaultsForm', () => {
   it('shows the configurable daily extra-work cap', () => {
     const html = renderToStaticMarkup(<PlannerDefaultsForm {...defaultProps} />)
 
-    expect(html).toContain('Daily extra-work limit')
+    expect(html).toContain('id="settings-max-daily-extra"')
     expect(html).toContain('name="max_daily_extra_hours"')
     expect(html).toContain('value="3"')
-    expect(html).toContain('Save planner')
-  })
-
-  it('shows the configurable balance credit multiplier field', () => {
-    const html = renderToStaticMarkup(<PlannerDefaultsForm {...defaultProps} />)
-
-    expect(html).toContain('Time bank credit multiplier')
     expect(html).toContain('name="balance_credit_multiplier"')
     expect(html).toContain('value="1.5"')
   })

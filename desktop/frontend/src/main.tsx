@@ -2,8 +2,7 @@ import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { defaultLocale, initI18n, isAppLocale } from './i18n'
-import * as backend from './services/backend'
+import { initI18n } from './i18n'
 
 function Bootstrap() {
   const [ready, setReady] = useState(false)
@@ -11,16 +10,7 @@ function Bootstrap() {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      let locale = defaultLocale
-      try {
-        const config = await backend.getConfig()
-        if (config.locale && isAppLocale(config.locale)) {
-          locale = config.locale
-        }
-      } catch {
-        // fall back to default locale
-      }
-      await initI18n(locale)
+      await initI18n()
       if (!cancelled) setReady(true)
     })()
     return () => {

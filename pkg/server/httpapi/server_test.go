@@ -61,7 +61,7 @@ func TestConfigRoundTrip(t *testing.T) {
 		t.Fatalf("get status = %d, want %d", getRecorder.Code, http.StatusOK)
 	}
 
-	putBody := `{"login":"dev@example.com","password":"secret","locale":"en"}`
+	putBody := `{"login":"dev@example.com","password":"secret","locale":"pt-BR"}`
 	putRequest := httptest.NewRequest(http.MethodPut, "/api/config", io.NopCloser(strings.NewReader(putBody)))
 	putRecorder := httptest.NewRecorder()
 	server.Handler().ServeHTTP(putRecorder, putRequest)
@@ -81,5 +81,25 @@ func TestConfigRoundTrip(t *testing.T) {
 	}
 	if file.Login != "dev@example.com" {
 		t.Fatalf("login = %q, want dev@example.com", file.Login)
+	}
+	if file.Locale != config.LocalePTBR {
+		t.Fatalf("locale = %q, want %q", file.Locale, config.LocalePTBR)
+	}
+}
+
+func TestConfigRejectsUnsupportedLocale(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, ".config"))
+	if err := config.Init(""); err != nil {
+		t.Fatalf("config init: %v", err)
+	}
+
+	server := httpapi.New("3847")
+	putBody := `{"login":"dev@example.com","password":"secret","locale":"en"}`
+	putRequest := httptest.NewRequest(http.MethodPut, "/api/config", io.NopCloser(strings.NewReader(putBody)))
+	putRecorder := httptest.NewRecorder()
+	server.Handler().ServeHTTP(putRecorder, putRequest)
+	if putRecorder.Code != http.StatusInternalServerError {
+		t.Fatalf("put status = %d, want %d; body %s", putRecorder.Code, http.StatusInternalServerError, putRecorder.Body.String())
 	}
 }

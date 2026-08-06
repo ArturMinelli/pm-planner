@@ -5,42 +5,23 @@ import (
 	"strings"
 )
 
-const (
-	localeEN   = "en"
-	localePTBR = "pt-BR"
-)
+const localePTBR = "pt-BR"
 
-var notificationTemplates = map[string]map[string]string{
-	localeEN: {
-		KeyRemindersSlotInMinutes:      "{{slot}} in {{minutes}} min",
-		KeyRemindersRecommendedTime:    "Recommended time: {{time}}",
-		KeyRemindersRuntimeUnavailable: "Runtime unavailable",
-		KeyRemindersNotAvailable:       "Notifications unavailable",
-	},
-	localePTBR: {
-		KeyRemindersSlotInMinutes:      "{{slot}} em {{minutes}} min",
-		KeyRemindersRecommendedTime:    "Horário recomendado: {{time}}",
-		KeyRemindersRuntimeUnavailable: "Runtime indisponível",
-		KeyRemindersNotAvailable:       "Notificações não disponíveis",
-	},
+var notificationTemplates = map[string]string{
+	KeyRemindersSlotInMinutes:      "{{slot}} em {{minutes}} min",
+	KeyRemindersRecommendedTime:    "Horário recomendado: {{time}}",
+	KeyRemindersRuntimeUnavailable: "Runtime indisponível",
+	KeyRemindersNotAvailable:       "Notificações não disponíveis",
 }
 
-// NormalizeNotificationLocale maps a locale string to a supported notification locale.
-func NormalizeNotificationLocale(locale string) string {
-	locale = strings.ToLower(strings.TrimSpace(locale))
-	if strings.HasPrefix(locale, "en") {
-		return localeEN
-	}
+// NormalizeNotificationLocale always returns pt-BR.
+func NormalizeNotificationLocale(_ string) string {
 	return localePTBR
 }
 
 // TranslateNotification renders a notification string for the given locale.
-func TranslateNotification(locale, key string, params map[string]string) string {
-	templates, ok := notificationTemplates[NormalizeNotificationLocale(locale)]
-	if !ok {
-		templates = notificationTemplates[localePTBR]
-	}
-	template, ok := templates[key]
+func TranslateNotification(_ string, key string, params map[string]string) string {
+	template, ok := notificationTemplates[key]
 	if !ok {
 		return key
 	}
@@ -71,14 +52,8 @@ func ReminderBody(locale, time string) string {
 }
 
 // SlotLabel returns a localized entry/exit label for notifications.
-func SlotLabel(locale string, journeyIndex int, isExit bool) string {
+func SlotLabel(_ string, journeyIndex int, isExit bool) string {
 	number := fmt.Sprintf("%d", journeyIndex+1)
-	if NormalizeNotificationLocale(locale) == localeEN {
-		if isExit {
-			return fmt.Sprintf("Exit %s", number)
-		}
-		return fmt.Sprintf("Entry %s", number)
-	}
 	if isExit {
 		return fmt.Sprintf("Saída %s", number)
 	}

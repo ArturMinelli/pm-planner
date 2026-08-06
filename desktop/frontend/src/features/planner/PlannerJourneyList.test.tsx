@@ -29,12 +29,12 @@ describe('PlannerJourneyList', () => {
       />,
     )
 
-    expect(html).toContain('1 journey')
-    expect(html).toContain('2 journey')
-    expect(html).toContain('Entry 1')
-    expect(html).toContain('Exit 1')
-    expect(html).toContain('Entry 2')
-    expect(html).toContain('Exit 2')
+    expect(html).toContain('1ª jornada')
+    expect(html).toContain('2ª jornada')
+    expect(html).toContain('Entrada 1')
+    expect(html).toContain('Saída 1')
+    expect(html).toContain('Entrada 2')
+    expect(html).toContain('Saída 2')
   })
 
   it('shows the originals line when provided', () => {
@@ -82,7 +82,7 @@ describe('PlannerJourneyList', () => {
       />,
     )
 
-    expect(html).toContain('Add journey')
+    expect(html).toContain('Adicionar jornada')
   })
 
   it('marks the solved exit journey with a calculated slot card', () => {
@@ -115,7 +115,7 @@ describe('PlannerJourneyList', () => {
     )
 
     expect(html).toContain('disabled')
-    expect(html).toContain('Cannot remove')
+    expect(html).toContain('Não é possível remover')
   })
 
   it('shows skeleton placeholders while loading', () => {
@@ -133,8 +133,8 @@ describe('PlannerJourneyList', () => {
     )
 
     expect(html).toContain('skeleton')
-    expect(html).toContain('Loading stamps')
-    expect(html).not.toContain('Entry 1')
+    expect(html).toContain('Carregando marcações')
+    expect(html).not.toContain('Entrada 1')
     expect(html).toContain('disabled')
   })
 
@@ -166,7 +166,7 @@ describe('PlannerJourneyList', () => {
       />,
     )
 
-    expect(html).toContain('Journey 2 entry 13:30 is before journey 1 exit 14:00')
+    expect(html).toContain('Entrada da jornada 2 (13:30) é anterior à saída da jornada 1 (14:00).')
     expect(html).toContain('planner-warning')
   })
 
@@ -184,7 +184,7 @@ describe('PlannerJourneyList', () => {
       />,
     )
 
-    expect(html).toContain('Entry 1')
+    expect(html).toContain('Entrada 1')
     expect(html).not.toContain('skeleton')
     expect(html).not.toContain('disabled=""')
   })

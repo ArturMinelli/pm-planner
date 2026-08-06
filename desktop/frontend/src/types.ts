@@ -6,7 +6,7 @@ export interface PlannerAnchorsConfig {
   out2?: string
 }
 
-export type AppLocale = 'en' | 'pt-BR'
+export type AppLocale = 'pt-BR'
 
 /** Mirrors pm-cli pkg/config.File */
 export interface PmConfig {

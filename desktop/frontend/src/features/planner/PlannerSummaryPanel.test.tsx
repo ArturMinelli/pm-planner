@@ -42,10 +42,10 @@ describe('PlannerSummaryPanel', () => {
       />,
     )
 
-    expect(html).toContain('Daily target')
-    expect(html).toContain('1 journey')
-    expect(html).toContain('2 journey')
-    expect(html).toContain('Overtime')
+    expect(html).toContain('Meta do dia')
+    expect(html).toContain('1ª jornada')
+    expect(html).toContain('2ª jornada')
+    expect(html).toContain('Hora extra')
     expect(html).not.toContain('Ajuste do Banco')
     expect(html).not.toContain('Meta Planejada')
   })
@@ -55,8 +55,8 @@ describe('PlannerSummaryPanel', () => {
       <PlannerSummaryPanel loaded={null} summary={null} />,
     )
 
-    expect(html).toContain('Select a date')
-    expect(html).not.toContain('Daily target')
+    expect(html).toContain('Selecione uma data')
+    expect(html).not.toContain('Meta do dia')
   })
 
   it('shows skeleton placeholders while loading', () => {
@@ -65,9 +65,9 @@ describe('PlannerSummaryPanel', () => {
     )
 
     expect(html).toContain('skeleton')
-    expect(html).toContain('Loading summary')
-    expect(html).not.toContain('Select a date')
-    expect(html).not.toContain('Daily target')
+    expect(html).toContain('Carregando resumo')
+    expect(html).not.toContain('Selecione uma data')
+    expect(html).not.toContain('Meta do dia')
   })
 
   it('shows summary stats after load', () => {
@@ -117,8 +117,8 @@ describe('PlannerSummaryPanel', () => {
       />,
     )
 
-    expect(html).toContain('1 journey')
-    expect(html).toContain('2 journey')
-    expect(html).toContain('3 journey')
+    expect(html).toContain('1ª jornada')
+    expect(html).toContain('2ª jornada')
+    expect(html).toContain('3ª jornada')
   })
 })

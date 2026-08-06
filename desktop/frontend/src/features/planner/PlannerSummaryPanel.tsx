@@ -30,7 +30,7 @@ export default function PlannerSummaryPanel({
   loaded,
   summary,
 }: PlannerSummaryPanelProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const balance = loaded?.balance
   const balanceError = loaded?.balanceError
   const hasAlternative =
@@ -39,7 +39,7 @@ export default function PlannerSummaryPanel({
     balance.targetAdjustmentSecs !== 0
 
   const formatJourneyLabel = (position: number) => {
-    const ordinal = i18n.language === 'pt-BR' ? `${position}ª` : String(position)
+    const ordinal = `${position}ª`
     return t('planner.journeyOrdinal', { ordinal })
   }
 

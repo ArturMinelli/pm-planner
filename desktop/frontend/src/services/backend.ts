@@ -15,6 +15,7 @@ import {
   builtinPlannerAnchors,
 } from '../util/plannerDefaults'
 import { normalizeReminderSettings } from '../util/reminderSettings'
+import { appLocale } from '../i18n'
 import * as httpClient from './httpClient'
 
 interface GoPmApp {
@@ -78,7 +79,7 @@ export async function saveConfig(config: PmConfig): Promise<void> {
   const payload: PmConfig = {
     login: config.login,
     password: config.password,
-    locale: config.locale,
+    locale: appLocale,
   }
   if (
     typeof config.max_daily_extra_minutes === 'number' &&
