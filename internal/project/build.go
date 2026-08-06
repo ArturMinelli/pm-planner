@@ -76,6 +76,22 @@ func CLIBuildCommands(options CLIBuildOptions) ([]CommandSpec, error) {
 	}, nil
 }
 
+func desktopFrontendBuildCommands(root string) []CommandSpec {
+	frontendDir := ResolveOutputPath(root, "desktop/frontend")
+	return []CommandSpec{
+		{
+			Dir:  frontendDir,
+			Name: "npm",
+			Args: []string{"ci"},
+		},
+		{
+			Dir:  frontendDir,
+			Name: "npm",
+			Args: []string{"run", "build"},
+		},
+	}
+}
+
 func DesktopBuildCommands(options DesktopBuildOptions) ([]CommandSpec, error) {
 	root, err := ResolveRoot(options.Root)
 	if err != nil {
@@ -97,13 +113,17 @@ func DesktopBuildCommands(options DesktopBuildOptions) ([]CommandSpec, error) {
 		if options.SkipFrontend {
 			args = append(args, "-s")
 		}
-		return []CommandSpec{
-			{
-				Dir:  ResolveOutputPath(root, "desktop"),
-				Name: "wails",
-				Args: args,
-			},
-		}, nil
+
+		commands := make([]CommandSpec, 0, 3)
+		if !options.SkipFrontend {
+			commands = append(commands, desktopFrontendBuildCommands(root)...)
+		}
+		commands = append(commands, CommandSpec{
+			Dir:  ResolveOutputPath(root, "desktop"),
+			Name: "wails",
+			Args: args,
+		})
+		return commands, nil
 	}
 
 	output := options.Output
@@ -173,13 +193,16 @@ func DesktopBundleBuildCommands(options DesktopBuildOptions) ([]CommandSpec, err
 		args = append(args, "-s")
 	}
 
-	return []CommandSpec{
-		{
-			Dir:  ResolveOutputPath(root, "desktop"),
-			Name: "wails",
-			Args: args,
-		},
-	}, nil
+	commands := make([]CommandSpec, 0, 3)
+	if !options.SkipFrontend {
+		commands = append(commands, desktopFrontendBuildCommands(root)...)
+	}
+	commands = append(commands, CommandSpec{
+		Dir:  ResolveOutputPath(root, "desktop"),
+		Name: "wails",
+		Args: args,
+	})
+	return commands, nil
 }
 
 func BuildDesktopBundle(ctx context.Context, options DesktopBuildOptions, runner Runner) error {

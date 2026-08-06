@@ -160,16 +160,19 @@ func TestDesktopBundleBuildCommandsOmitsNoPackage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(commands) != 1 {
+	if len(commands) != 3 {
 		t.Fatalf("commands: got %d", len(commands))
 	}
+	if commands[0].Name != "npm" || commands[1].Name != "npm" {
+		t.Fatalf("frontend commands: got %#v", commands[:2])
+	}
 
-	for _, arg := range commands[0].Args {
+	for _, arg := range commands[2].Args {
 		if arg == "-nopackage" {
-			t.Fatalf("bundle build must not use -nopackage: %#v", commands[0].Args)
+			t.Fatalf("bundle build must not use -nopackage: %#v", commands[2].Args)
 		}
 	}
-	assertArgPair(t, commands[0].Args, "-platform", "darwin/arm64")
+	assertArgPair(t, commands[2].Args, "-platform", "darwin/arm64")
 }
 
 func TestMacOSAppBundleArtifactPath(t *testing.T) {
