@@ -1054,7 +1054,8 @@ input[readonly] {
 .planner-datepicker-popover {
   position: absolute;
   top: calc(100% + 0.45rem);
-  left: 0;
+  right: 0;
+  left: auto;
   z-index: 80;
   width: min(20rem, calc(100vw - 2rem));
   padding: 0.72rem;
