@@ -12,6 +12,7 @@ export type PlannerTimeInputProps = {
   name?: string
   placeholder?: string
   className?: string
+  'aria-labelledby'?: string
 }
 
 /** Normalize to HH:MM display from pasted or typed raw text (max 4 digits). */
@@ -34,11 +35,13 @@ export default function PlannerTimeInput({
   name,
   placeholder = '08:00…',
   className,
+  'aria-labelledby': ariaLabelledBy,
 }: PlannerTimeInputProps): JSX.Element {
   return (
     <input
       id={id}
       name={name}
+      aria-labelledby={ariaLabelledBy}
       type="text"
       inputMode="numeric"
       autoComplete="off"

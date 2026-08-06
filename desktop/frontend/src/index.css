@@ -634,10 +634,7 @@ input[readonly] {
   min-height: 2.58rem;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.35rem 0.45rem 0.35rem 0.55rem;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius);
-  background: var(--accent-soft);
+  padding: 0.15rem 0.2rem;
 }
 
 .calculada-timebox .calculada-time {
@@ -651,16 +648,6 @@ input[readonly] {
   background: transparent;
 }
 
-.calculada-timebox .calculada-time:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-}
-
-.calculada-timebox .calculada-time:focus-visible {
-  outline: none;
-  box-shadow: var(--focus);
-  border-radius: calc(var(--radius) - 2px);
-}
-
 .calculada-time {
   display: flex;
   width: 100%;
@@ -668,28 +655,12 @@ input[readonly] {
   align-items: center;
   justify-content: center;
   padding: 0.45rem 0.65rem;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius);
-  cursor: pointer;
+  border: 0;
   font-size: 1.15rem;
   font-weight: 760;
   font-variant-numeric: tabular-nums;
   color: var(--accent-strong);
-  background: var(--accent-soft);
-}
-
-.calculada-time:hover:not(:disabled) {
-  border-color: var(--accent-strong);
-}
-
-.calculada-time:focus-visible {
-  outline: none;
-  box-shadow: var(--focus);
-}
-
-.calculada-time:disabled {
-  cursor: not-allowed;
-  opacity: 0.52;
+  background: transparent;
 }
 
 .calculada-time-alt {
@@ -741,9 +712,103 @@ input[readonly] {
   min-width: 0;
 }
 
+.slot-field-label-row {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.slot-field-label,
 .slot-field-header > label {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+.slot-mode-indicator {
+  flex: 0 0 auto;
+}
+
+.slot-mode-indicator.calculator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--muted);
+  background: var(--control);
+  cursor: pointer;
+}
+
+.slot-mode-indicator.calculator:hover {
+  color: var(--accent-strong);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.slot-mode-indicator.calculator:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.slot-mode-indicator.auto-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.35rem;
+  padding: 0.05rem 0.42rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.slot-field-card {
+  display: grid;
+  gap: 0.45rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.55rem 0.62rem 0.62rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+
+.slot-field-card.interactive.calculable {
+  border-style: dashed;
+  border-color: var(--border-strong);
+  cursor: pointer;
+}
+
+.slot-field-card.interactive.calculable:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.slot-field-card.interactive.calculated {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  cursor: pointer;
+}
+
+.slot-field-card.interactive.calculated:hover {
+  border-color: var(--accent-strong);
+}
+
+.slot-field-card.interactive.calculated:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.slot-field-card.registered {
+  border-color: var(--ok);
+  background: var(--ok-bg);
 }
 
 .slot-status-badges {
@@ -757,10 +822,10 @@ input[readonly] {
 }
 
 .clockout-time-wrap.registered {
-  padding: 0.2rem;
-  border: 1px solid var(--ok);
-  border-radius: var(--radius);
-  background: var(--ok-bg);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .settings-check-grid {
@@ -924,22 +989,12 @@ input[readonly] {
   min-width: 0;
 }
 
-.clockout-time-wrap.calculable {
-  padding: 0.2rem;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.clockout-time-wrap.calculable:hover {
-  border-color: var(--border-strong);
-}
-
 .slot-field {
   min-width: 0;
   container-type: inline-size;
 }
 
+.slot-field-label,
 .slot-field-header > label {
   white-space: nowrap;
   overflow-wrap: normal;

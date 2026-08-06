@@ -85,7 +85,7 @@ describe('PlannerJourneyList', () => {
     expect(html).toContain('Add journey')
   })
 
-  it('marks the solved exit journey with an active calculator button', () => {
+  it('marks the solved exit journey with a calculated slot card', () => {
     const html = renderToStaticMarkup(
       <PlannerJourneyList
         journeys={[journey('08:00', '12:00'), journey('13:30', '18:00')]}
@@ -97,8 +97,9 @@ describe('PlannerJourneyList', () => {
       />,
     )
 
+    expect(html).toContain('slot-field-card calculated')
     expect(html).toContain('calculada-time')
-    expect(html).toMatch(/<button[^>]*class="calculada-time"/)
+    expect(html).toContain('Auto')
   })
 
   it('disables the remove button for registered journeys', () => {

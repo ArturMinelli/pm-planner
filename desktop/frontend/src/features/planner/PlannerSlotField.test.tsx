@@ -24,7 +24,7 @@ function adjustment(patch: Partial<BalanceAdjustment> = {}): BalanceAdjustment {
 }
 
 describe('PlannerSlotField', () => {
-  it('shows editable input in a calculable wrap when not solved', () => {
+  it('shows editable input in a calculable card when not solved', () => {
     const html = renderToStaticMarkup(
       <PlannerSlotField
         slot={slot()}
@@ -38,14 +38,14 @@ describe('PlannerSlotField', () => {
 
     expect(html).toContain('Exit 1')
     expect(html).toContain('value="18:00"')
-    expect(html).toContain('clockout-time-wrap calculable')
-    expect(html).toContain('Click to calculate from the daily target')
+    expect(html).toContain('slot-field-card calculable')
+    expect(html).toContain('Click this field to calculate from the daily target')
+    expect(html).toContain('slot-mode-indicator calculator')
     expect(html).not.toContain('calculada-time')
-    expect(html).not.toContain('calculator-btn')
     expect(html).not.toContain('calculada-badge')
   })
 
-  it('shows calculada time as a toggle button when solved', () => {
+  it('shows calculated time inside an interactive card when solved', () => {
     const html = renderToStaticMarkup(
       <PlannerSlotField
         slot={slot({ time: '18:00' })}
@@ -57,16 +57,17 @@ describe('PlannerSlotField', () => {
       />,
     )
 
+    expect(html).toContain('slot-field-card calculated')
     expect(html).toContain('calculada-time')
     expect(html).toContain('18:00')
-    expect(html).toMatch(/<button[^>]*class="calculada-time"/)
+    expect(html).toContain('Auto')
     expect(html).toContain('Disable automatic calculation')
-    expect(html).not.toContain('calculator-btn')
+    expect(html).not.toContain('slot-mode-indicator calculator')
     expect(html).not.toContain('calculada-badge')
     expect(html).not.toContain('slot-solved')
   })
 
-  it('shows balance badge and alternative time inline inside the calculada box', () => {
+  it('shows balance badge and alternative time inline inside the calculated card', () => {
     const html = renderToStaticMarkup(
       <PlannerSlotField
         slot={slot()}
@@ -85,7 +86,7 @@ describe('PlannerSlotField', () => {
     expect(html).toContain('1.5x')
     expect(html).toContain('Daily extra-work cap of 03:00 applied')
     expect(html).toMatch(
-      /calculada-timebox[\s\S]*calculada-time[\s\S]*calculada-time-alt alternative-clockout/,
+      /slot-field-card calculated[\s\S]*calculada-time[\s\S]*calculada-time-alt alternative-clockout/,
     )
   })
 
@@ -102,12 +103,12 @@ describe('PlannerSlotField', () => {
     )
 
     expect(html).toContain('value="18:00"')
-    expect(html).toContain('clockout-time-wrap registered')
+    expect(html).toContain('slot-field-card registered')
     expect(html).toContain('Stamp registered in PontoMais')
     expect(html).not.toContain('registered-badge')
     expect(html).not.toContain('>registrada<')
     expect(html).not.toContain('calculada-time')
-    expect(html).not.toContain('clockout-time-wrap calculable')
+    expect(html).not.toContain('slot-field-card calculable')
   })
 
   it('outlines registered slots without a text badge', () => {
@@ -122,7 +123,7 @@ describe('PlannerSlotField', () => {
       />,
     )
 
-    expect(html).toContain('clockout-time-wrap registered')
+    expect(html).toContain('slot-field-card registered')
     expect(html).not.toContain('registered-badge')
     expect(html).not.toContain('>registrada<')
   })
@@ -177,7 +178,7 @@ describe('PlannerSlotField', () => {
       />,
     )
 
-    expect(entryHtml).toMatch(/<label[^>]*>Entry 1<\/label>/)
+    expect(entryHtml).toMatch(/<span[^>]*>Entry 1<\/span>/)
     expect(exitHtml).toMatch(/<label[^>]*>Exit 1<\/label>/)
     expect(entryHtml).toContain('slot-field')
     expect(exitHtml).toContain('calculada-time')
