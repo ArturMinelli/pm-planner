@@ -22,17 +22,40 @@ export function formatInstalledVersion(
   return date ? `${status.commitSha} (${date})` : status.commitSha
 }
 
+export type UpdateBadgeTone = 'success' | 'warning' | 'muted'
+
+export function describeUpdateBadge(
+  translate: TFunction,
+  status: UpdateStatus,
+): { label: string; tone: UpdateBadgeTone } {
+  if (!status.isGit) {
+    return {
+      label: translate('settings.updates.cannotCompare'),
+      tone: 'muted',
+    }
+  }
+  if (status.behind === 1) {
+    return {
+      label: translate('settings.updates.oneAvailable'),
+      tone: 'warning',
+    }
+  }
+  if (status.behind > 1) {
+    return {
+      label: translate('settings.updates.manyAvailable', { count: status.behind }),
+      tone: 'warning',
+    }
+  }
+  return {
+    label: translate('settings.updates.upToDate'),
+    tone: 'success',
+  }
+}
+
 /** Summarizes a check result. Only meaningful once blockers have been ruled out. */
 export function describeUpdateAvailability(
   translate: TFunction,
   status: UpdateStatus,
 ): string {
-  if (!status.isGit) {
-    return translate('settings.updates.cannotCompare')
-  }
-  if (status.behind === 1) return translate('settings.updates.oneAvailable')
-  if (status.behind > 1) {
-    return translate('settings.updates.manyAvailable', { count: status.behind })
-  }
-  return translate('settings.updates.upToDate')
+  return describeUpdateBadge(translate, status).label
 }

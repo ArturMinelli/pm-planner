@@ -103,7 +103,7 @@
     },
     "updates": {
       "title": "Atualizações",
-      "intro": "Verifique se há uma versão mais recente e atualize quando quiser.",
+      "intro": "A versão instalada é verificada automaticamente ao abrir esta página.",
       "installedVersion": "Versão instalada",
       "check": "Verificar atualizações",
       "checking": "Verificando...",

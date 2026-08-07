@@ -22,9 +22,9 @@ function render(props: Partial<Parameters<typeof UpdateSettingsForm>[0]> = {}) {
     <UpdateSettingsForm
       status={null}
       checking={false}
+      checkError={null}
       updating={false}
       canApplyUpdate
-      onCheck={() => undefined}
       onUpdate={() => undefined}
       {...props}
     />,
@@ -32,12 +32,13 @@ function render(props: Partial<Parameters<typeof UpdateSettingsForm>[0]> = {}) {
 }
 
 describe('UpdateSettingsForm', () => {
-  it('asks for a check before anything is known', () => {
-    const html = render()
+  it('shows a skeleton while the initial check is running', () => {
+    const html = render({ checking: true })
 
-    expect(html).toContain('Verificar atualizações')
-    expect(html).toContain('Verifique para descobrir')
-    expect(html).toContain('disabled=""')
+    expect(html).toContain('aria-busy="true"')
+    expect(html).toContain('Verificando...')
+    expect(html).not.toContain('Verificar atualizações')
+    expect(html).not.toContain('Atualizar agora')
   })
 
   it('shows the installed version and offers the update when behind', () => {
@@ -45,17 +46,20 @@ describe('UpdateSettingsForm', () => {
 
     expect(html).toContain('a1b2c3d (03/08/2026)')
     expect(html).toContain('2 atualizações disponíveis.')
+    expect(html).toContain('Atualizar agora')
     expect(html).toContain('fechado e reaberto automaticamente')
+    expect(html).not.toContain('Verificar atualizações')
   })
 
-  it('keeps the update button disabled when up to date', () => {
+  it('does not render the update button when up to date', () => {
     const html = render({ status: status() })
 
     expect(html).toContain('PM Planner está atualizado.')
+    expect(html).not.toContain('Atualizar agora')
     expect(html).not.toContain('fechado e reaberto automaticamente')
   })
 
-  it('surfaces blockers instead of the availability summary', () => {
+  it('surfaces blockers instead of the availability badge summary', () => {
     const html = render({
       status: status({
         dirty: true,
@@ -67,7 +71,7 @@ describe('UpdateSettingsForm', () => {
     })
 
     expect(html).toContain('alterações locais não commitadas')
-    expect(html).not.toContain('PM Planner está atualizado.')
+    expect(html).toContain('PM Planner está atualizado.')
   })
 
   it('reports progress while the update starts', () => {
@@ -78,5 +82,14 @@ describe('UpdateSettingsForm', () => {
 
     expect(html).toContain('Atualizando...')
     expect(html).toContain('aria-busy="true"')
+  })
+
+  it('shows a check error banner when the automatic check fails', () => {
+    const html = render({
+      checkError: 'Não foi possível verificar atualizações.',
+    })
+
+    expect(html).toContain('Não foi possível verificar atualizações.')
+    expect(html).toContain('role="alert"')
   })
 })

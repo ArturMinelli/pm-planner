@@ -56,6 +56,16 @@ describe('SettingsPage', () => {
       notificationAuthorized: true,
     } satisfies ReminderStatus)
     mockedBackend.consumeUpdateResult.mockResolvedValue(null)
+    mockedBackend.checkForUpdate.mockResolvedValue({
+      root: '/home/user/.local/share/pm-planner',
+      isGit: true,
+      commitSha: 'a1b2c3d',
+      commitDate: '2026-08-03T15:57:02-03:00',
+      behind: 0,
+      dirty: false,
+      blockers: [],
+      updateAvailable: false,
+    })
 
     container = document.createElement('div')
     document.body.appendChild(container)
@@ -75,6 +85,14 @@ describe('SettingsPage', () => {
       await flushPromises()
     })
   }
+
+  it('checks for updates automatically on mount', async () => {
+    await renderPage()
+
+    expect(mockedBackend.checkForUpdate).toHaveBeenCalledTimes(1)
+    expect(container.textContent).toContain('a1b2c3d (03/08/2026)')
+    expect(container.textContent).toContain('PM Planner está atualizado.')
+  })
 
   it('stacks Account, Planner, and Reminders sections in single-column order', async () => {
     await renderPage()

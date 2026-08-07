@@ -3,6 +3,7 @@ import i18n from '../i18n'
 import type { UpdateStatus } from '../types'
 import {
   describeUpdateAvailability,
+  describeUpdateBadge,
   formatCommitDate,
   formatInstalledVersion,
 } from './updateStatus'
@@ -50,6 +51,38 @@ describe('formatInstalledVersion', () => {
 
   it('prompts for a check before anything is known', () => {
     expect(formatInstalledVersion(translate, null)).toBe('Verifique para descobrir')
+  })
+})
+
+describe('describeUpdateBadge', () => {
+  const translate = i18n.t.bind(i18n)
+
+  it('reports being up to date with a success tone', () => {
+    expect(describeUpdateBadge(translate, status())).toEqual({
+      label: 'PM Planner está atualizado.',
+      tone: 'success',
+    })
+  })
+
+  it('uses the singular for a single commit with a warning tone', () => {
+    expect(describeUpdateBadge(translate, status({ behind: 1 }))).toEqual({
+      label: '1 atualização disponível.',
+      tone: 'warning',
+    })
+  })
+
+  it('uses the plural beyond one commit with a warning tone', () => {
+    expect(describeUpdateBadge(translate, status({ behind: 5 }))).toEqual({
+      label: '5 atualizações disponíveis.',
+      tone: 'warning',
+    })
+  })
+
+  it('explains that tarball installs cannot be compared with a muted tone', () => {
+    expect(describeUpdateBadge(translate, status({ isGit: false }))).toEqual({
+      label: expect.stringContaining('Não é possível comparar versões'),
+      tone: 'muted',
+    })
   })
 })
 

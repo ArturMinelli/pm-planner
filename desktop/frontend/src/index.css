@@ -530,6 +530,54 @@ input[readonly] {
   height: 1.35rem;
 }
 
+.update-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.35rem 0 0.65rem;
+}
+
+.version-pill {
+  display: inline-block;
+  padding: 0.32rem 0.58rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--text);
+  background: color-mix(in srgb, var(--control) 88%, var(--panel));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.28rem 0.62rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.status-badge.success {
+  color: var(--ok);
+  background: var(--ok-bg);
+}
+
+.status-badge.warning {
+  color: var(--warning);
+  background: var(--warning-bg);
+}
+
+.status-badge.muted {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--muted) 12%, var(--panel));
+}
+
 .toast {
   position: fixed;
   right: calc(1rem + env(safe-area-inset-right));

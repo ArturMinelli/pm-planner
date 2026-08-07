@@ -53,6 +53,7 @@ export default function SettingsPage() {
   const [busy, setBusy] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
   const [checkingUpdate, setCheckingUpdate] = useState(false)
+  const [checkError, setCheckError] = useState<string | null>(null)
   const [updating, setUpdating] = useState(false)
   const usesDesktopShell = backend.hasWailsRuntime()
 
@@ -230,17 +231,30 @@ export default function SettingsPage() {
     }
   }
 
-  const checkUpdate = async () => {
-    dismissToast()
+  const checkUpdate = useCallback(async () => {
     setCheckingUpdate(true)
+    setCheckError(null)
     try {
       setUpdateStatus(await backend.checkForUpdate())
     } catch (error) {
+      if (typeof error === 'object' && error && 'key' in error) {
+        const message =
+          translateMessage(t, error as { key: string; params?: Record<string, string> }) ??
+          t('errors.generic')
+        setCheckError(message)
+      } else {
+        const message = error instanceof Error ? error.message : String(error)
+        setCheckError(message.startsWith('errors.') ? t(message) : message)
+      }
       showError(error)
     } finally {
       setCheckingUpdate(false)
     }
-  }
+  }, [showError, t])
+
+  useEffect(() => {
+    void checkUpdate()
+  }, [checkUpdate])
 
   const startUpdate = async () => {
     dismissToast()
@@ -326,9 +340,9 @@ export default function SettingsPage() {
       <UpdateSettingsForm
         status={updateStatus}
         checking={checkingUpdate}
+        checkError={checkError}
         updating={updating}
         canApplyUpdate={usesDesktopShell}
-        onCheck={() => void checkUpdate()}
         onUpdate={() => void startUpdate()}
       />
 
