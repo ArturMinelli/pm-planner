@@ -234,7 +234,6 @@ export default function PlannerPage() {
 
   const timesDisabled = fetching
   const originalsLine = loaded?.originalsLine || t('planner.none')
-  const isToday = loaded?.date === localDateYYYYMMDD()
   const loadWarning = translateMessage(t, loaded?.loadWarning)
 
   return (
