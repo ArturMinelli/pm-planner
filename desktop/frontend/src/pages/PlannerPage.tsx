@@ -7,11 +7,16 @@ import { translateMessage } from '../i18n/translateMessage'
 import { localDateYYYYMMDD } from '../util/timeFormat'
 import {
   applyInstantSuggestions,
+  canRemoveJourney,
   defaultSolvedSlot,
+  extraJourneyCount,
+  journeysFromPunches,
   NO_SOLVED_SLOT,
+  replacePunchAtSlot,
   seedEntryAfterExit,
+  sortPunches,
 } from '../util/plannerSuggestions'
-import { enforceJourneyOrder } from '../util/plannerTimes'
+import { enforceJourneyOrder, parseHHMM } from '../util/plannerTimes'
 import { resolvePlannerAnchorsArray } from '../util/plannerDefaults'
 import { Banner, Field, Page, PageHeader, Stack } from '../components/ui'
 import PlannerDatePicker from '../components/PlannerDatePicker'
@@ -31,6 +36,7 @@ export default function PlannerPage() {
   const [journeys, setJourneys] = useState<Journey[]>([])
   const [solvedSlot, setSolvedSlot] = useState<SolvedSlot>(NO_SOLVED_SLOT)
   const [summary, setSummary] = useState<PlannerSummary | null>(null)
+  const [punches, setPunches] = useState<string[]>([])
 
   const loadedRef = useRef<PlannerPayload | null>(null)
   loadedRef.current = loaded
@@ -91,25 +97,52 @@ export default function PlannerPage() {
     [recalculateSummary],
   )
 
+  const applyPunches = useCallback(
+    (nextPunches: string[], extraOverride?: number) => {
+      const currentLoaded = loadedRef.current
+      if (!currentLoaded) return
+
+      const extra = extraOverride ?? extraJourneyCount(rawJourneys.length, punches.length)
+      const valid = sortPunches(nextPunches.filter((punch) => parseHHMM(punch) !== null))
+      const built = journeysFromPunches(
+        valid,
+        extra,
+        currentLoaded.baseTargetSecs,
+        { baseAnchors: baseAnchorsRef.current },
+      )
+      setPunches(valid)
+      commitPlannerState(built.journeys, built.solvedSlot)
+    },
+    [rawJourneys.length, punches.length, commitPlannerState],
+  )
+
   const handleUpdateJourney = useCallback(
     (journeyIndex: number, isEntry: boolean, time: string) => {
-      const patched = rawJourneys.map((journey, index) => {
-        if (index !== journeyIndex) return journey
+      const journey = rawJourneys[journeyIndex]
+      const slot = isEntry ? journey?.entry : journey?.exit
+      if (slot?.registered && parseHHMM(time) !== null) {
+        const slotIndex = journeyIndex * 2 + (isEntry ? 0 : 1)
+        applyPunches(replacePunchAtSlot(punches, slotIndex, time))
+        return
+      }
+
+      const patched = rawJourneys.map((item, index) => {
+        if (index !== journeyIndex) return item
         if (isEntry) {
           return {
-            ...journey,
-            entry: { time, registered: journey.entry.registered },
+            ...item,
+            entry: { time, registered: item.entry.registered },
           }
         }
         return {
-          ...journey,
-          exit: { time, registered: journey.exit.registered },
+          ...item,
+          exit: { time, registered: item.exit.registered },
         }
       })
       const reordered = enforceJourneyOrder(patched, journeyIndex, isEntry)
       commitPlannerState(reordered, solvedSlot, { journeyIndex, isEntry })
     },
-    [rawJourneys, solvedSlot, commitPlannerState],
+    [rawJourneys, solvedSlot, punches, applyPunches, commitPlannerState],
   )
 
   const handleToggleSolved = useCallback(
@@ -142,11 +175,16 @@ export default function PlannerPage() {
 
   const handleRemoveJourney = useCallback(
     (journeyIndex: number) => {
+      const journey = rawJourneys[journeyIndex]
+      const registered = Boolean(journey?.entry.registered || journey?.exit.registered)
+      if (!canRemoveJourney(rawJourneys.length, punches.length, registered)) return
+
       const newJourneys = rawJourneys.filter((_, index) => index !== journeyIndex)
       let newSlot = solvedSlot
       if (solvedSlot.journeyIndex === journeyIndex) {
         newSlot = NO_SOLVED_SLOT
-      } else if (solvedSlot.journeyIndex > journeyIndex) {
+      }
+      if (solvedSlot.journeyIndex > journeyIndex) {
         newSlot = {
           journeyIndex: solvedSlot.journeyIndex - 1,
           isEntry: solvedSlot.isEntry,
@@ -157,7 +195,7 @@ export default function PlannerPage() {
       }
       commitPlannerState(newJourneys, newSlot)
     },
-    [rawJourneys, solvedSlot, commitPlannerState],
+    [rawJourneys, solvedSlot, punches.length, commitPlannerState],
   )
 
   const loadPlannerDay = useCallback(
@@ -172,6 +210,7 @@ export default function PlannerPage() {
       setRawJourneys([])
       setJourneys([])
       setSolvedSlot(NO_SOLVED_SLOT)
+      setPunches([])
 
       try {
         const payload = await backend.loadPlanner(date)
@@ -190,6 +229,7 @@ export default function PlannerPage() {
         )
 
         setLoaded(payload)
+        setPunches(sortPunches(payload.originalTimes))
         setRawJourneys(payload.journeys)
         setJourneys(instantJourneys)
         setSolvedSlot(instantSlot)
@@ -233,7 +273,6 @@ export default function PlannerPage() {
   }, [loadPlannerDay])
 
   const timesDisabled = fetching
-  const originalsLine = loaded?.originalsLine || t('planner.none')
   const loadWarning = translateMessage(t, loaded?.loadWarning)
 
   return (
@@ -293,7 +332,7 @@ export default function PlannerPage() {
             solvedSlot={solvedSlot}
             balance={loaded?.balance}
             summary={summary}
-            originalsLine={originalsLine}
+            punches={punches}
             disabled={timesDisabled}
             onAddJourney={handleAddJourney}
             onRemoveJourney={handleRemoveJourney}

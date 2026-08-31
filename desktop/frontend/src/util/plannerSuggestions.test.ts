@@ -2,10 +2,16 @@ import { describe, expect, it } from 'vitest'
 import type { Journey } from '../types'
 import {
   applyInstantSuggestions,
+  assignStampsToPlannerSlots,
   BUILTIN_ANCHORS,
+  canRemoveJourney,
   defaultSolvedSlot,
+  journeysFromPunches,
+  punchJourneyFloor,
+  replacePunchAtSlot,
   resolveAnchors,
   solveSlot,
+  sortPunches,
 } from './plannerSuggestions'
 
 const TARGET_SECS = 8 * 60 * 60 + 30 * 60
@@ -120,5 +126,87 @@ describe('applyInstantSuggestions', () => {
 
     expect(result[1].entry.time).toBe('14:00')
     expect(result[1].exit.time).toBe('18:30')
+  })
+})
+
+describe('assignStampsToPlannerSlots', () => {
+  it('fills slots in punch order so 13:18 is Saída 1', () => {
+    expect(assignStampsToPlannerSlots(['09:02', '13:18', '15:45'], 4)).toEqual([
+      '09:02',
+      '13:18',
+      '15:45',
+      '',
+    ])
+  })
+
+  it('puts a lone punch on the first slot', () => {
+    expect(assignStampsToPlannerSlots(['13:45'], 4)).toEqual(['13:45', '', '', ''])
+  })
+})
+
+describe('punchJourneyFloor', () => {
+  it('keeps a minimum of two journeys', () => {
+    expect(punchJourneyFloor(0)).toBe(2)
+    expect(punchJourneyFloor(1)).toBe(2)
+    expect(punchJourneyFloor(3)).toBe(2)
+  })
+
+  it('opens a third journey for a fifth punch', () => {
+    expect(punchJourneyFloor(5)).toBe(3)
+  })
+})
+
+describe('sortPunches', () => {
+  it('orders times chronologically', () => {
+    expect(sortPunches(['15:45', '09:02', '13:18'])).toEqual(['09:02', '13:18', '15:45'])
+  })
+})
+
+describe('replacePunchAtSlot', () => {
+  it('sorts after an edit so times can jump slots', () => {
+    expect(replacePunchAtSlot(['09:02', '13:18', '15:45'], 1, '16:00')).toEqual([
+      '09:02',
+      '15:45',
+      '16:00',
+    ])
+  })
+})
+
+describe('canRemoveJourney', () => {
+  it('blocks remove at the punch floor even for empty journeys', () => {
+    expect(canRemoveJourney(2, 1, false)).toBe(false)
+  })
+
+  it('blocks remove when the journey has a registered punch', () => {
+    expect(canRemoveJourney(3, 3, true)).toBe(false)
+  })
+
+  it('allows remove for an extra empty journey', () => {
+    expect(canRemoveJourney(3, 3, false)).toBe(true)
+  })
+})
+
+describe('journeysFromPunches', () => {
+  it('assigns three punches sequentially and solves Saída 2', () => {
+    const { journeys, solvedSlot } = journeysFromPunches(
+      ['09:02', '13:18', '15:45'],
+      0,
+      TARGET_SECS,
+    )
+
+    expect(journeys).toHaveLength(2)
+    expect(journeys[0].entry).toEqual({ time: '09:02', registered: true })
+    expect(journeys[0].exit).toEqual({ time: '13:18', registered: true })
+    expect(journeys[1].entry).toEqual({ time: '15:45', registered: true })
+    expect(journeys[1].exit.registered).toBe(false)
+    expect(journeys[1].exit.time).toBe('19:59')
+    expect(solvedSlot).toEqual({ journeyIndex: 1, isEntry: false })
+  })
+
+  it('keeps extra empty journeys above the punch floor', () => {
+    const { journeys } = journeysFromPunches(['09:02', '13:18'], 1, TARGET_SECS)
+    expect(journeys).toHaveLength(3)
+    expect(journeys[2].entry.registered).toBe(false)
+    expect(journeys[2].exit.registered).toBe(false)
   })
 })

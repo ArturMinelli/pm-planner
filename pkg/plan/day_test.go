@@ -425,6 +425,39 @@ func TestSummarizeOvertimeIsNonZeroWhenTotalExceedsTarget(t *testing.T) {
 	}
 }
 
+func TestSuggestDayThreePunchesAssignsSequentiallyAndSolvesLastExit(t *testing.T) {
+	date := dayTestDate()
+	stamps := []string{"09:02", "13:18", "15:45"}
+	anchors := []string{"08:00", "12:00", "13:30", "18:00"}
+	target := 8*time.Hour + 30*time.Minute
+
+	day, err := SuggestDay(date, stamps, nil, target, anchors)
+	if err != nil {
+		t.Fatalf("SuggestDay: %v", err)
+	}
+
+	if day.Journeys[0].Entry.Time != "09:02" || !day.Journeys[0].Entry.Registered {
+		t.Errorf("Entrada 1: got %+v", day.Journeys[0].Entry)
+	}
+	if day.Journeys[0].Exit.Time != "13:18" || !day.Journeys[0].Exit.Registered {
+		t.Errorf("Saída 1: got %+v", day.Journeys[0].Exit)
+	}
+	if day.Journeys[1].Entry.Time != "15:45" || !day.Journeys[1].Entry.Registered {
+		t.Errorf("Entrada 2: got %+v", day.Journeys[1].Entry)
+	}
+	if day.Journeys[1].Exit.Time != "19:59" || day.Journeys[1].Exit.Registered {
+		t.Errorf("Saída 2: got %+v, want unregistered 19:59", day.Journeys[1].Exit)
+	}
+	if day.SolvedSlot.JourneyIndex != 1 || day.SolvedSlot.IsEntry {
+		t.Errorf("solved slot: got %+v, want journey 1 exit", day.SolvedSlot)
+	}
+
+	summary := Summarize(day, target, date)
+	if len(summary.Warnings) != 0 {
+		t.Errorf("expected no overlap warning, got %v", summary.Warnings)
+	}
+}
+
 func TestSummarizeWarnsOnOrderingViolation(t *testing.T) {
 	date := dayTestDate()
 	day := Day{

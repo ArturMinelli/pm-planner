@@ -11,6 +11,7 @@ type PlannerJourneyGroupProps = {
   balance?: BalanceAdjustment
   alternativeTime?: string
   disabled?: boolean
+  canRemove?: boolean
   onUpdateTime: (journeyIndex: number, isEntry: boolean, time: string) => void
   onRemove: (journeyIndex: number) => void
   onToggleSolved: (journeyIndex: number, isEntry: boolean) => void
@@ -23,6 +24,7 @@ export default function PlannerJourneyGroup({
   balance,
   alternativeTime,
   disabled,
+  canRemove,
   onUpdateTime,
   onRemove,
   onToggleSolved,
@@ -34,8 +36,15 @@ export default function PlannerJourneyGroup({
   const ordinal = `${position}ª`
   const journeyTitle = t('planner.journeyOrdinal', { ordinal })
   const isRegistered = journey.entry.registered || journey.exit.registered
+  const allowRemove = canRemove ?? !isRegistered
   const entrySolved = isSlotSolved(solvedSlot, journeyIndex, true)
   const exitSolved = isSlotSolved(solvedSlot, journeyIndex, false)
+
+  function removeTitle(): string | undefined {
+    if (allowRemove) return undefined
+    if (isRegistered) return t('planner.cannotRemoveRegistered')
+    return t('planner.cannotRemoveBelowFloor')
+  }
 
   return (
     <div className="journey-group">
@@ -45,8 +54,8 @@ export default function PlannerJourneyGroup({
           type="button"
           className="btn secondary journey-remove-btn"
           onClick={() => onRemove(journeyIndex)}
-          disabled={disabled || isRegistered}
-          title={isRegistered ? t('planner.cannotRemoveRegistered') : undefined}
+          disabled={disabled || !allowRemove}
+          title={removeTitle()}
           aria-label={t('planner.removeJourney', { ordinal })}
         >
           ✕

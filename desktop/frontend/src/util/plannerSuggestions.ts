@@ -11,6 +11,84 @@ export type SlotRef = {
   isEntry: boolean
 }
 
+export type InstantSuggestionOptions = {
+  baseAnchors?: string[]
+  breakMinutes?: number
+  preserveSlot?: SlotRef
+}
+
+export function punchJourneyFloor(punchCount: number): number {
+  return Math.max(2, Math.ceil(punchCount / 2))
+}
+
+export function extraJourneyCount(journeyCount: number, punchCount: number): number {
+  return Math.max(0, journeyCount - punchJourneyFloor(punchCount))
+}
+
+export function canRemoveJourney(
+  journeyCount: number,
+  punchCount: number,
+  journeyRegistered: boolean,
+): boolean {
+  if (journeyRegistered) return false
+  return journeyCount > punchJourneyFloor(punchCount)
+}
+
+export function sortPunches(punches: string[]): string[] {
+  return [...punches].sort()
+}
+
+export function assignStampsToPlannerSlots(stamps: string[], slotCount: number): string[] {
+  const assigned = Array.from({ length: slotCount }, () => '')
+  const limit = Math.min(stamps.length, slotCount)
+  for (let index = 0; index < limit; index++) {
+    assigned[index] = stamps[index]
+  }
+  return assigned
+}
+
+export function replacePunchAtSlot(punches: string[], slotIndex: number, time: string): string[] {
+  const next = sortPunches(punches)
+  if (slotIndex < 0 || slotIndex >= next.length) return next
+  if (parseHHMM(time) === null) return next
+  next[slotIndex] = time
+  return sortPunches(next)
+}
+
+export function journeysFromPunches(
+  punches: string[],
+  extraCount: number,
+  targetSecs: number,
+  options: InstantSuggestionOptions = {},
+): { journeys: Journey[]; solvedSlot: SolvedSlot } {
+  const valid = punches.filter((punch) => parseHHMM(punch) !== null)
+  const sorted = sortPunches(valid)
+  const journeyCount = punchJourneyFloor(sorted.length) + Math.max(0, extraCount)
+  const slotCount = journeyCount * 2
+  const assigned = assignStampsToPlannerSlots(sorted, slotCount)
+  const baseAnchors = options.baseAnchors ?? [...BUILTIN_ANCHORS]
+  const breakMinutes = options.breakMinutes ?? DEFAULT_BREAK_MINUTES
+  const anchors = resolveAnchors(baseAnchors, slotCount, breakMinutes, targetSecs)
+
+  const journeys: Journey[] = []
+  for (let journeyIndex = 0; journeyIndex < journeyCount; journeyIndex++) {
+    const entryTime = assigned[journeyIndex * 2]
+    const exitTime = assigned[journeyIndex * 2 + 1]
+    journeys.push({
+      entry: {
+        time: entryTime || anchors[journeyIndex * 2] || '',
+        registered: Boolean(entryTime),
+      },
+      exit: {
+        time: exitTime,
+        registered: Boolean(exitTime),
+      },
+    })
+  }
+
+  return applyInstantSuggestions(journeys, defaultSolvedSlot(journeys), targetSecs, options)
+}
+
 export function isSolvedSlotValid(slot: SolvedSlot): boolean {
   return slot.journeyIndex >= 0
 }
@@ -205,12 +283,6 @@ function formatFromMinutes(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60) % 24
   const minutes = totalMinutes % 60
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-}
-
-export type InstantSuggestionOptions = {
-  baseAnchors?: string[]
-  breakMinutes?: number
-  preserveSlot?: SlotRef
 }
 
 export function applyInstantSuggestions(

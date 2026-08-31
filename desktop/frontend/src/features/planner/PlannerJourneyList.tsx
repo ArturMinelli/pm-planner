@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Card } from '../../components/ui'
 import type { BalanceAdjustment, Journey, PlannerSummary, SolvedSlot } from '../../types'
 import { messageKey, translateMessage } from '../../i18n/translateMessage'
+import { canRemoveJourney } from '../../util/plannerSuggestions'
 import PlannerJourneyGroup from './PlannerJourneyGroup'
 
 type PlannerJourneyListProps = {
@@ -10,7 +11,7 @@ type PlannerJourneyListProps = {
   solvedSlot: SolvedSlot
   balance?: BalanceAdjustment
   summary?: PlannerSummary | null
-  originalsLine?: string
+  punches?: string[]
   disabled?: boolean
   onAddJourney: () => void
   onRemoveJourney: (journeyIndex: number) => void
@@ -36,7 +37,7 @@ export default function PlannerJourneyList({
   solvedSlot,
   balance,
   summary,
-  originalsLine,
+  punches = [],
   disabled,
   onAddJourney,
   onRemoveJourney,
@@ -52,10 +53,6 @@ export default function PlannerJourneyList({
         <JourneyListSkeleton label={t('planner.loadingJourneys')} />
       ) : (
         <>
-          {originalsLine ? (
-            <p className="muted small originals-line">{originalsLine}</p>
-          ) : null}
-
           {summary?.warnings?.length ? (
             <ul className="planner-warnings" aria-live="polite">
               {summary.warnings.map((warning) => (
@@ -67,20 +64,24 @@ export default function PlannerJourneyList({
           ) : null}
 
           <div className="journey-list">
-            {journeys.map((journey, index) => (
-              <PlannerJourneyGroup
-                key={index}
-                journey={journey}
-                journeyIndex={index}
-                solvedSlot={solvedSlot}
-                balance={balance}
-                alternativeTime={alternativeTime}
-                disabled={disabled}
-                onUpdateTime={onUpdateJourney}
-                onRemove={onRemoveJourney}
-                onToggleSolved={onToggleSolved}
-              />
-            ))}
+            {journeys.map((journey, index) => {
+              const registered = journey.entry.registered || journey.exit.registered
+              return (
+                <PlannerJourneyGroup
+                  key={index}
+                  journey={journey}
+                  journeyIndex={index}
+                  solvedSlot={solvedSlot}
+                  balance={balance}
+                  alternativeTime={alternativeTime}
+                  disabled={disabled}
+                  canRemove={canRemoveJourney(journeys.length, punches.length, registered)}
+                  onUpdateTime={onUpdateJourney}
+                  onRemove={onRemoveJourney}
+                  onToggleSolved={onToggleSolved}
+                />
+              )
+            })}
           </div>
         </>
       )}

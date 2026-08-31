@@ -290,4 +290,65 @@ describe('PlannerPage', () => {
     expect(grid?.textContent).toContain('Entrada 1')
     expect(grid?.textContent).toContain('Meta do dia')
   })
+
+  it('re-sorts punches when a registered journey slot is edited', async () => {
+    mockedBackend.loadPlanner.mockResolvedValue(
+      samplePayload({
+        originalTimes: ['09:02', '13:18', '15:45'],
+        journeys: [
+          {
+            entry: { time: '09:02', registered: true },
+            exit: { time: '13:18', registered: true },
+          },
+          {
+            entry: { time: '15:45', registered: true },
+            exit: { time: '19:59', registered: false },
+          },
+        ],
+        solvedSlot: { journeyIndex: 1, isEntry: false },
+      }),
+    )
+
+    await renderPage()
+
+    const journeyInputs = container.querySelectorAll('.journey-list input[type="text"]')
+    expect((journeyInputs[1] as HTMLInputElement).value).toBe('13:18')
+
+    await act(async () => {
+      setInputValue(journeyInputs[1] as HTMLInputElement, '1600')
+      await flushPromises()
+    })
+
+    const updated = container.querySelectorAll('.journey-list input[type="text"]')
+    expect((updated[1] as HTMLInputElement).value).toBe('15:45')
+    expect((updated[2] as HTMLInputElement).value).toBe('16:00')
+    expect(container.textContent).not.toContain('Restaurar pontos')
+    expect(container.textContent).not.toContain('Adicionar marcação')
+  })
+
+  it('keeps 13:18 on Saída 1 for three sequential punches', async () => {
+    mockedBackend.loadPlanner.mockResolvedValue(
+      samplePayload({
+        originalTimes: ['09:02', '13:18', '15:45'],
+        journeys: [
+          {
+            entry: { time: '09:02', registered: true },
+            exit: { time: '13:18', registered: true },
+          },
+          {
+            entry: { time: '15:45', registered: true },
+            exit: { time: '19:59', registered: false },
+          },
+        ],
+        solvedSlot: { journeyIndex: 1, isEntry: false },
+      }),
+    )
+
+    await renderPage()
+
+    const journeyInputs = container.querySelectorAll('.journey-list input[type="text"]')
+    expect((journeyInputs[0] as HTMLInputElement).value).toBe('09:02')
+    expect((journeyInputs[1] as HTMLInputElement).value).toBe('13:18')
+    expect((journeyInputs[2] as HTMLInputElement).value).toBe('15:45')
+  })
 })

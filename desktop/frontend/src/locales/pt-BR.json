@@ -52,6 +52,7 @@
     "disableAutoCalculate": "Desativar cálculo automático",
     "alternativeAria": "{{label}} alternativa: {{time}}",
     "refresh": "Recarregar dia",
+    "cannotRemoveBelowFloor": "Não é possível remover abaixo do mínimo de jornadas para as marcações",
     "datePicker": {
       "chooseDate": "Escolher data",
       "previousMonth": "Mês anterior",
@@ -73,7 +74,7 @@
     },
     "planner": {
       "title": "Planner",
-      "intro": "Âncoras usadas para atribuir batidas aos quatro campos e preencher Entrada 1 quando não há registro correspondente.",
+      "intro": "Âncoras usadas para preencher campos sem marcação. As batidas reais preenchem os horários em ordem, da primeira entrada à última saída.",
       "factoryDefault": "Padrão de fábrica: {{times}}. Intervalo mínimo de 15 minutos entre horários consecutivos.",
       "maxDailyExtraLabel": "Limite diário de trabalho extra (horas)",
       "maxDailyExtraHint": "Limita apenas a saída alternativa para pagar saldo negativo. O padrão é 3 horas.",

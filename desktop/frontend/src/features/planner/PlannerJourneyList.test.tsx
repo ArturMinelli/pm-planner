@@ -37,39 +37,6 @@ describe('PlannerJourneyList', () => {
     expect(html).toContain('Saída 2')
   })
 
-  it('shows the originals line when provided', () => {
-    const html = renderToStaticMarkup(
-      <PlannerJourneyList
-        journeys={[journey('08:00', '18:00')]}
-        solvedSlot={{ journeyIndex: 0, isEntry: false }}
-        originalsLine="08:00 — 18:00"
-        onAddJourney={noop}
-        onRemoveJourney={noop}
-        onUpdateJourney={noop}
-        onToggleSolved={noop}
-      />,
-    )
-
-    expect(html).toContain('08:00 — 18:00')
-  })
-
-  it('shows each journey on its own originals line', () => {
-    const html = renderToStaticMarkup(
-      <PlannerJourneyList
-        journeys={[journey('08:00', '12:00'), journey('13:00', '18:00')]}
-        solvedSlot={{ journeyIndex: 1, isEntry: false }}
-        originalsLine={'08:00 — 12:00\n13:00 — 18:00'}
-        onAddJourney={noop}
-        onRemoveJourney={noop}
-        onUpdateJourney={noop}
-        onToggleSolved={noop}
-      />,
-    )
-
-    expect(html).toContain('08:00 — 12:00')
-    expect(html).toContain('13:00 — 18:00')
-  })
-
   it('shows the add journey button', () => {
     const html = renderToStaticMarkup(
       <PlannerJourneyList
@@ -105,8 +72,9 @@ describe('PlannerJourneyList', () => {
   it('disables the remove button for registered journeys', () => {
     const html = renderToStaticMarkup(
       <PlannerJourneyList
-        journeys={[journey('08:00', '12:00', true)]}
-        solvedSlot={{ journeyIndex: -1, isEntry: false }}
+        journeys={[journey('08:00', '12:00', true), journey('13:30', '18:00')]}
+        solvedSlot={{ journeyIndex: 1, isEntry: false }}
+        punches={['08:00', '12:00']}
         onAddJourney={noop}
         onRemoveJourney={noop}
         onUpdateJourney={noop}
@@ -115,7 +83,23 @@ describe('PlannerJourneyList', () => {
     )
 
     expect(html).toContain('disabled')
-    expect(html).toContain('Não é possível remover')
+    expect(html).toContain('Não é possível remover uma jornada com marcações registradas')
+  })
+
+  it('disables remove below the punch floor even for empty journeys', () => {
+    const html = renderToStaticMarkup(
+      <PlannerJourneyList
+        journeys={[journey('08:00', '12:00'), journey('13:30', '18:00')]}
+        solvedSlot={{ journeyIndex: 1, isEntry: false }}
+        punches={['08:00']}
+        onAddJourney={noop}
+        onRemoveJourney={noop}
+        onUpdateJourney={noop}
+        onToggleSolved={noop}
+      />,
+    )
+
+    expect(html).toContain('Não é possível remover abaixo do mínimo')
   })
 
   it('shows skeleton placeholders while loading', () => {
@@ -186,6 +170,6 @@ describe('PlannerJourneyList', () => {
 
     expect(html).toContain('Entrada 1')
     expect(html).not.toContain('skeleton')
-    expect(html).not.toContain('disabled=""')
+    expect(html).not.toMatch(/planner-slot-time-input[^>]*disabled/)
   })
 })
