@@ -291,6 +291,33 @@ describe('PlannerPage', () => {
     expect(grid?.textContent).toContain('Meta do dia')
   })
 
+  it('shows the API originals line above the journey list', async () => {
+    mockedBackend.loadPlanner.mockResolvedValue(
+      samplePayload({
+        originalTimes: ['09:02', '13:18', '15:45'],
+        originalsLine: '09:02 — 13:18\n15:45',
+        journeys: [
+          {
+            entry: { time: '09:02', registered: true },
+            exit: { time: '13:18', registered: true },
+          },
+          {
+            entry: { time: '15:45', registered: true },
+            exit: { time: '19:59', registered: false },
+          },
+        ],
+        solvedSlot: { journeyIndex: 1, isEntry: false },
+      }),
+    )
+
+    await renderPage()
+
+    const originals = container.querySelector('.originals-line')
+    expect(originals?.textContent).toContain('09:02 — 13:18')
+    expect(originals?.textContent).toContain('15:45')
+    expect(container.querySelector('.punch-chip-input')).toBeNull()
+  })
+
   it('re-sorts punches when a registered journey slot is edited', async () => {
     mockedBackend.loadPlanner.mockResolvedValue(
       samplePayload({
