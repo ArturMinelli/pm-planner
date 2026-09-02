@@ -127,6 +127,27 @@ describe('applyInstantSuggestions', () => {
     expect(result[1].entry.time).toBe('14:00')
     expect(result[1].exit.time).toBe('18:30')
   })
+
+  it('preserves other user-edited unregistered slots on an empty day', () => {
+    const emptyDay = [
+      journey('08:00', '12:00', false, false),
+      journey('13:30', '18:00', false, false),
+    ]
+    const solvedSlot = defaultSolvedSlot(emptyDay)
+
+    const { journeys: result } = applyInstantSuggestions(
+      [
+        journey('08:00', '11:30', false, false),
+        journey('14:00', '18:00', false, false),
+      ],
+      solvedSlot,
+      TARGET_SECS,
+      { preserveSlot: { journeyIndex: 1, isEntry: true } },
+    )
+
+    expect(result[0].exit.time).toBe('11:30')
+    expect(result[1].entry.time).toBe('14:00')
+  })
 })
 
 describe('assignStampsToPlannerSlots', () => {

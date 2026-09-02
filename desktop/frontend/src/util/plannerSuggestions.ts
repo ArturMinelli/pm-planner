@@ -160,6 +160,29 @@ export function resolveAnchors(
   return result
 }
 
+function shouldApplyAnchorSuggestion(
+  currentTime: string,
+  resolvedAnchor: string,
+  baseAnchors: string[],
+  slotIndex: number,
+): boolean {
+  if (currentTime === '' || currentTime === resolvedAnchor) {
+    return true
+  }
+
+  const configuredBaseAnchor = baseAnchors[slotIndex]
+  if (configuredBaseAnchor && currentTime === configuredBaseAnchor) {
+    return true
+  }
+
+  const builtinBaseAnchor = BUILTIN_ANCHORS[slotIndex]
+  if (builtinBaseAnchor && currentTime === builtinBaseAnchor) {
+    return true
+  }
+
+  return false
+}
+
 export function applyAnchorSuggestions(
   journeys: Journey[],
   baseAnchors: string[],
@@ -183,22 +206,28 @@ export function applyAnchorSuggestions(
     const preserveExit =
       preserveSlot?.journeyIndex === journeyIndex && !preserveSlot.isEntry
 
+    const entryTime = result[journeyIndex].entry.time
+    const entryAnchor = anchors[entrySlotIndex]
     if (
       !result[journeyIndex].entry.registered &&
       !isSlotSolved(solvedSlot, journeyIndex, true) &&
       !preserveEntry &&
-      anchors[entrySlotIndex]
+      entryAnchor &&
+      shouldApplyAnchorSuggestion(entryTime, entryAnchor, baseAnchors, entrySlotIndex)
     ) {
-      result[journeyIndex].entry.time = anchors[entrySlotIndex]
+      result[journeyIndex].entry.time = entryAnchor
     }
 
+    const exitTime = result[journeyIndex].exit.time
+    const exitAnchor = anchors[exitSlotIndex]
     if (
       !result[journeyIndex].exit.registered &&
       !isSlotSolved(solvedSlot, journeyIndex, false) &&
       !preserveExit &&
-      anchors[exitSlotIndex]
+      exitAnchor &&
+      shouldApplyAnchorSuggestion(exitTime, exitAnchor, baseAnchors, exitSlotIndex)
     ) {
-      result[journeyIndex].exit.time = anchors[exitSlotIndex]
+      result[journeyIndex].exit.time = exitAnchor
     }
   }
 
