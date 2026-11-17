@@ -175,6 +175,9 @@
   "clockIn": {
     "title": "Registrar ponto",
     "action": "Bater ponto",
+    "stepLocation": "Localização",
+    "stepSending": "Registrando",
+    "stepDone": "Pronto",
     "locating": "Obtendo localização…",
     "sending": "Registrando ponto…",
     "registered": "Ponto registrado às {{time}}",
