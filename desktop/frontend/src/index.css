@@ -1477,3 +1477,11 @@ input[readonly] {
     min-height: 4.5rem; /* two wrapped lines, avoids layout shift */
   }
 }
+
+.clockin-detail {
+  display: block;
+  margin-top: 0.25rem;
+  opacity: 0.75;
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}

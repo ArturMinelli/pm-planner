@@ -69,6 +69,9 @@ export default function ClockInButton({ onRegistered }: ClockInButtonProps) {
         >
           {busy ? <span className="clockin-spinner" aria-hidden="true" /> : null}
           {message}
+          {phase === 'failed' && result?.detail ? (
+            <small className="clockin-detail">{result.detail}</small>
+          ) : null}
         </div>
       </div>
       {tooClose ? (

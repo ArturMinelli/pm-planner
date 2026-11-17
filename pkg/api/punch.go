@@ -42,10 +42,21 @@ func newUUIDv4() (string, error) {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16]), nil
 }
 
+// setWebHeaders mirrors the headers the PontoMais web app sends (seen in the HAR capture).
+func setWebHeaders(req *http.Request, uuid string) {
+	req.Header.Set("api-version", "2")
+	req.Header.Set("uuid", uuid)
+	req.Header.Set("Origin", "https://app2.pontomais.com.br")
+	req.Header.Set("Referer", "https://app2.pontomais.com.br/")
+}
+
 func (c *Client) getJSON(ctx context.Context, endpoint string, out any) error {
 	req, err := c.NewAuthenticatedRequest(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return err
+	}
+	if uuid, uerr := deviceUUID(); uerr == nil {
+		setWebHeaders(req, uuid)
 	}
 	resp, err := c.DoAuthenticated(req)
 	if err != nil {
@@ -104,7 +115,7 @@ func (c *Client) ReverseGeocode(ctx context.Context, lat, lng float64, employeeI
 func (c *Client) RegisterPunch(ctx context.Context, loc Location) (*Punch, error) {
 	employee, _, err := c.FetchEmployee(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("session: %w", err)
 	}
 	uuid, err := deviceUUID()
 	if err != nil {
@@ -134,15 +145,14 @@ func (c *Client) RegisterPunch(ctx context.Context, loc Location) (*Punch, error
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("api-version", "2")
-	req.Header.Set("uuid", uuid)
+	setWebHeaders(req, uuid)
 	resp, err := c.DoAuthenticated(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("register: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, statusError(resp)
+		return nil, fmt.Errorf("register: %w", statusError(resp))
 	}
 	var env struct {
 		TimeCard *Punch `json:"time_card"`

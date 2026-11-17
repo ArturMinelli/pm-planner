@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -41,6 +42,8 @@ type ClockInResult struct {
 	Code           string     `json:"code,omitempty"`
 	Punch          *api.Punch `json:"punch,omitempty"`
 	LocationSource string     `json:"locationSource,omitempty"`
+	// Detail is a short technical hint (step, HTTP status, truncated body) for failures.
+	Detail string `json:"detail,omitempty"`
 }
 
 // clockInMu serializes clock-in calls so a double click cannot send two punches (FR-002).
@@ -97,11 +100,11 @@ func ClockIn(ctx context.Context, p Puncher, req ClockInRequest) ClockInResult {
 	if errors.As(err, &statusErr) {
 		switch {
 		case statusErr.StatusCode == 401 || statusErr.StatusCode == 403:
-			return ClockInResult{Status: "failed", Code: "session_expired", Registered: boolPtr(false)}
+			return ClockInResult{Status: "failed", Code: "session_expired", Registered: boolPtr(false), Detail: detail(err)}
 		case statusErr.StatusCode >= 500:
 			failCode = "service_rejected"
 		default:
-			return ClockInResult{Status: "failed", Code: "service_rejected", Registered: boolPtr(false)}
+			return ClockInResult{Status: "failed", Code: "service_rejected", Registered: boolPtr(false), Detail: detail(err)}
 		}
 	}
 
@@ -118,7 +121,16 @@ func ClockIn(ctx context.Context, p Puncher, req ClockInRequest) ClockInResult {
 	} else if pick := findNewPunch(before, after); pick != nil {
 		return ClockInResult{Status: "registered", Registered: boolPtr(true), Code: "recovered", Punch: pick, LocationSource: loc.Source}
 	}
-	return ClockInResult{Status: "failed", Code: failCode, Registered: boolPtr(false)}
+	return ClockInResult{Status: "failed", Code: failCode, Registered: boolPtr(false), Detail: detail(err)}
+}
+
+// detail returns err as a short single-line hint for the UI.
+func detail(err error) string {
+	s := strings.Join(strings.Fields(err.Error()), " ")
+	if len(s) > 200 {
+		s = s[:200] + "…"
+	}
+	return s
 }
 
 // resolveAddress returns the service-formatted address, or raw coordinates if lookup fails.

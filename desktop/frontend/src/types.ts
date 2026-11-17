@@ -182,4 +182,5 @@ export interface ClockInResult {
   code?: ClockInCode
   punch?: ClockInPunch
   locationSource?: string
+  detail?: string
 }
