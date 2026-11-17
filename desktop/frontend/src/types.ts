@@ -120,6 +120,7 @@ export interface NotificationPermissionStatus {
   available: boolean
   authorized: boolean
   detail?: string
+  localId?: string
 }
 
 /** Mirrors pm-cli pkg/update.Status */
@@ -183,4 +184,34 @@ export interface ClockInResult {
   punch?: ClockInPunch
   locationSource?: string
   detail?: string
+}
+
+export type PunchStatus = 'pending' | 'synced' | 'unconfirmed' | 'failed'
+
+export interface PunchRecord {
+  localId: string
+  date: string
+  time: string
+  createdAt: string
+  source: 'app' | 'remote'
+  status: PunchStatus
+  remoteId?: number
+  address?: string
+  latitude: number
+  longitude: number
+  locationSource?: string
+  disabled?: boolean
+  checks: number
+  lastCheckedAt?: string
+  syncedAt?: string
+}
+
+/** Counts are global across days. */
+export interface PunchLogState {
+  date: string
+  punches: PunchRecord[]
+  lastSyncAt?: string
+  lastSyncError?: string
+  pendingCount: number
+  unconfirmedCount: number
 }

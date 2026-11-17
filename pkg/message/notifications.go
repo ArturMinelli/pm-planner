@@ -12,6 +12,8 @@ var notificationTemplates = map[string]string{
 	KeyRemindersRecommendedTime:    "Horário recomendado: {{time}}",
 	KeyRemindersRuntimeUnavailable: "Runtime indisponível",
 	KeyRemindersNotAvailable:       "Notificações não disponíveis",
+	KeyPunchUnconfirmedTitle:       "Batida não confirmada",
+	KeyPunchUnconfirmedBody:        "A batida das {{time}} ainda não apareceu no PontoMais. Verifique o ponto.",
 }
 
 // NormalizeNotificationLocale always returns pt-BR.

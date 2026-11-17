@@ -113,6 +113,9 @@ func (c *Client) ReverseGeocode(ctx context.Context, lat, lng float64, employeeI
 
 // RegisterPunch submits a punch at loc, replaying the web client's request shape.
 func (c *Client) RegisterPunch(ctx context.Context, loc Location) (*Punch, error) {
+	if err := guardRealPunch(c); err != nil {
+		return nil, err
+	}
 	employee, _, err := c.FetchEmployee(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("session: %w", err)

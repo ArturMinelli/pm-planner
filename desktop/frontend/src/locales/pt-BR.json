@@ -192,5 +192,31 @@
     "locationDefault": "Localização padrão (escritório)",
     "testMode": "MODO DE TESTE — nenhum ponto real será registrado",
     "offline": "Sem conexão. O ponto NÃO foi registrado."
+  },
+  "punchLog": {
+    "title": "Registros de hoje",
+    "titleOther": "Registros do dia",
+    "empty": "Nenhum ponto registrado neste dia.",
+    "listLabel": "Pontos registrados",
+    "statusSynced": "Sincronizado",
+    "statusPending": "Aguardando confirmação",
+    "statusUnconfirmed": "Não confirmado",
+    "statusFailed": "Falhou",
+    "sourceApp": "Pelo app",
+    "sourceRemote": "PontoMais",
+    "disabled": "Desconsiderado",
+    "lastSync": "Última sincronização às {{time}}",
+    "neverSynced": "Ainda não sincronizado",
+    "syncAction": "Sincronizar",
+    "syncError": "Falha ao sincronizar. Tentando novamente.",
+    "warningTitle": "Ponto não confirmado",
+    "warningTimes_one": "O ponto das {{times}} não foi confirmado no PontoMais após 5 minutos. Ele pode não ter sido registrado.",
+    "warningTimes_other": "Os pontos das {{times}} não foram confirmados no PontoMais após 5 minutos. Eles podem não ter sido registrados.",
+    "warningCount_one": "Há 1 ponto não confirmado no PontoMais após 5 minutos. Ele pode não ter sido registrado.",
+    "warningCount_other": "Há {{count}} pontos não confirmados no PontoMais após 5 minutos. Eles podem não ter sido registrados.",
+    "warningHelp": "Se continuar assim, confira o PontoMais e registre o ponto novamente se necessário.",
+    "verify": "Verificar agora",
+    "verifying": "Verificando…",
+    "awaitingConfirmation": "Aguardando confirmação do PontoMais"
   }
 }

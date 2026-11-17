@@ -9,10 +9,14 @@ import (
 
 	"pm-cli/pkg/api"
 	"pm-cli/pkg/config"
+	pmserver "pm-cli/pkg/server"
 	"pm-cli/pkg/server/httpapi"
 )
 
 func main() {
+	// The dev API must never punch on the real PontoMais; use pm-fake-pontomais.
+	api.BlockRealPunches()
+
 	port := os.Getenv("PM_API_PORT")
 	if port == "" {
 		port = "3847"
@@ -29,6 +33,8 @@ func main() {
 	if api.FakeMode() {
 		fmt.Printf("FAKE MODE: pontomais URL=%s\n", os.Getenv("PM_FAKE_PONTOMAIS_URL"))
 	}
+
+	go pmserver.PunchLog().Run(ctx)
 
 	server := httpapi.New(port)
 	fmt.Printf("PM dev API listening on http://127.0.0.1:%s\n", port)

@@ -30,5 +30,7 @@ const (
 	KeyRemindersSlotInMinutes      = "reminders.slot_in_minutes"
 	KeyRemindersRecommendedTime    = "reminders.recommended_time"
 	KeyRemindersRuntimeUnavailable = "reminders.runtime_unavailable"
+	KeyPunchUnconfirmedTitle       = "punches.unconfirmed_title"
+	KeyPunchUnconfirmedBody        = "punches.unconfirmed_body"
 	KeyRemindersNotAvailable       = "reminders.not_available"
 )

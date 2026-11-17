@@ -23,6 +23,8 @@ import PlannerDatePicker from '../components/PlannerDatePicker'
 import PlannerSummaryPanel from '../features/planner/PlannerSummaryPanel'
 import PlannerJourneyList from '../features/planner/PlannerJourneyList'
 import ClockInButton from '../features/planner/ClockInButton'
+import PunchLogCard, { UnconfirmedWarning } from '../features/planner/PunchLogCard'
+import { usePunchLog } from '../hooks/usePunchLog'
 import { canClockIn } from '../util/clockInAccess'
 
 const DEFAULT_BREAK_MINUTES = 60
@@ -31,6 +33,7 @@ export default function PlannerPage() {
   const { t } = useTranslation()
   const { config, configRevision } = useConfig()
   const [date, setDate] = useState(localDateYYYYMMDD)
+  const punchLog = usePunchLog(date)
   const [fetching, setFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState<PlannerPayload | null>(null)
@@ -334,9 +337,22 @@ export default function PlannerPage() {
 
         {error ? <Banner tone="error">{error}</Banner> : null}
 
+        <UnconfirmedWarning
+          state={punchLog.state}
+          syncing={punchLog.syncing}
+          onSync={() => void punchLog.syncNow()}
+        />
+
         {canClockIn(config?.login) && date === localDateYYYYMMDD() ? (
-          <ClockInButton onRegistered={handleRefresh} />
+          <ClockInButton onRegistered={handleRefresh} onPunched={() => void punchLog.refresh()} />
         ) : null}
+
+        <PunchLogCard
+          state={punchLog.state}
+          syncing={punchLog.syncing}
+          isToday={date === localDateYYYYMMDD()}
+          onSync={() => void punchLog.syncNow()}
+        />
 
         <div className="grid-2">
           <PlannerJourneyList

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"pm-cli/pkg/api"
+	"pm-cli/pkg/punchlog"
 )
 
 // Puncher is the subset of the PontoMais client used by ClockIn; *api.Client satisfies it.
@@ -44,6 +45,8 @@ type ClockInResult struct {
 	LocationSource string     `json:"locationSource,omitempty"`
 	// Detail is a short technical hint (step, HTTP status, truncated body) for failures.
 	Detail string `json:"detail,omitempty"`
+	// LocalID is the punch log record created for this attempt, if any.
+	LocalID string `json:"localId,omitempty"`
 }
 
 // clockInMu serializes clock-in calls so a double click cannot send two punches (FR-002).
@@ -54,8 +57,60 @@ var now = time.Now
 
 const recentPunchGuard = 60 * time.Second
 
+// Option customizes ClockIn.
+type Option func(*options)
+
+type options struct {
+	log     *punchlog.Store
+	localID string
+}
+
+// WithLog records the attempt in the local punch log (pending before sending).
+func WithLog(s *punchlog.Store) Option { return func(o *options) { o.log = s } }
+
 // ClockIn registers a punch. It never returns an error; the outcome is in the result.
-func ClockIn(ctx context.Context, p Puncher, req ClockInRequest) ClockInResult {
+func ClockIn(ctx context.Context, p Puncher, req ClockInRequest, opts ...Option) ClockInResult {
+	var o options
+	for _, opt := range opts {
+		opt(&o)
+	}
+	res := clockIn(ctx, p, req, &o)
+	res.LocalID = o.localID
+	o.settle(res)
+	return res
+}
+
+// begin saves the pending record right before the punch is sent. A log failure must not
+// block the punch itself, so it only leaves the attempt untracked.
+func (o *options) begin(loc ClockInLocation, address string) {
+	if o.log == nil {
+		return
+	}
+	t := now()
+	id, err := o.log.AddPending(punchlog.Record{
+		Date: t.Format("2006-01-02"), Time: t.Format("15:04:05"), CreatedAt: t,
+		Address: address, Latitude: loc.Latitude, Longitude: loc.Longitude, LocationSource: loc.Source,
+	})
+	if err == nil {
+		o.localID = id
+	}
+}
+
+// settle maps the outcome onto the record; uncertain (or a registered punch without an
+// id) stays pending for the syncer to confirm.
+func (o *options) settle(res ClockInResult) {
+	if o.log == nil || o.localID == "" {
+		return
+	}
+	switch {
+	case res.Status == "registered" && res.Punch != nil && res.Punch.ID != 0:
+		_ = o.log.MarkSynced(o.localID, *res.Punch, now())
+	case res.Status == "failed":
+		_ = o.log.MarkFailed(o.localID)
+	}
+}
+
+func clockIn(ctx context.Context, p Puncher, req ClockInRequest, o *options) ClockInResult {
 	loc := req.Location
 	if !(loc.Latitude >= -90 && loc.Latitude <= 90 && loc.Longitude >= -180 && loc.Longitude <= 180) ||
 		(loc.Latitude == 0 && loc.Longitude == 0) {
@@ -85,6 +140,7 @@ func ClockIn(ctx context.Context, p Puncher, req ClockInRequest) ClockInResult {
 		address = resolveAddress(ctx, p, loc)
 	}
 
+	o.begin(loc, address)
 	punch, err := p.RegisterPunch(ctx, api.Location{
 		Latitude:  loc.Latitude,
 		Longitude: loc.Longitude,

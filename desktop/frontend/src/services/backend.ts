@@ -5,6 +5,7 @@ import type {
   NotificationPermissionStatus,
   PlannerSummary,
   PmConfig,
+  PunchLogState,
   PlannerAnchorsConfig,
   PlannerPayload,
   RecalculateRequest,
@@ -33,6 +34,8 @@ interface GoPmApp {
   StartUpdate(): Promise<void>
   ConsumeUpdateResult(): Promise<UpdateResult | null>
   ClockIn(req: ClockInRequest): Promise<ClockInResult>
+  GetPunchLog(date: string): Promise<PunchLogState>
+  SyncPunches(): Promise<PunchLogState>
 }
 
 function goApp(): GoPmApp | undefined {
@@ -183,6 +186,16 @@ export async function clockIn(req: ClockInRequest): Promise<ClockInResult> {
     return httpClient.clockIn(req)
   }
   return requireRuntime().ClockIn(req)
+}
+
+export async function getPunchLog(date: string): Promise<PunchLogState> {
+  if (!hasWailsRuntime()) return httpClient.getPunchLog(date)
+  return requireRuntime().GetPunchLog(date)
+}
+
+export async function syncPunches(): Promise<PunchLogState> {
+  if (!hasWailsRuntime()) return httpClient.syncPunches()
+  return requireRuntime().SyncPunches()
 }
 
 /** The desktop build never runs in test mode; only the dev server can. */

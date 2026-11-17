@@ -15,5 +15,5 @@ func ClockIn(ctx context.Context, req app.ClockInRequest) app.ClockInResult {
 	}
 	reqCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
-	return app.ClockIn(reqCtx, api.New(), req)
+	return app.ClockIn(reqCtx, api.New(), req, app.WithLog(PunchLog().Store))
 }

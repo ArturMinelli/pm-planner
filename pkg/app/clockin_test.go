@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
 	"pm-cli/pkg/api"
+	"pm-cli/pkg/punchlog"
 )
 
 type fetchStep struct {
@@ -297,5 +299,74 @@ func TestClockInConcurrentCallsSerialized(t *testing.T) {
 	}
 	if p.maxInFlight != 1 {
 		t.Fatalf("max concurrent registers = %d, want 1", p.maxInFlight)
+	}
+}
+
+// logCheckingPuncher asserts the pending record exists while RegisterPunch runs.
+type logCheckingPuncher struct {
+	*fakePuncher
+	t      *testing.T
+	store  *punchlog.Store
+	seen   string
+	seenAt int
+}
+
+func (l *logCheckingPuncher) RegisterPunch(ctx context.Context, loc api.Location) (*api.Punch, error) {
+	d, _ := l.store.Read()
+	if len(d.Records) == 1 {
+		l.seen = d.Records[0].Status
+		l.seenAt = len(d.Records)
+	}
+	return l.fakePuncher.RegisterPunch(ctx, loc)
+}
+
+func TestClockInLog(t *testing.T) {
+	pinNow(t, testNow)
+	punch := &api.Punch{ID: 7, Date: "2026-11-17", Time: "10:00:03"}
+	tests := []struct {
+		name       string
+		p          *fakePuncher
+		wantStatus string
+		wantRemote int64
+	}{
+		{"registered", &fakePuncher{regPunch: punch}, punchlog.StatusSynced, 7},
+		{"registered without id", &fakePuncher{regPunch: &api.Punch{}}, punchlog.StatusPending, 0},
+		{"definitive failure", &fakePuncher{regErr: &api.HTTPStatusError{StatusCode: 422}}, punchlog.StatusFailed, 0},
+		{"session expired", &fakePuncher{regErr: &api.HTTPStatusError{StatusCode: 401}}, punchlog.StatusFailed, 0},
+		{"uncertain", &fakePuncher{regErr: errors.New("timeout"), fetches: []fetchStep{{}, {err: errors.New("down")}}}, punchlog.StatusPending, 0},
+		{"recovered", &fakePuncher{regErr: errors.New("timeout"), fetches: []fetchStep{{}, {punches: []api.Punch{*punch}}}}, punchlog.StatusSynced, 7},
+		{"offline failed", &fakePuncher{regErr: errors.New("timeout")}, punchlog.StatusFailed, 0},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			store := punchlog.NewStore(filepath.Join(t.TempDir(), "punches.json"))
+			p := &logCheckingPuncher{fakePuncher: tc.p, t: t, store: store}
+			res := ClockIn(context.Background(), p, ClockInRequest{Location: validLoc()}, WithLog(store))
+			if p.seen != punchlog.StatusPending {
+				t.Fatalf("record during RegisterPunch = %q, want pending", p.seen)
+			}
+			d, _ := store.Read()
+			if len(d.Records) != 1 || res.LocalID != d.Records[0].LocalID {
+				t.Fatalf("records %+v, result localId %q", d.Records, res.LocalID)
+			}
+			r := d.Records[0]
+			if r.Status != tc.wantStatus || r.RemoteID != tc.wantRemote || r.Latitude != -23.55 || r.Source != "app" {
+				t.Fatalf("record %+v, want %s remote %d", r, tc.wantStatus, tc.wantRemote)
+			}
+		})
+	}
+}
+
+func TestClockInGuardsDoNotLog(t *testing.T) {
+	pinNow(t, testNow)
+	store := punchlog.NewStore(filepath.Join(t.TempDir(), "punches.json"))
+	bad := validLoc()
+	bad.Latitude, bad.Longitude = 0, 0
+	ClockIn(context.Background(), &fakePuncher{}, ClockInRequest{Location: bad}, WithLog(store))
+	near := &fakePuncher{fetches: []fetchStep{{punches: []api.Punch{{ID: 1, Date: "2026-11-17", Time: "10:00:00"}}}}}
+	res := ClockIn(context.Background(), near, ClockInRequest{Location: validLoc()}, WithLog(store))
+	d, _ := store.Read()
+	if len(d.Records) != 0 || res.Code != "too_close" || res.LocalID != "" {
+		t.Fatalf("%+v %+v", d.Records, res)
 	}
 }

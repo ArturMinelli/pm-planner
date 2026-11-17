@@ -8,6 +8,7 @@ import type {
   RecalculateRequest,
   ClockInRequest,
   ClockInResult,
+  PunchLogState,
   ReminderPlanPayload,
   ReminderSettings,
   ReminderStatus,
@@ -176,6 +177,14 @@ export async function clockIn(req: ClockInRequest): Promise<ClockInResult> {
   })
   // Failures are non-2xx but still carry a ClockInResult body, so parse regardless of status.
   return (await response.json()) as ClockInResult
+}
+
+export async function getPunchLog(date: string): Promise<PunchLogState> {
+  return request<PunchLogState>(`/punches?date=${encodeURIComponent(date)}`)
+}
+
+export async function syncPunches(): Promise<PunchLogState> {
+  return request<PunchLogState>('/punches/sync', { method: 'POST' })
 }
 
 export async function getTestMode(): Promise<boolean> {

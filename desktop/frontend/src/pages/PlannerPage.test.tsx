@@ -19,6 +19,8 @@ vi.mock('../services/backend', () => ({
   loadPlanner: vi.fn(),
   recalculateDay: vi.fn(),
   getTestMode: vi.fn(),
+  getPunchLog: vi.fn(),
+  syncPunches: vi.fn(),
   clockIn: vi.fn(),
 }))
 
@@ -111,6 +113,9 @@ describe('PlannerPage', () => {
     )
     mockedBackend.recalculateDay.mockResolvedValue(sampleSummary())
     mockedBackend.getTestMode.mockResolvedValue(false)
+    const emptyLog = { date: '', punches: [], pendingCount: 0, unconfirmedCount: 0 }
+    mockedBackend.getPunchLog.mockResolvedValue(emptyLog)
+    mockedBackend.syncPunches.mockResolvedValue(emptyLog)
 
     container = document.createElement('div')
     document.body.appendChild(container)

@@ -70,6 +70,8 @@ func (s *Server) handler() http.Handler {
 	mux.HandleFunc("/api/auth/test", s.handleAuthTest)
 	mux.HandleFunc("GET /api/testmode", s.handleTestMode)
 	mux.HandleFunc("POST /api/clockin", s.handleClockIn)
+	mux.HandleFunc("GET /api/punches", s.handlePunches)
+	mux.HandleFunc("POST /api/punches/sync", s.handlePunchSync)
 	mux.HandleFunc("POST /api/planner/recalculate", s.handleRecalculate)
 	mux.HandleFunc("GET /api/planner/{date}", s.handlePlannerDate)
 	mux.HandleFunc("/api/reminders/status", s.handleReminderStatus)
@@ -161,6 +163,24 @@ func (s *Server) handleClockIn(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusGatewayTimeout
 	}
 	writeJSON(w, status, res)
+}
+
+func (s *Server) handlePunches(w http.ResponseWriter, r *http.Request) {
+	state, err := server.GetPunchLog(r.URL.Query().Get("date"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, state)
+}
+
+func (s *Server) handlePunchSync(w http.ResponseWriter, r *http.Request) {
+	state, err := server.SyncPunches(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, state)
 }
 
 func (s *Server) handleRecalculate(w http.ResponseWriter, r *http.Request) {

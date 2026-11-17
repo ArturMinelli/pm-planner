@@ -6,6 +6,8 @@ import { Button, Card } from '../../components/ui'
 
 type ClockInButtonProps = {
   onRegistered: () => void
+  /** Fires for registered and uncertain outcomes: a local record now exists. */
+  onPunched?: () => void
 }
 
 function failureKey(code: ClockInResult['code'] | undefined): string {
@@ -69,7 +71,7 @@ function CheckMark() {
   )
 }
 
-export default function ClockInButton({ onRegistered }: ClockInButtonProps) {
+export default function ClockInButton({ onRegistered, onPunched }: ClockInButtonProps) {
   const { t } = useTranslation()
   const { phase, result, run, reset } = useClockIn()
   const now = useNow()
@@ -81,6 +83,7 @@ export default function ClockInButton({ onRegistered }: ClockInButtonProps) {
   async function submit(confirmNear: boolean) {
     const outcome = await run(confirmNear)
     if (outcome?.status === 'registered') onRegistered()
+    if (outcome?.status === 'registered' || outcome?.status === 'uncertain') onPunched?.()
   }
 
   let message: string | null = null

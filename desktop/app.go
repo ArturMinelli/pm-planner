@@ -5,6 +5,7 @@ import (
 
 	"pm-cli/pkg/app"
 	"pm-cli/pkg/config"
+	"pm-cli/pkg/punchlog"
 	"pm-cli/pkg/server"
 	"pm-cli/pkg/update"
 )
@@ -24,6 +25,10 @@ func (a *App) Startup(ctx context.Context) {
 	_ = config.Init("")
 	// Updates are manual now; drop the daily schedule older installs registered.
 	_ = update.RemoveScheduledAutoUpdate()
+
+	syncer := server.PunchLog()
+	syncer.OnUnconfirmed = notifyUnconfirmed
+	go syncer.Run(ctx)
 }
 
 // GetConfig reads the YAML file on disk used by pm CLI (~/.config/pm/config.yaml).
@@ -59,6 +64,16 @@ func (a *App) LoadPlanner(date string) (*app.PlannerPayload, error) {
 // ClockIn registers a punch; the result always states whether it was registered.
 func (a *App) ClockIn(req app.ClockInRequest) app.ClockInResult {
 	return server.ClockIn(a.context(), req)
+}
+
+// GetPunchLog returns the local clock-in registry for a date (default today); no remote call.
+func (a *App) GetPunchLog(date string) (punchlog.State, error) {
+	return server.GetPunchLog(date)
+}
+
+// SyncPunches runs a debounced on-demand sync and returns today's registry.
+func (a *App) SyncPunches() (punchlog.State, error) {
+	return server.SyncPunches(a.context())
 }
 
 func (a *App) context() context.Context {

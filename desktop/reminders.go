@@ -9,9 +9,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"pm-cli/pkg/config"
 	"pm-cli/pkg/message"
+	"pm-cli/pkg/punchlog"
 	"pm-cli/pkg/reminder"
 	"pm-cli/pkg/server"
 
@@ -234,4 +236,15 @@ func localizedSlotLabel(locale, slotKey string) string {
 		return slotKey
 	}
 	return message.SlotLabel(locale, journeyNumber-1, isExit)
+}
+
+// notifyUnconfirmed warns natively that a clock-in could not be confirmed in PontoMais.
+func notifyUnconfirmed(r punchlog.Record) {
+	file, _ := config.Read("")
+	locale := config.ResolveLocale(file)
+	title := message.TranslateNotification(locale, message.KeyPunchUnconfirmedTitle, nil)
+	body := message.TranslateNotification(locale, message.KeyPunchUnconfirmedBody, map[string]string{"time": r.Time})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_ = systemNotifier{}.Notify(ctx, title, body)
 }

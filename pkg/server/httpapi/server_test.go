@@ -1,6 +1,7 @@
 package httpapi_test
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -8,9 +9,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 	"testing"
 
+	"pm-cli/pkg/api"
 	"pm-cli/pkg/config"
+	"pm-cli/pkg/punchlog"
+	pmserver "pm-cli/pkg/server"
 	"pm-cli/pkg/server/httpapi"
 )
 
@@ -140,5 +145,61 @@ func TestAuthTestSkipsSignInInFakeMode(t *testing.T) {
 	httpapi.New("3847").Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"ok":true`) {
 		t.Fatalf("status = %d body %s; want ok without sign-in", rec.Code, rec.Body.String())
+	}
+}
+
+type stubRemote struct{ calls int }
+
+func (s *stubRemote) FetchTodayPunches(context.Context) ([]api.Punch, error) {
+	s.calls++
+	return []api.Punch{{ID: 3, Date: "2026-11-17", Time: "09:00:00"}}, nil
+}
+
+func punchServer(t *testing.T) (http.Handler, *stubRemote) {
+	t.Helper()
+	remote := &stubRemote{}
+	s := punchlog.NewSyncer(punchlog.NewStore(filepath.Join(t.TempDir(), "punches.json")), remote)
+	s.Now = func() time.Time { return time.Date(2026, 11, 17, 10, 0, 0, 0, time.Local) }
+	pmserver.SetPunchLog(s)
+	t.Cleanup(func() { pmserver.SetPunchLog(nil) })
+	return httpapi.New("3847").Handler(), remote
+}
+
+func doReq(h http.Handler, method, path string) *httptest.ResponseRecorder {
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(method, path, nil))
+	return rec
+}
+
+func TestPunchesEndpoints(t *testing.T) {
+	h, remote := punchServer(t)
+
+	rec := doReq(h, http.MethodGet, "/api/punches")
+	var st punchlog.State
+	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &st) != nil || st.Date != "2026-11-17" || len(st.Punches) != 0 || remote.calls != 0 {
+		t.Fatalf("get: %d %s calls=%d", rec.Code, rec.Body.String(), remote.calls)
+	}
+	if !strings.Contains(rec.Body.String(), `"punches":[]`) || !strings.Contains(rec.Body.String(), `"pendingCount":0`) {
+		t.Fatalf("contract: %s", rec.Body.String())
+	}
+
+	rec = doReq(h, http.MethodPost, "/api/punches/sync")
+	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &st) != nil || len(st.Punches) != 1 || st.Punches[0].RemoteID != 3 || st.LastSyncAt == nil {
+		t.Fatalf("sync: %d %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"remoteId":3`) || !strings.Contains(rec.Body.String(), `"source":"remote"`) {
+		t.Fatalf("camelCase: %s", rec.Body.String())
+	}
+	// Debounced second call: no new remote call.
+	doReq(h, http.MethodPost, "/api/punches/sync")
+	if remote.calls != 1 {
+		t.Fatalf("remote calls = %d, want 1", remote.calls)
+	}
+
+	if rec = doReq(h, http.MethodGet, "/api/punches?date=2026-11-17"); rec.Code != 200 || !strings.Contains(rec.Body.String(), `"remoteId":3`) {
+		t.Fatalf("by date: %s", rec.Body.String())
+	}
+	if rec = doReq(h, http.MethodGet, "/api/punches?date=nope"); rec.Code != http.StatusBadRequest {
+		t.Fatalf("bad date status = %d", rec.Code)
 	}
 }
