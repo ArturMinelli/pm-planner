@@ -22,6 +22,7 @@ import { Banner, Field, Page, PageHeader, Stack } from '../components/ui'
 import PlannerDatePicker from '../components/PlannerDatePicker'
 import PlannerSummaryPanel from '../features/planner/PlannerSummaryPanel'
 import PlannerJourneyList from '../features/planner/PlannerJourneyList'
+import ClockInButton from '../features/planner/ClockInButton'
 
 const DEFAULT_BREAK_MINUTES = 60
 
@@ -37,6 +38,7 @@ export default function PlannerPage() {
   const [solvedSlot, setSolvedSlot] = useState<SolvedSlot>(NO_SOLVED_SLOT)
   const [summary, setSummary] = useState<PlannerSummary | null>(null)
   const [punches, setPunches] = useState<string[]>([])
+  const [testMode, setTestMode] = useState(false)
 
   const loadedRef = useRef<PlannerPayload | null>(null)
   loadedRef.current = loaded
@@ -261,6 +263,10 @@ export default function PlannerPage() {
   )
 
   useEffect(() => {
+    void backend.getTestMode().then(setTestMode).catch(() => undefined)
+  }, [])
+
+  useEffect(() => {
     const cancelRef = { cancelled: false }
     void loadPlannerDay(cancelRef)
     return () => {
@@ -321,9 +327,15 @@ export default function PlannerPage() {
       />
 
       <Stack>
+        {testMode ? <Banner tone="error">{t('clockIn.testMode')}</Banner> : null}
+
         {loadWarning ? <Banner>{loadWarning}</Banner> : null}
 
         {error ? <Banner tone="error">{error}</Banner> : null}
+
+        {date === localDateYYYYMMDD() ? (
+          <ClockInButton onRegistered={handleRefresh} />
+        ) : null}
 
         <div className="grid-2">
           <PlannerJourneyList

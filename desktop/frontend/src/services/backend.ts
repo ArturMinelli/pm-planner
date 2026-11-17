@@ -1,5 +1,7 @@
 import type {
   AuthResult,
+  ClockInRequest,
+  ClockInResult,
   NotificationPermissionStatus,
   PlannerSummary,
   PmConfig,
@@ -30,6 +32,7 @@ interface GoPmApp {
   CheckForUpdate(): Promise<UpdateStatus>
   StartUpdate(): Promise<void>
   ConsumeUpdateResult(): Promise<UpdateResult | null>
+  ClockIn(req: ClockInRequest): Promise<ClockInResult>
 }
 
 function goApp(): GoPmApp | undefined {
@@ -173,6 +176,21 @@ export async function getReminderPlan(date: string) {
     return httpClient.getReminderPlan(date)
   }
   throw new Error('errors.desktopShellRequired')
+}
+
+export async function clockIn(req: ClockInRequest): Promise<ClockInResult> {
+  if (!hasWailsRuntime()) {
+    return httpClient.clockIn(req)
+  }
+  return requireRuntime().ClockIn(req)
+}
+
+/** The desktop build never runs in test mode; only the dev server can. */
+export async function getTestMode(): Promise<boolean> {
+  if (!hasWailsRuntime()) {
+    return httpClient.getTestMode()
+  }
+  return false
 }
 
 export async function checkForUpdate(): Promise<UpdateStatus> {

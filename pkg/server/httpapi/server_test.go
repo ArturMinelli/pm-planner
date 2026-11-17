@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -101,5 +102,43 @@ func TestConfigRejectsUnsupportedLocale(t *testing.T) {
 	server.Handler().ServeHTTP(putRecorder, putRequest)
 	if putRecorder.Code != http.StatusInternalServerError {
 		t.Fatalf("put status = %d, want %d; body %s", putRecorder.Code, http.StatusInternalServerError, putRecorder.Body.String())
+	}
+}
+
+func TestTestModeEndpointReflectsFakeEnv(t *testing.T) {
+	const env = "PM_FAKE_PONTOMAIS_URL"
+	get := func() bool {
+		rec := httptest.NewRecorder()
+		httpapi.New("3847").Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/testmode", nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", rec.Code)
+		}
+		var body struct {
+			TestMode bool `json:"testMode"`
+		}
+		if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		return body.TestMode
+	}
+
+	t.Setenv(env, "x")
+	os.Unsetenv(env)
+	if get() {
+		t.Fatal("testMode = true with env unset")
+	}
+	t.Setenv(env, "http://127.0.0.1:3850/api")
+	if !get() {
+		t.Fatal("testMode = false with env set")
+	}
+}
+
+func TestAuthTestSkipsSignInInFakeMode(t *testing.T) {
+	t.Setenv("PM_FAKE_PONTOMAIS_URL", "http://127.0.0.1:1/unused")
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/test", strings.NewReader(`{"login":"a@example.invalid","password":"p"}`))
+	httpapi.New("3847").Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"ok":true`) {
+		t.Fatalf("status = %d body %s; want ok without sign-in", rec.Code, rec.Body.String())
 	}
 }

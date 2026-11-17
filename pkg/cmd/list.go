@@ -29,7 +29,7 @@ var listCmd = &cobra.Command{
 		ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
 		defer cancel()
 
-		url := fmt.Sprintf("%s/time_card_control/current/work_days/%s", api.BaseURL, dateArg)
+		url := fmt.Sprintf("%s/time_card_control/current/work_days/%s", client.BaseURL, dateArg)
 		req, err := client.NewAuthenticatedRequest(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			return err

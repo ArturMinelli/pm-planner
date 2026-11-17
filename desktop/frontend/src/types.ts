@@ -143,3 +143,43 @@ export interface UpdateResult {
   commit: string
   finishedAt: string
 }
+
+/** Mirrors specs/001-app-clock-in/contracts/clockin.md */
+export interface ClockInRequest {
+  location: {
+    latitude: number
+    longitude: number
+    accuracy: number
+    address?: string
+    source: 'detected' | 'default'
+  }
+  confirmNear: boolean
+}
+
+export type ClockInCode =
+  | 'invalid_location'
+  | 'too_close'
+  | 'session_expired'
+  | 'service_rejected'
+  | 'offline'
+  | 'uncertain'
+  | 'recovered'
+
+export interface ClockInPunch {
+  id: number
+  date: string
+  time: string
+  address: string
+  latitude: number
+  longitude: number
+  disabled: boolean
+}
+
+/** Returned for every outcome, including failures; `registered` is null only when unknown. */
+export interface ClockInResult {
+  status: 'registered' | 'failed' | 'uncertain'
+  registered: boolean | null
+  code?: ClockInCode
+  punch?: ClockInPunch
+  locationSource?: string
+}

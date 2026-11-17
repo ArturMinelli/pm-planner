@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"pm-cli/pkg/api"
+	"pm-cli/pkg/app"
 	"pm-cli/pkg/config"
 	"pm-cli/pkg/server"
 )
@@ -66,6 +68,8 @@ func (s *Server) handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/config", s.handleConfig)
 	mux.HandleFunc("/api/auth/test", s.handleAuthTest)
+	mux.HandleFunc("GET /api/testmode", s.handleTestMode)
+	mux.HandleFunc("POST /api/clockin", s.handleClockIn)
 	mux.HandleFunc("POST /api/planner/recalculate", s.handleRecalculate)
 	mux.HandleFunc("GET /api/planner/{date}", s.handlePlannerDate)
 	mux.HandleFunc("/api/reminders/status", s.handleReminderStatus)
@@ -104,6 +108,10 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) handleTestMode(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]bool{"testMode": api.FakeMode()})
+}
+
 func (s *Server) handleAuthTest(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, errors.New("method not allowed"))
@@ -130,6 +138,29 @@ func (s *Server) handlePlannerDate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, payload)
+}
+
+func (s *Server) handleClockIn(w http.ResponseWriter, r *http.Request) {
+	req, err := decodeJSON[app.ClockInRequest](r.Body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	res := server.ClockIn(r.Context(), req)
+	status := http.StatusOK
+	switch res.Code {
+	case "session_expired":
+		status = http.StatusUnauthorized
+	case "too_close":
+		status = http.StatusConflict
+	case "service_rejected", "invalid_location":
+		status = http.StatusBadGateway
+	case "offline":
+		status = http.StatusServiceUnavailable
+	case "uncertain":
+		status = http.StatusGatewayTimeout
+	}
+	writeJSON(w, status, res)
 }
 
 func (s *Server) handleRecalculate(w http.ResponseWriter, r *http.Request) {

@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"pm-cli/pkg/api"
 	"pm-cli/pkg/config"
 	"pm-cli/pkg/server/httpapi"
 )
@@ -24,6 +25,10 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	if api.FakeMode() {
+		fmt.Printf("FAKE MODE: pontomais URL=%s\n", os.Getenv("PM_FAKE_PONTOMAIS_URL"))
+	}
 
 	server := httpapi.New(port)
 	fmt.Printf("PM dev API listening on http://127.0.0.1:%s\n", port)

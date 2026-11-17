@@ -171,5 +171,23 @@
     "recommended_time": "Horário recomendado: {{time}}",
     "runtime_unavailable": "Runtime indisponível",
     "not_available": "Notificações não disponíveis"
+  },
+  "clockIn": {
+    "title": "Registrar ponto",
+    "action": "Bater ponto",
+    "locating": "Obtendo localização…",
+    "sending": "Registrando ponto…",
+    "registered": "Ponto registrado às {{time}}",
+    "notRegistered": "O ponto NÃO foi registrado",
+    "uncertain": "Não foi possível confirmar se o ponto foi registrado. Verificando…",
+    "retry": "Tentar novamente",
+    "sessionExpired": "Sessão expirada. Entre novamente.",
+    "tooClose": "Você já registrou um ponto há menos de 1 minuto. Registrar mesmo assim?",
+    "confirm": "Registrar mesmo assim",
+    "cancel": "Cancelar",
+    "locationDetected": "Localização detectada",
+    "locationDefault": "Localização padrão (escritório)",
+    "testMode": "MODO DE TESTE — nenhum ponto real será registrado",
+    "offline": "Sem conexão. O ponto NÃO foi registrado."
   }
 }

@@ -18,6 +18,8 @@ vi.mock('../services/backend', () => ({
   saveConfig: vi.fn(),
   loadPlanner: vi.fn(),
   recalculateDay: vi.fn(),
+  getTestMode: vi.fn(),
+  clockIn: vi.fn(),
 }))
 
 vi.mock('../util/timeFormat', async (importOriginal) => {
@@ -108,6 +110,7 @@ describe('PlannerPage', () => {
       samplePayload({ date }),
     )
     mockedBackend.recalculateDay.mockResolvedValue(sampleSummary())
+    mockedBackend.getTestMode.mockResolvedValue(false)
 
     container = document.createElement('div')
     document.body.appendChild(container)

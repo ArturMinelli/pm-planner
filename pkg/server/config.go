@@ -29,6 +29,10 @@ func TestAuth(ctx context.Context, login, password string) AuthResult {
 			Error: message.Ptr(message.KeyErrorsAuthMissingCredentials, nil),
 		}
 	}
+	if api.FakeMode() {
+		// Fake mode: sign-in has a hard-coded production URL, so skip it entirely.
+		return AuthResult{OK: true}
+	}
 	if err := auth.VerifyCredentials(login, password); err != nil {
 		classified := message.FromError(err)
 		return AuthResult{Error: &classified}

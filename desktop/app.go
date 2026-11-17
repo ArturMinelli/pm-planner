@@ -56,6 +56,11 @@ func (a *App) LoadPlanner(date string) (*app.PlannerPayload, error) {
 	return server.LoadPlanner(a.context(), date)
 }
 
+// ClockIn registers a punch; the result always states whether it was registered.
+func (a *App) ClockIn(req app.ClockInRequest) app.ClockInResult {
+	return server.ClockIn(a.context(), req)
+}
+
 func (a *App) context() context.Context {
 	if a.ctx == nil {
 		return context.Background()

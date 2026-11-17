@@ -6,6 +6,8 @@ import type {
   PlannerAnchorsConfig,
   PlannerPayload,
   RecalculateRequest,
+  ClockInRequest,
+  ClockInResult,
   ReminderPlanPayload,
   ReminderSettings,
   ReminderStatus,
@@ -164,6 +166,21 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 export async function getReminderPlan(date: string): Promise<ReminderPlanPayload> {
   const query = date ? `?date=${encodeURIComponent(date)}` : ''
   return request<ReminderPlanPayload>(`/reminders/plan${query}`)
+}
+
+export async function clockIn(req: ClockInRequest): Promise<ClockInResult> {
+  const response = await fetch(`${API_BASE}/clockin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
+  // Failures are non-2xx but still carry a ClockInResult body, so parse regardless of status.
+  return (await response.json()) as ClockInResult
+}
+
+export async function getTestMode(): Promise<boolean> {
+  const body = await request<{ testMode: boolean }>('/testmode')
+  return body.testMode === true
 }
 
 export async function checkForUpdate(): Promise<UpdateStatus> {
