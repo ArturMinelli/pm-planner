@@ -23,6 +23,7 @@ import PlannerDatePicker from '../components/PlannerDatePicker'
 import PlannerSummaryPanel from '../features/planner/PlannerSummaryPanel'
 import PlannerJourneyList from '../features/planner/PlannerJourneyList'
 import ClockInButton from '../features/planner/ClockInButton'
+import { canClockIn } from '../util/clockInAccess'
 
 const DEFAULT_BREAK_MINUTES = 60
 
@@ -333,7 +334,7 @@ export default function PlannerPage() {
 
         {error ? <Banner tone="error">{error}</Banner> : null}
 
-        {date === localDateYYYYMMDD() ? (
+        {canClockIn(config?.login) && date === localDateYYYYMMDD() ? (
           <ClockInButton onRegistered={handleRefresh} />
         ) : null}
 

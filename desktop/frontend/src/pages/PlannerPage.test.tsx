@@ -260,6 +260,28 @@ describe('PlannerPage', () => {
     expect((updatedInputs[2] as HTMLInputElement).value).toBe('14:00')
   })
 
+  it('shows the clock-in card only for the allowed login', async () => {
+    mockedBackend.getConfig.mockResolvedValue({
+      ...defaultConfig(),
+      login: 'Artur.Peixoto@fivelabs.com.br',
+    })
+
+    await renderPage()
+
+    expect(container.querySelector('.clockin-action')).not.toBeNull()
+  })
+
+  it('hides the clock-in card for other logins', async () => {
+    mockedBackend.getConfig.mockResolvedValue({
+      ...defaultConfig(),
+      login: 'someone.else@fivelabs.com.br',
+    })
+
+    await renderPage()
+
+    expect(container.querySelector('.clockin-action')).toBeNull()
+  })
+
   it('shows a warning banner when the payload includes loadWarning', async () => {
     mockedBackend.loadPlanner.mockResolvedValue(
       samplePayload({
