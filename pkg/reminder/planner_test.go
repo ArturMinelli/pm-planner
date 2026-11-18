@@ -34,15 +34,9 @@ func TestBuildScheduleSuppressesCompletedSlots(t *testing.T) {
 	anchors := []string{"08:00", "12:00", "13:30", "18:00"}
 	wd := &api.WorkDay{ShiftTime: float64((8*time.Hour + 30*time.Minute).Seconds())}
 	wd.TimeCards = append(wd.TimeCards,
-		struct {
-			Time string `json:"time"`
-		}{Time: "08:00"},
-		struct {
-			Time string `json:"time"`
-		}{Time: "12:00"},
-		struct {
-			Time string `json:"time"`
-		}{Time: "13:30"},
+		api.Punch{Time: "08:00"},
+		api.Punch{Time: "12:00"},
+		api.Punch{Time: "13:30"},
 	)
 
 	day, err := BuildDayPlan(date, wd, anchors, date)
@@ -96,15 +90,9 @@ func TestBuildDayPlanTwoJourneys(t *testing.T) {
 	anchors := []string{"08:00", "12:00", "13:30", "18:00"}
 	wd := &api.WorkDay{ShiftTime: float64((8*time.Hour + 30*time.Minute).Seconds())}
 	wd.TimeCards = append(wd.TimeCards,
-		struct {
-			Time string `json:"time"`
-		}{Time: "08:00"},
-		struct {
-			Time string `json:"time"`
-		}{Time: "12:00"},
-		struct {
-			Time string `json:"time"`
-		}{Time: "13:30"},
+		api.Punch{Time: "08:00"},
+		api.Punch{Time: "12:00"},
+		api.Punch{Time: "13:30"},
 	)
 
 	dayPlan, err := BuildDayPlan(date, wd, anchors, date)
@@ -132,24 +120,12 @@ func TestBuildDayPlanThreeJourneys(t *testing.T) {
 	anchors := []string{"08:00", "12:00", "13:30", "18:00"}
 	wd := &api.WorkDay{ShiftTime: float64((8*time.Hour + 30*time.Minute).Seconds())}
 	wd.TimeCards = append(wd.TimeCards,
-		struct {
-			Time string `json:"time"`
-		}{Time: "08:00"},
-		struct {
-			Time string `json:"time"`
-		}{Time: "11:00"},
-		struct {
-			Time string `json:"time"`
-		}{Time: "12:00"},
-		struct {
-			Time string `json:"time"`
-		}{Time: "13:30"},
-		struct {
-			Time string `json:"time"`
-		}{Time: "15:00"},
-		struct {
-			Time string `json:"time"`
-		}{Time: "17:00"},
+		api.Punch{Time: "08:00"},
+		api.Punch{Time: "11:00"},
+		api.Punch{Time: "12:00"},
+		api.Punch{Time: "13:30"},
+		api.Punch{Time: "15:00"},
+		api.Punch{Time: "17:00"},
 	)
 
 	dayPlan, err := BuildDayPlan(date, wd, anchors, date)

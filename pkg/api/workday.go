@@ -19,9 +19,7 @@ type WorkDay struct {
 			LeaveTime string `json:"leave_time"`
 		} `json:"periods"`
 	} `json:"shift_day"`
-	TimeCards []struct {
-		Time string `json:"time"`
-	} `json:"time_cards"`
+	TimeCards []Punch `json:"time_cards"`
 }
 
 type workdayEnvelope struct {
@@ -67,6 +65,11 @@ func (c *Client) FetchWorkDay(ctx context.Context, date string) (*WorkDay, error
 	var env workdayEnvelope
 	if err := json.NewDecoder(resp.Body).Decode(&env); err != nil {
 		return nil, err
+	}
+	for i := range env.WorkDay.TimeCards {
+		if env.WorkDay.TimeCards[i].Date == "" {
+			env.WorkDay.TimeCards[i].Date = date // the work day's own date
+		}
 	}
 	return &env.WorkDay, nil
 }

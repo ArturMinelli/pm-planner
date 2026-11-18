@@ -21,6 +21,7 @@ func LoadPlanner(ctx context.Context, date string) (*app.PlannerPayload, error) 
 
 	payload, err := app.FetchPlannerPayload(reqCtx, client, date)
 	if err == nil {
+		_ = PunchLog().ReconcileDay(payload.Punches) // best effort; the planner must still load
 		return payload, nil
 	}
 

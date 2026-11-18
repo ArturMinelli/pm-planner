@@ -139,7 +139,7 @@ func (s *Syncer) syncLocked(ctx context.Context) error {
 			// Keep every record as is (auth/network failures prove nothing about a punch).
 			d.LastSyncError = fetchErr.Error()
 		} else {
-			promoted = reconcile(d, remote, now.Format("2006-01-02"), now, s.UnconfirmedAfter)
+			promoted = reconcile(d, remote, now, s.UnconfirmedAfter)
 			d.LastSyncAt = &now
 			d.LastSyncError = ""
 		}
@@ -150,6 +150,22 @@ func (s *Syncer) syncLocked(ctx context.Context) error {
 	if fetchErr != nil {
 		return fetchErr
 	}
+	return err
+}
+
+// ReconcileDay reconciles open records against the punches of one fetched work day
+// (each carrying its date), with the same matching and dedupe as a regular sync.
+func (s *Syncer) ReconcileDay(remote []api.Punch) error {
+	if len(remote) == 0 {
+		return nil
+	}
+	now := s.Now()
+	var promoted []Record
+	err := s.Store.Update(func(d *Data) bool {
+		promoted = reconcile(d, remote, now, s.UnconfirmedAfter)
+		return true
+	})
+	s.notify(promoted)
 	return err
 }
 
@@ -195,15 +211,21 @@ func promote(d *Data, now time.Time, after time.Duration) []Record {
 
 func parseTime(date, tm string, loc *time.Location) (time.Time, bool) {
 	t, err := time.ParseInLocation("2006-01-02 15:04:05", date+" "+tm, loc)
+	if err != nil { // work_days returns HH:MM
+		t, err = time.ParseInLocation("2006-01-02 15:04", date+" "+tm, loc)
+	}
 	return t, err == nil
 }
 
 // reconcile merges the remote punches of today into d. Pending/unconfirmed records claim
 // the nearest unclaimed active remote punch within MatchWindow; remote punches nobody
 // claims are added as source "remote". A remoteId never appears in two records.
-// shortcut: only today is mirrored; FetchWorkDay returns no punch ids, so other days
-// cannot be reconciled safely.
-func reconcile(d *Data, remote []api.Punch, today string, now time.Time, after time.Duration) []Record {
+// Matching is by the record's own date, not today: the remote may still return an earlier
+// day's punches after midnight, and a record left open overnight must still link. An open
+// record also absorbs an already mirrored remote record of its day (stale duplicates).
+// shortcut: days the remote no longer returns are not re-checked, FetchWorkDay has no ids.
+func reconcile(d *Data, remote []api.Punch, now time.Time, after time.Duration) []Record {
+	absorbMirrored(d, now)
 	byRemote := map[int64]*Record{}
 	for i := range d.Records {
 		if id := d.Records[i].RemoteID; id != 0 {
@@ -220,7 +242,7 @@ func reconcile(d *Data, remote []api.Punch, today string, now time.Time, after t
 	var open []*Record
 	for i := range d.Records {
 		r := &d.Records[i]
-		if r.Date == today && r.RemoteID == 0 && (r.Status == StatusPending || r.Status == StatusUnconfirmed) {
+		if r.RemoteID == 0 && (r.Status == StatusPending || r.Status == StatusUnconfirmed) {
 			open = append(open, r)
 		}
 	}
@@ -235,7 +257,7 @@ func reconcile(d *Data, remote []api.Punch, today string, now time.Time, after t
 		best := -1
 		var bestDiff time.Duration
 		for i, p := range remote {
-			if p.Disabled || p.ID == 0 || byRemote[p.ID] != nil || p.Date != today {
+			if p.Disabled || p.ID == 0 || byRemote[p.ID] != nil || p.Date != r.Date {
 				continue
 			}
 			pt, ok := parseTime(p.Date, p.Time, now.Location())
@@ -270,4 +292,49 @@ func reconcile(d *Data, remote []api.Punch, today string, now time.Time, after t
 		byRemote[p.ID] = &d.Records[len(d.Records)-1]
 	}
 	return promote(d, now, after)
+}
+
+// absorbMirrored links each open record to the nearest remote-sourced record of the same
+// date within MatchWindow and drops that mirror, so the punch shows once.
+func absorbMirrored(d *Data, now time.Time) {
+	drop := map[int]bool{}
+	for i := range d.Records {
+		r := &d.Records[i]
+		if r.RemoteID != 0 || (r.Status != StatusPending && r.Status != StatusUnconfirmed) {
+			continue
+		}
+		rt, ok := parseTime(r.Date, r.Time, now.Location())
+		if !ok {
+			continue
+		}
+		best, bestDiff := -1, MatchWindow+1
+		for j := range d.Records {
+			m := &d.Records[j]
+			if drop[j] || m.Source != SourceRemote || m.Disabled || m.RemoteID == 0 || m.Date != r.Date {
+				continue
+			}
+			mt, ok := parseTime(m.Date, m.Time, now.Location())
+			if !ok {
+				continue
+			}
+			diff := mt.Sub(rt)
+			if diff < 0 {
+				diff = -diff
+			}
+			if diff < bestDiff {
+				best, bestDiff = j, diff
+			}
+		}
+		if best >= 0 {
+			r.RemoteID, r.Status, r.SyncedAt, r.Time = d.Records[best].RemoteID, StatusSynced, &now, d.Records[best].Time
+			drop[best] = true
+		}
+	}
+	kept := d.Records[:0]
+	for i, r := range d.Records {
+		if !drop[i] {
+			kept = append(kept, r)
+		}
+	}
+	d.Records = kept
 }

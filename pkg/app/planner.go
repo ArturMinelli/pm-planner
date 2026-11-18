@@ -26,6 +26,8 @@ type PlannerPayload struct {
 	SolvedSlot     plan.SolvedSlot         `json:"solvedSlot"`
 	OriginalsLine  string                  `json:"originalsLine"`
 	LoadWarning    *message.Message          `json:"loadWarning,omitempty"`
+	// Punches are the day's remote time cards, used to reconcile the local punch log.
+	Punches []api.Punch `json:"-"`
 }
 
 // PlannerSummary is returned when recalculating from editable journey inputs.
@@ -117,6 +119,7 @@ func FetchPlannerPayload(ctx context.Context, client *api.Client, dateStr string
 		Journeys:       day.Journeys,
 		SolvedSlot:     day.SolvedSlot,
 		OriginalsLine:  FormatOriginalStamps(stamps),
+		Punches:        wd.TimeCards,
 	}, nil
 }
 

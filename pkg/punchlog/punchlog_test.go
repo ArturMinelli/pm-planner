@@ -394,3 +394,64 @@ func TestRunSchedule(t *testing.T) {
 		t.Fatalf("calls=%d tickers=%v", r.count(), got)
 	}
 }
+
+func TestReconcileOpenRecordFromPreviousDay(t *testing.T) {
+	remote := &fakeRemote{}
+	s, c := newSyncer(t, remote)
+	pendingAt(t, s, "16:38:10", t0)          // pending, dated 2026-11-17
+	other := pendingAt(t, s, "08:00:00", t0) // never confirmed remotely
+	c.t = t0.Add(24 * time.Hour)             // next day; the remote still returns the old day's punch
+	remote.punches = []api.Punch{rp(7, "16:38:00", false)}
+	if err := s.Sync(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	d, _ := s.Store.Read()
+	var linked, total int
+	for _, r := range d.Records {
+		total++
+		if r.RemoteID == 7 && r.Source == SourceApp && r.Status == StatusSynced {
+			linked++
+		}
+	}
+	if linked != 1 || total != 2 {
+		t.Fatalf("linked=%d total=%d records=%+v", linked, total, d.Records)
+	}
+	if got := byID(t, s, other); got.Status != StatusUnconfirmed {
+		t.Fatalf("unmatched status = %s", got.Status)
+	}
+}
+
+func TestReconcileAbsorbsStaleMirror(t *testing.T) {
+	remote := &fakeRemote{}
+	s, c := newSyncer(t, remote)
+	id := pendingAt(t, s, "16:38:10", t0)
+	_ = s.Store.Update(func(d *Data) bool {
+		d.Records = append(d.Records, Record{LocalID: "m", Date: "2026-11-17", Time: "16:38:00",
+			Source: SourceRemote, Status: StatusSynced, RemoteID: 7})
+		return true
+	})
+	c.t = t0.Add(24 * time.Hour)
+	if err := s.Sync(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	d, _ := s.Store.Read()
+	if len(d.Records) != 1 || byID(t, s, id).RemoteID != 7 || byID(t, s, id).Status != StatusSynced {
+		t.Fatalf("records=%+v", d.Records)
+	}
+}
+
+func TestReconcileDayLinksPastRecordOnce(t *testing.T) {
+	s, c := newSyncer(t, &fakeRemote{})
+	id := pendingAt(t, s, "16:38:10", t0)
+	c.t = t0.Add(48 * time.Hour)
+	day := []api.Punch{rp(7, "16:38", false)} // work_days times are HH:MM
+	for range 2 {
+		if err := s.ReconcileDay(day); err != nil {
+			t.Fatal(err)
+		}
+	}
+	d, _ := s.Store.Read()
+	if got := byID(t, s, id); len(d.Records) != 1 || got.RemoteID != 7 || got.Status != StatusSynced {
+		t.Fatalf("records=%+v", d.Records)
+	}
+}
