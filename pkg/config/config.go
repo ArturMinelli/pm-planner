@@ -26,7 +26,6 @@ type File struct {
 	Login                   string          `json:"login" yaml:"login"`
 	Password                string          `json:"password" yaml:"password"`
 	Locale                  string          `json:"locale,omitempty" yaml:"locale,omitempty"`
-	MaxDailyExtraMinutes    int             `json:"max_daily_extra_minutes,omitempty" yaml:"max_daily_extra_minutes,omitempty"`
 	BalanceCreditMultiplier float64         `json:"balance_credit_multiplier,omitempty" yaml:"balance_credit_multiplier,omitempty"`
 	Planner                 *PlannerAnchors `json:"planner,omitempty" yaml:"planner,omitempty"`
 	Reminders               *Reminders      `json:"reminders,omitempty" yaml:"reminders,omitempty"`
@@ -37,7 +36,6 @@ type fileRaw struct {
 	Email                   string          `yaml:"email"`
 	Password                string          `yaml:"password"`
 	Locale                  string          `yaml:"locale,omitempty"`
-	MaxDailyExtraMinutes    int             `yaml:"max_daily_extra_minutes,omitempty"`
 	BalanceCreditMultiplier float64         `yaml:"balance_credit_multiplier,omitempty"`
 	Planner                 *PlannerAnchors `yaml:"planner,omitempty"`
 	Reminders               *Reminders      `yaml:"reminders,omitempty"`
@@ -123,7 +121,6 @@ func Read(cfgFileOverride string) (*File, error) {
 		Login:                   resolveLogin(raw.Login, raw.Email),
 		Password:                raw.Password,
 		Locale:                  raw.Locale,
-		MaxDailyExtraMinutes:    raw.MaxDailyExtraMinutes,
 		BalanceCreditMultiplier: raw.BalanceCreditMultiplier,
 		Planner:                 raw.Planner,
 		Reminders:               raw.Reminders,
@@ -152,9 +149,6 @@ func Save(cfgFileOverride string, f *File) error {
 			return err
 		}
 		f.Locale = LocalePTBR
-		if _, err := ResolveMaxDailyExtraWork(f); err != nil {
-			return fmt.Errorf("max_daily_extra_minutes: %w", err)
-		}
 		if _, err := ResolveBalanceCreditMultiplier(f); err != nil {
 			return fmt.Errorf("balance_credit_multiplier: %w", err)
 		}

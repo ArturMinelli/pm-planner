@@ -26,7 +26,6 @@ function defaultConfig(): PmConfig {
     login: 'user@example.com',
     password: 'secret',
     planner: builtinPlannerAnchors(),
-    max_daily_extra_minutes: 180,
     balance_credit_multiplier: 1.5,
   }
 }

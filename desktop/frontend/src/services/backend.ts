@@ -88,13 +88,6 @@ export async function saveConfig(config: PmConfig): Promise<void> {
     locale: appLocale,
   }
   if (
-    typeof config.max_daily_extra_minutes === 'number' &&
-    Number.isFinite(config.max_daily_extra_minutes) &&
-    config.max_daily_extra_minutes > 0
-  ) {
-    payload.max_daily_extra_minutes = Math.trunc(config.max_daily_extra_minutes)
-  }
-  if (
     typeof config.balance_credit_multiplier === 'number' &&
     Number.isFinite(config.balance_credit_multiplier) &&
     config.balance_credit_multiplier > 0

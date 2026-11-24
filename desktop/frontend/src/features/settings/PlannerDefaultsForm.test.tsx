@@ -4,22 +4,17 @@ import PlannerDefaultsForm from './PlannerDefaultsForm'
 
 const defaultProps = {
   anchors: { in1: '08:00', out1: '12:00', in2: '13:30', out2: '18:00' },
-  maxDailyExtraHours: '3',
   balanceCreditMultiplier: '1.5',
   busy: false,
   onAnchorsChange: () => undefined,
-  onMaxDailyExtraHoursChange: () => undefined,
   onBalanceCreditMultiplierChange: () => undefined,
   onSave: () => undefined,
 }
 
 describe('PlannerDefaultsForm', () => {
-  it('shows the configurable daily extra-work cap', () => {
+  it('shows the balance credit multiplier field', () => {
     const html = renderToStaticMarkup(<PlannerDefaultsForm {...defaultProps} />)
 
-    expect(html).toContain('id="settings-max-daily-extra"')
-    expect(html).toContain('name="max_daily_extra_hours"')
-    expect(html).toContain('value="3"')
     expect(html).toContain('name="balance_credit_multiplier"')
     expect(html).toContain('value="1.5"')
   })

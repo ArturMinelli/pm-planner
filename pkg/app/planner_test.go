@@ -77,11 +77,8 @@ func TestFetchPlannerPayloadKeepsPlanningWhenBalanceFails(t *testing.T) {
 	}
 }
 
-func TestFetchPlannerPayloadUsesConfiguredDailyExtraCap(t *testing.T) {
+func TestFetchPlannerPayloadCapsDailyExtraAtThreeHours(t *testing.T) {
 	setupPlannerSession(t)
-	if err := config.Save("", &config.File{MaxDailyExtraMinutes: 90}); err != nil {
-		t.Fatal(err)
-	}
 	today := time.Now().Format("2006-01-02")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -101,8 +98,8 @@ func TestFetchPlannerPayloadUsesConfiguredDailyExtraCap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if payload.Balance == nil || payload.Balance.TargetAdjustmentSecs != 90*60 || !payload.Balance.Capped {
-		t.Fatalf("configured cap not applied: %#v", payload.Balance)
+	if payload.Balance == nil || payload.Balance.TargetAdjustmentSecs != 180*60 || !payload.Balance.Capped {
+		t.Fatalf("3h cap not applied: %#v", payload.Balance)
 	}
 }
 

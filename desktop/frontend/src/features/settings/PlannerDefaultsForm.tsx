@@ -4,7 +4,6 @@ import { Button, Card, Field } from '../../components/ui'
 import {
   builtinPlannerAnchors,
   DEFAULT_BALANCE_CREDIT_MULTIPLIER,
-  DEFAULT_MAX_DAILY_EXTRA_MINUTES,
 } from '../../util/plannerDefaults'
 import {
   adjustPlannerAnchor,
@@ -17,11 +16,9 @@ type AnchorField = keyof PlannerAnchorTimes
 
 type PlannerDefaultsFormProps = {
   anchors: PlannerAnchorTimes
-  maxDailyExtraHours: string
   balanceCreditMultiplier: string
   busy: boolean
   onAnchorsChange: (anchors: PlannerAnchorTimes) => void
-  onMaxDailyExtraHoursChange: (value: string) => void
   onBalanceCreditMultiplierChange: (value: string) => void
   onSave: () => void
 }
@@ -30,11 +27,9 @@ const ANCHOR_FIELDS: AnchorField[] = ['in1', 'out1', 'in2', 'out2']
 
 export default function PlannerDefaultsForm({
   anchors,
-  maxDailyExtraHours,
   balanceCreditMultiplier,
   busy,
   onAnchorsChange,
-  onMaxDailyExtraHoursChange,
   onBalanceCreditMultiplierChange,
   onSave,
 }: PlannerDefaultsFormProps) {
@@ -76,24 +71,6 @@ export default function PlannerDefaultsForm({
           })}
         </small>
         <Field
-          id="settings-max-daily-extra"
-          label={t('settings.planner.maxDailyExtraLabel')}
-          hint={t('settings.planner.maxDailyExtraHint')}
-        >
-          <input
-            id="settings-max-daily-extra"
-            name="max_daily_extra_hours"
-            type="number"
-            min="0.02"
-            max="24"
-            step="any"
-            inputMode="decimal"
-            autoComplete="off"
-            value={maxDailyExtraHours}
-            onChange={(event) => onMaxDailyExtraHoursChange(event.target.value)}
-          />
-        </Field>
-        <Field
           id="settings-balance-credit-multiplier"
           label={t('settings.planner.creditMultiplierLabel')}
           hint={t('settings.planner.creditMultiplierHint')}
@@ -117,9 +94,6 @@ export default function PlannerDefaultsForm({
             variant="secondary"
             onClick={() => {
               onAnchorsChange(builtinPlannerAnchors())
-              onMaxDailyExtraHoursChange(
-                String(DEFAULT_MAX_DAILY_EXTRA_MINUTES / 60),
-              )
               onBalanceCreditMultiplierChange(
                 String(DEFAULT_BALANCE_CREDIT_MULTIPLIER),
               )

@@ -13,7 +13,6 @@ export interface PmConfig {
   login: string
   password: string
   locale?: AppLocale
-  max_daily_extra_minutes?: number
   balance_credit_multiplier?: number
   planner?: PlannerAnchorsConfig
   reminders?: ReminderSettings

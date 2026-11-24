@@ -6,7 +6,6 @@ import type { ReminderSettings, UpdateStatus } from '../types'
 import {
   builtinPlannerAnchors,
   DEFAULT_BALANCE_CREDIT_MULTIPLIER,
-  DEFAULT_MAX_DAILY_EXTRA_MINUTES,
 } from '../util/plannerDefaults'
 import {
   anchorLabelKey,
@@ -39,9 +38,6 @@ export default function SettingsPage() {
   const { config, mergeAndSave, saveReminderSettings: persistReminderSettings } = useConfig()
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
-  const [maxDailyExtraHours, setMaxDailyExtraHours] = useState(
-    String(DEFAULT_MAX_DAILY_EXTRA_MINUTES / 60),
-  )
   const [balanceCreditMultiplier, setBalanceCreditMultiplier] = useState(
     String(DEFAULT_BALANCE_CREDIT_MULTIPLIER),
   )
@@ -96,11 +92,6 @@ export default function SettingsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- settings forms are local drafts until Save
     setLogin(config.login ?? '')
     setPassword(config.password ?? '')
-    setMaxDailyExtraHours(
-      String(
-        (config.max_daily_extra_minutes ?? DEFAULT_MAX_DAILY_EXTRA_MINUTES) / 60,
-      ),
-    )
     setBalanceCreditMultiplier(
       String(config.balance_credit_multiplier ?? DEFAULT_BALANCE_CREDIT_MULTIPLIER),
     )
@@ -182,15 +173,6 @@ export default function SettingsPage() {
       }
       return
     }
-    const maxDailyExtraMinutes = Math.round(Number(maxDailyExtraHours) * 60)
-    if (
-      !Number.isFinite(maxDailyExtraMinutes) ||
-      maxDailyExtraMinutes < 1 ||
-      maxDailyExtraMinutes > 24 * 60
-    ) {
-      showError(t('settings.planner.dailyLimitError'))
-      return
-    }
     const multiplier = Number(balanceCreditMultiplier)
     if (!Number.isFinite(multiplier) || multiplier < 1.0 || multiplier > 3.0) {
       showError(t('settings.planner.multiplierError'))
@@ -200,7 +182,6 @@ export default function SettingsPage() {
     try {
       await mergeAndSave({
         planner: { ...anchors },
-        max_daily_extra_minutes: maxDailyExtraMinutes,
         balance_credit_multiplier: multiplier,
       })
       showSuccess(t('settings.planner.saved'))
@@ -319,11 +300,9 @@ export default function SettingsPage() {
 
         <PlannerDefaultsForm
           anchors={anchors}
-          maxDailyExtraHours={maxDailyExtraHours}
           balanceCreditMultiplier={balanceCreditMultiplier}
           busy={busy}
           onAnchorsChange={applyAnchors}
-          onMaxDailyExtraHoursChange={setMaxDailyExtraHours}
           onBalanceCreditMultiplierChange={setBalanceCreditMultiplier}
           onSave={() => void savePlanner()}
         />

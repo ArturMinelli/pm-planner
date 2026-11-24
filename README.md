@@ -405,7 +405,6 @@ Exemplo de `config.yaml`:
 login: "voce@empresa.com"
 password: "sua-senha"
 locale: "pt-BR"
-max_daily_extra_minutes: 180
 planner:
   in1: "08:00"
   out1: "12:00"
@@ -421,7 +420,6 @@ reminders:
 | --- | --- |
 | `login` / `password` | Credenciais de login do PontoMais (e-mail ou CPF). O campo legado `email` ainda é lido se `login` estiver ausente. |
 | `locale` | Idioma fixo do app (`pt-BR`). Gravado automaticamente ao salvar configurações; não é editável pela interface. |
-| `max_daily_extra_minutes` | Limite de trabalho extra usado para calcular a saída alternativa de quitação de saldo negativo. Padrão: 180 minutos. |
 | `planner.in1/out1/in2/out2` | Horários âncora padrão para os quatro campos de ponto. Usados pelo planner do app desktop como sugestão inicial para o dia. |
 | `reminders.*` | Lembretes opt-in do app desktop. Quando ativados, `pm-desktop --daemon` verifica os horários recomendados e dispara notificações nativas. `lead_minutes` aceita vários avisos personalizados entre 1 e 240 minutos. |
 
@@ -522,7 +520,7 @@ Clique no ícone de configurações na barra lateral para configurar o app.
 **Planner:**
 
 - Ajuste os quatro horários âncora (**Entrada 1**, **Saída 1**, **Entrada 2**, **Saída 2**) usados como padrão quando o planner não tem ponto correspondente para iniciar.
-- Defina o **Limite Diário de Trabalho Extra** usado pela saída alternativa ao pagar saldo negativo. O padrão é 3 horas.
+- A saída alternativa ao pagar saldo negativo usa um **Limite Diário de Trabalho Extra** fixo de 3 horas; não é configurável.
 - Horários consecutivos devem ter pelo menos 15 minutos de diferença.
 - Clique em **Restaurar Padrões** para voltar a `08:00 / 12:00 / 13:30 / 18:00` e ao limite de 3 horas.
 - Clique em **Salvar Planner** para persistir no `config.yaml`.

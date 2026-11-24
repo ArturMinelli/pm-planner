@@ -9,7 +9,6 @@ export const BUILTIN_PLANNER_ANCHORS = {
   out2: '18:00',
 } as const
 
-export const DEFAULT_MAX_DAILY_EXTRA_MINUTES = 180
 export const DEFAULT_BALANCE_CREDIT_MULTIPLIER = 1.5
 
 export type PlannerAnchorTimes = {

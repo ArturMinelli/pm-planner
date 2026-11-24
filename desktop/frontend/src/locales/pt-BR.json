@@ -75,14 +75,11 @@
       "title": "Planner",
       "intro": "Âncoras usadas para preencher campos sem marcação. As batidas reais preenchem os horários em ordem, da primeira entrada à última saída.",
       "factoryDefault": "Padrão de fábrica: {{times}}. Intervalo mínimo de 15 minutos entre horários consecutivos.",
-      "maxDailyExtraLabel": "Limite diário de trabalho extra (horas)",
-      "maxDailyExtraHint": "Limita apenas a saída alternativa para pagar saldo negativo. O padrão é 3 horas.",
       "creditMultiplierLabel": "Multiplicador de crédito do banco de horas",
       "creditMultiplierHint": "Taxa de crédito para saldo negativo: 1 hora trabalhada extra gera este múltiplo em crédito. Padrão: 1,5x. Intervalo: 1,0 a 3,0.",
       "restoreDefaults": "Restaurar padrões",
       "save": "Salvar planner",
       "saved": "Configurações do planner salvas no arquivo compartilhado.",
-      "dailyLimitError": "O limite diário deve estar entre 1 minuto e 24 horas.",
       "multiplierError": "O multiplicador de crédito deve estar entre 1,0 e 3,0."
     },
     "reminders": {
