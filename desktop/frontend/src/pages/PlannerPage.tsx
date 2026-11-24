@@ -25,7 +25,6 @@ import PlannerJourneyList from '../features/planner/PlannerJourneyList'
 import ClockInButton from '../features/planner/ClockInButton'
 import PunchLogCard, { UnconfirmedWarning } from '../features/planner/PunchLogCard'
 import { usePunchLog } from '../hooks/usePunchLog'
-import { canClockIn } from '../util/clockInAccess'
 
 const DEFAULT_BREAK_MINUTES = 60
 
@@ -342,7 +341,7 @@ export default function PlannerPage() {
           onSync={() => void punchLog.syncNow()}
         />
 
-        {canClockIn(config?.login) && date === localDateYYYYMMDD() ? (
+        {date === localDateYYYYMMDD() ? (
           <ClockInButton onRegistered={handleRefresh} onPunched={() => void punchLog.refresh()} />
         ) : null}
 

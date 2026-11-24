@@ -265,10 +265,10 @@ describe('PlannerPage', () => {
     expect((updatedInputs[2] as HTMLInputElement).value).toBe('14:00')
   })
 
-  it('shows the clock-in card only for the allowed login', async () => {
+  it('shows the clock-in card for any logged user on today', async () => {
     mockedBackend.getConfig.mockResolvedValue({
       ...defaultConfig(),
-      login: 'Artur.Peixoto@fivelabs.com.br',
+      login: 'user@example.com',
     })
 
     await renderPage()
@@ -276,13 +276,28 @@ describe('PlannerPage', () => {
     expect(container.querySelector('.clockin-action')).not.toBeNull()
   })
 
-  it('hides the clock-in card for other logins', async () => {
+  it('hides the clock-in card when a non-today date is selected', async () => {
     mockedBackend.getConfig.mockResolvedValue({
       ...defaultConfig(),
-      login: 'someone.else@fivelabs.com.br',
+      login: 'user@example.com',
     })
 
     await renderPage()
+    expect(container.querySelector('.clockin-action')).not.toBeNull()
+
+    await act(async () => {
+      document.getElementById('planner-date')?.click()
+      await flushPromises()
+    })
+
+    const dayFifteen = Array.from(document.querySelectorAll('.calendar-day')).find(
+      (element) => element.textContent === '15' && !element.classList.contains('outside'),
+    )
+
+    await act(async () => {
+      dayFifteen?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      await flushPromises()
+    })
 
     expect(container.querySelector('.clockin-action')).toBeNull()
   })
