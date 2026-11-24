@@ -503,7 +503,26 @@ input[readonly] {
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
-  padding-block: 0.25rem;
+  padding-block: 0.25rem 0;
+}
+
+/* Steps, status and retry row stay collapsed until a phase starts, so idle is just clock + button. */
+.clockin-aux {
+  display: grid;
+  width: 100%;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 320ms var(--ease), opacity 240ms var(--ease);
+}
+.clockin-aux[data-open="true"] { grid-template-rows: 1fr; opacity: 1; }
+.clockin-aux-inner {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  overflow: hidden;
+  padding: 0.75rem 0.25rem 0.25rem;
 }
 
 .clockin[data-phase="registered"] { --ring: var(--ok); }
@@ -513,7 +532,7 @@ input[readonly] {
 
 .clockin-readout {
   display: flex;
-  min-height: 5.5rem; /* same height for clock and success moment */
+  min-height: 4.5rem; /* same height for clock and success moment */
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -614,7 +633,6 @@ input[readonly] {
 
 .clockin-steps {
   display: flex;
-  min-height: 1.5rem;
   gap: 1.1rem;
   margin: 0;
   padding: 0;
@@ -642,7 +660,8 @@ input[readonly] {
 }
 .clockin-steps .done .clockin-dot { background: var(--ok); }
 
-.clockin-actions { min-height: 2.75rem; justify-content: center; }
+.clockin-actions { justify-content: center; margin-top: 0; }
+.clockin-actions:empty { display: none; }
 
 .clockin-btn {
   min-height: 2.75rem;
@@ -655,10 +674,7 @@ input[readonly] {
   box-shadow: none;
 }
 
-.clockin-status {
-  min-height: 2.75rem;
-  margin-top: 0.75rem;
-}
+.clockin-status { width: 100%; }
 
 .clockin-status .banner {
   animation: clockin-status-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -1626,12 +1642,6 @@ input[readonly] {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .clockin-status {
-    min-height: 4.5rem; /* two wrapped lines, avoids layout shift */
   }
 }
 

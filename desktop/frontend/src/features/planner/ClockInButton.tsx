@@ -147,46 +147,49 @@ export default function ClockInButton({ onRegistered, onPunched }: ClockInButton
             {t('clockIn.action')}
           </Button>
         </div>
-        <ol className="clockin-steps" aria-hidden="true" data-visible={busy || phase === 'registered'}>
-          {steps.map((label, i) => (
-            <li key={label} className={i < step ? 'done' : i === step ? 'active' : undefined}>
-              <span className="clockin-dot" />
-              {label}
-            </li>
-          ))}
-        </ol>
-      </div>
-      {/* Wrapper reserves the status line's height so states do not shift the card. */}
-      <div className="clockin-status">
-        {/* Always mounted so screen readers announce changes to it. */}
-        <div
-          role="status"
-          aria-live="polite"
-          className={message ? `banner ${tone}` : undefined}
-        >
-          {busy ? <span className="clockin-spinner" aria-hidden="true" /> : null}
-          {message}
-          {phase === 'failed' && result?.detail ? (
-            <small className="clockin-detail">{result.detail}</small>
+        <div className="clockin-aux" data-open={phase !== 'idle'}>
+          <div className="clockin-aux-inner">
+            <ol className="clockin-steps" aria-hidden="true" data-visible={busy || phase === 'registered'}>
+              {steps.map((label, i) => (
+                <li key={label} className={i < step ? 'done' : i === step ? 'active' : undefined}>
+                  <span className="clockin-dot" />
+                  {label}
+                </li>
+              ))}
+            </ol>
+          <div className="clockin-status">
+            {/* Always mounted so screen readers announce changes to it. */}
+            <div
+              role="status"
+              aria-live="polite"
+              className={message ? `banner ${tone}` : undefined}
+            >
+              {busy ? <span className="clockin-spinner" aria-hidden="true" /> : null}
+              {message}
+              {phase === 'failed' && result?.detail ? (
+                <small className="clockin-detail">{result.detail}</small>
+              ) : null}
+            </div>
+          </div>
+          <div className="btn-row clockin-actions">
+          {tooClose ? (
+            <>
+              <Button className="clockin-btn" onClick={() => void submit(true)}>
+                {t('clockIn.confirm')}
+              </Button>
+              <Button className="clockin-btn" variant="secondary" onClick={reset}>
+                {t('clockIn.cancel')}
+              </Button>
+            </>
           ) : null}
+          {failed ? (
+            <Button className="clockin-btn" onClick={() => void submit(false)}>
+              {t('clockIn.retry')}
+            </Button>
+          ) : null}
+          </div>
+          </div>
         </div>
-      </div>
-      <div className="btn-row clockin-actions">
-      {tooClose ? (
-        <>
-          <Button className="clockin-btn" onClick={() => void submit(true)}>
-            {t('clockIn.confirm')}
-          </Button>
-          <Button className="clockin-btn" variant="secondary" onClick={reset}>
-            {t('clockIn.cancel')}
-          </Button>
-        </>
-      ) : null}
-      {failed ? (
-        <Button className="clockin-btn" onClick={() => void submit(false)}>
-          {t('clockIn.retry')}
-        </Button>
-      ) : null}
       </div>
     </Card>
   )
