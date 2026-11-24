@@ -310,7 +310,6 @@ export default function SettingsPage() {
         <ReminderSettingsForm
           settings={reminders}
           busy={busy}
-          showAutostart={usesDesktopShell}
           onSettingsChange={setReminders}
           onSave={() => void saveReminders()}
         />

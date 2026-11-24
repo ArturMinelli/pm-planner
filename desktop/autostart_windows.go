@@ -35,17 +35,6 @@ func autostartEnable(executable string) error {
 	return exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", script).Run()
 }
 
-func autostartDisable() error {
-	path, err := autostartPath()
-	if err != nil {
-		return err
-	}
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	return nil
-}
-
 func autostartIsEnabled() (bool, error) {
 	path, err := autostartPath()
 	if err != nil {

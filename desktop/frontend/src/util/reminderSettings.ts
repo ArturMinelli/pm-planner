@@ -6,8 +6,6 @@ export const MAX_REMINDER_LEAD_MINUTES = 4 * 60
 
 export function defaultReminderSettings(): ReminderSettings {
   return {
-    enabled: false,
-    autostart: false,
     lead_minutes: [...DEFAULT_REMINDER_LEADS],
     native_notifications: true,
   }
@@ -25,11 +23,7 @@ export function normalizeReminderSettings(
         value <= MAX_REMINDER_LEAD_MINUTES,
     )
 
-  const enabled = Boolean(settings?.enabled)
-
   return {
-    enabled,
-    autostart: enabled && Boolean(settings?.autostart),
     lead_minutes: leadMinutes && leadMinutes.length > 0
       ? [...new Set(leadMinutes.map((value) => Math.trunc(value)))].sort(
           (left, right) => right - left,

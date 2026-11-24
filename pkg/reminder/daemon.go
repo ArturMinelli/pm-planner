@@ -14,13 +14,12 @@ import (
 )
 
 const (
-	defaultRefreshInterval     = time.Hour
-	defaultFreshWindow         = 30 * time.Minute
-	defaultPostSlotRefresh     = 2 * time.Minute
-	defaultInitialBackoff      = time.Minute
-	defaultMaxBackoff          = 30 * time.Minute
-	defaultRequestTimeout      = 25 * time.Second
-	defaultIdleDisabledRecheck = 5 * time.Minute
+	defaultRefreshInterval = time.Hour
+	defaultFreshWindow     = 30 * time.Minute
+	defaultPostSlotRefresh = 2 * time.Minute
+	defaultInitialBackoff  = time.Minute
+	defaultMaxBackoff      = 30 * time.Minute
+	defaultRequestTimeout  = 25 * time.Second
 )
 
 type Fetcher interface {
@@ -44,7 +43,6 @@ type DaemonOptions struct {
 	RequestTimeout  time.Duration
 	InitialBackoff  time.Duration
 	MaxBackoff      time.Duration
-	DisabledRecheck time.Duration
 }
 
 type Daemon struct {
@@ -80,9 +78,6 @@ func NewDaemon(options DaemonOptions) *Daemon {
 	}
 	if options.MaxBackoff <= 0 {
 		options.MaxBackoff = defaultMaxBackoff
-	}
-	if options.DisabledRecheck <= 0 {
-		options.DisabledRecheck = defaultIdleDisabledRecheck
 	}
 	return &Daemon{options: options}
 }
@@ -141,13 +136,6 @@ func (d *Daemon) Run(ctx context.Context) error {
 			backoff = nextBackoff(backoff, d.options.MaxBackoff)
 			continue
 		}
-		if !settings.Enabled {
-			if !d.sleep(ctx, d.options.DisabledRecheck) {
-				return ctx.Err()
-			}
-			continue
-		}
-
 		now := d.options.Now()
 		today := now.Format("2006-01-02")
 		_ = store.PruneBefore(today)

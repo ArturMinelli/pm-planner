@@ -21,12 +21,8 @@ func runDaemon() error {
 	if err != nil {
 		return err
 	}
-	settings, err := config.ResolveReminders(f)
-	if err != nil {
+	if _, err := config.ResolveReminders(f); err != nil {
 		return err
-	}
-	if !settings.Enabled {
-		return nil
 	}
 	if running, _ := daemonRunning(); running {
 		return nil

@@ -11,7 +11,6 @@ import {
 type ReminderSettingsFormProps = {
   settings: ReminderSettings
   busy: boolean
-  showAutostart: boolean
   onSettingsChange: (settings: ReminderSettings) => void
   onSave: () => void
 }
@@ -19,7 +18,6 @@ type ReminderSettingsFormProps = {
 export default function ReminderSettingsForm({
   settings,
   busy,
-  showAutostart,
   onSettingsChange,
   onSave,
 }: ReminderSettingsFormProps) {
@@ -57,33 +55,6 @@ export default function ReminderSettingsForm({
           onSave()
         }}
       >
-        <div className="settings-check-grid">
-          <label className="check-row">
-            <input
-              type="checkbox"
-              checked={normalized.enabled}
-              onChange={(event) =>
-                update({
-                  enabled: event.target.checked,
-                  autostart: event.target.checked ? normalized.autostart : false,
-                })
-              }
-            />
-            <span>{t('settings.reminders.enable')}</span>
-          </label>
-          {showAutostart ? (
-            <label className="check-row">
-              <input
-                type="checkbox"
-                checked={normalized.autostart}
-                disabled={!normalized.enabled}
-                onChange={(event) => update({ autostart: event.target.checked })}
-              />
-              <span>{t('settings.reminders.autostart')}</span>
-            </label>
-          ) : null}
-        </div>
-
         <Field
           id="settings-reminder-lead-amount"
           label={t('settings.reminders.notifyBefore')}

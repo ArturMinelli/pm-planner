@@ -44,7 +44,7 @@ func TestBuildScheduleSuppressesCompletedSlots(t *testing.T) {
 		t.Fatal(err)
 	}
 	settings, err := config.ResolveReminders(&config.File{
-		Reminders: &config.Reminders{Enabled: true},
+		Reminders: &config.Reminders{},
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -124,16 +124,12 @@ describe('ConfigContext', () => {
     mockedBackend.getConfig.mockResolvedValue({
       ...defaultConfig(),
       reminders: {
-        enabled: true,
-        autostart: false,
         lead_minutes: [10],
       },
     })
 
     await act(async () => {
       await saveReminderSettingsRef?.({
-        enabled: true,
-        autostart: false,
         lead_minutes: [10],
       })
       await flushPromises()

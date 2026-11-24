@@ -54,9 +54,6 @@ async function pollReminders() {
   if (!('Notification' in window) || Notification.permission !== 'granted') return
 
   try {
-    const status = await backend.getReminderStatus()
-    if (!status.settings.enabled) return
-
     const plan = await backend.getReminderPlan(localDateYYYYMMDD())
     const delivered = readDeliveredIds()
     const now = new Date()

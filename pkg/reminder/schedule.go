@@ -11,7 +11,7 @@ const DeliveryWindow = 10 * time.Minute
 
 // BuildSchedule returns all future and recent reminder occurrences for a day plan.
 func BuildSchedule(day *DayPlan, settings config.Reminders) []ScheduledReminder {
-	if day == nil || !settings.Enabled {
+	if day == nil {
 		return nil
 	}
 	out := make([]ScheduledReminder, 0, len(day.Slots)*len(settings.LeadMinutes))

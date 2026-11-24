@@ -84,29 +84,14 @@ func (a *App) SaveReminderSettings(settings config.Reminders) error {
 		return err
 	}
 
-	normalized, err := server.ReadReminderSettings()
-	if err != nil {
-		return err
-	}
-
 	executable, err := os.Executable()
 	if err != nil {
 		return err
 	}
-	if normalized.Enabled && normalized.Autostart {
-		if err := autostartEnable(executable); err != nil {
-			return err
-		}
-	} else {
-		if err := autostartDisable(); err != nil {
-			return err
-		}
+	if err := autostartEnable(executable); err != nil {
+		return err
 	}
-
-	if normalized.Enabled {
-		return ensureDaemonRunning(executable)
-	}
-	return stopDaemon()
+	return ensureDaemonRunning(executable)
 }
 
 func (a *App) RequestNotificationPermission() (*NotificationPermissionStatus, error) {
@@ -212,18 +197,6 @@ func ensureDaemonRunning(executable string) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	return nil
-}
-
-func stopDaemon() error {
-	pid, err := readDaemonPID()
-	if err != nil {
-		return nil
-	}
-	if err := terminateProcess(pid); err != nil {
-		return err
-	}
-	removeDaemonPID()
 	return nil
 }
 

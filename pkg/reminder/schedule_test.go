@@ -30,7 +30,7 @@ func TestBuildScheduleUsesLeadMinutes(t *testing.T) {
 		},
 	}
 	settings, err := config.ResolveReminders(&config.File{
-		Reminders: &config.Reminders{Enabled: true, LeadMinutes: []int{5, 15}},
+		Reminders: &config.Reminders{LeadMinutes: []int{5, 15}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +56,7 @@ func TestDueRemindersHonorsDeliveryWindowAndDedupe(t *testing.T) {
 		},
 	}
 	settings, err := config.ResolveReminders(&config.File{
-		Reminders: &config.Reminders{Enabled: true, LeadMinutes: []int{15}},
+		Reminders: &config.Reminders{LeadMinutes: []int{15}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +88,7 @@ func TestNextWakeReturnsImmediateForDueReminder(t *testing.T) {
 		},
 	}
 	settings, err := config.ResolveReminders(&config.File{
-		Reminders: &config.Reminders{Enabled: true, LeadMinutes: []int{15}},
+		Reminders: &config.Reminders{LeadMinutes: []int{15}},
 	})
 	if err != nil {
 		t.Fatal(err)

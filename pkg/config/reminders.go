@@ -9,8 +9,6 @@ var defaultReminderLeads = []int{15, 5}
 
 // Reminders holds user-configurable background reminder settings.
 type Reminders struct {
-	Enabled             bool  `json:"enabled" yaml:"enabled"`
-	Autostart           bool  `json:"autostart" yaml:"autostart"`
 	LeadMinutes         []int `json:"lead_minutes,omitempty" yaml:"lead_minutes,omitempty"`
 	NativeNotifications *bool `json:"native_notifications,omitempty" yaml:"native_notifications,omitempty"`
 }
@@ -19,11 +17,9 @@ func boolPtr(v bool) *bool {
 	return &v
 }
 
-// DefaultReminders returns the normalized reminder defaults. Reminders are opt-in.
+// DefaultReminders returns the normalized reminder defaults. Reminders are always on.
 func DefaultReminders() Reminders {
 	return Reminders{
-		Enabled:             false,
-		Autostart:           false,
 		LeadMinutes:         append([]int(nil), defaultReminderLeads...),
 		NativeNotifications: boolPtr(true),
 	}
@@ -34,16 +30,11 @@ func ResolveReminders(f *File) (Reminders, error) {
 	out := DefaultReminders()
 	if f != nil && f.Reminders != nil {
 		raw := f.Reminders
-		out.Enabled = raw.Enabled
-		out.Autostart = raw.Autostart
 		if len(raw.LeadMinutes) > 0 {
 			out.LeadMinutes = append([]int(nil), raw.LeadMinutes...)
 		}
 	}
 	normalizeReminderLeads(out.LeadMinutes)
-	if !out.Enabled {
-		out.Autostart = false
-	}
 	if err := ValidateReminders(out); err != nil {
 		return Reminders{}, err
 	}
@@ -54,7 +45,7 @@ func normalizeReminderLeads(v []int) {
 	sort.Slice(v, func(i, j int) bool { return v[i] > v[j] })
 }
 
-// ValidateReminders checks reminder settings are small, known, and non-empty when enabled.
+// ValidateReminders checks reminder settings are small, known, and non-empty.
 func ValidateReminders(r Reminders) error {
 	if len(r.LeadMinutes) == 0 {
 		return fmt.Errorf("at least one lead minute is required")

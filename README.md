@@ -411,8 +411,6 @@ planner:
   in2: "13:30"
   out2: "18:00"
 reminders:
-  enabled: true
-  autostart: true
   lead_minutes: [15, 5]
 ```
 
@@ -421,7 +419,7 @@ reminders:
 | `login` / `password` | Credenciais de login do PontoMais (e-mail ou CPF). O campo legado `email` ainda é lido se `login` estiver ausente. |
 | `locale` | Idioma fixo do app (`pt-BR`). Gravado automaticamente ao salvar configurações; não é editável pela interface. |
 | `planner.in1/out1/in2/out2` | Horários âncora padrão para os quatro campos de ponto. Usados pelo planner do app desktop como sugestão inicial para o dia. |
-| `reminders.*` | Lembretes opt-in do app desktop. Quando ativados, `pm-desktop --daemon` verifica os horários recomendados e dispara notificações nativas. `lead_minutes` aceita vários avisos personalizados entre 1 e 240 minutos. |
+| `reminders.*` | Lembretes do app desktop, sempre ativos: `pm-desktop --daemon` verifica os horários recomendados e dispara notificações nativas. `lead_minutes` aceita vários avisos personalizados entre 1 e 240 minutos. |
 
 Os headers de autenticação são armazenados em cache como `session.json` no mesmo diretório e reutilizados até expirarem. O identificador do colaborador descoberto automaticamente pela API também é guardado nesse arquivo protegido; se ficar inválido, o PM Planner o descobre novamente.
 
@@ -481,7 +479,7 @@ O mesmo binário também possui modos internos usados pelos lembretes:
 bin/pm-desktop --daemon
 ```
 
-Normalmente você não precisa chamá-los manualmente: a página de Configurações registra o daemon no autostart do usuário quando os lembretes são ativados.
+Normalmente você não precisa chamá-los manualmente: a página de Configurações registra o daemon no autostart do usuário e o mantém em execução, pois os lembretes estão sempre ativos.
 
 O app tem duas páginas acessíveis pela barra lateral.
 
@@ -527,9 +525,9 @@ Clique no ícone de configurações na barra lateral para configurar o app.
 
 **Lembretes de Jornada:**
 
-- Ative os lembretes para iniciar o daemon em segundo plano e avisar antes de Entrada 1, Saída 1, Entrada 2 e Saída 2.
+- Os lembretes estão sempre ativos: o daemon roda em segundo plano e avisa antes de Entrada 1, Saída 1, Entrada 2 e Saída 2.
 - Adicione e remova quantos avisos personalizados quiser, entre 1 minuto e 4 horas antes.
-- Quando **Iniciar com o sistema** estiver ativo, o app cria um LaunchAgent no macOS, uma entrada XDG autostart no Linux, ou um atalho Startup no Windows.
+- O app sempre se registra para iniciar com o sistema: cria um LaunchAgent no macOS, uma entrada XDG autostart no Linux, ou um atalho Startup no Windows.
 
 **Atualizações:**
 

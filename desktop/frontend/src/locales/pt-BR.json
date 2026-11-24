@@ -84,8 +84,6 @@
     },
     "reminders": {
       "title": "Lembretes de jornada",
-      "enable": "Ativar lembretes",
-      "autostart": "Iniciar com o sistema",
       "notifyBefore": "Avisar antes",
       "notifyBeforeHint": "Adicione quantos avisos quiser, em minutos, de 1 até 240 minutos antes. Mantenha pelo menos um.",
       "amountPlaceholderMinutes": "Ex.: 30",

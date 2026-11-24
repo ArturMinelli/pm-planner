@@ -7,13 +7,10 @@ describe('ReminderSettingsForm', () => {
     const html = renderToStaticMarkup(
       <ReminderSettingsForm
         settings={{
-          enabled: true,
-          autostart: true,
           lead_minutes: [120, 15],
           native_notifications: false,
         }}
         busy={false}
-        showAutostart
         onSettingsChange={() => undefined}
         onSave={() => undefined}
       />,
@@ -26,6 +23,5 @@ describe('ReminderSettingsForm', () => {
     expect(html).not.toContain('Notificação nativa')
     expect(html).not.toContain('Permitir Notificações')
     expect(html).not.toContain('Daemon ativo')
-    expect(html).not.toContain('Autostart ativo')
   })
 })

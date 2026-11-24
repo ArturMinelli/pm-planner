@@ -86,15 +86,12 @@ export interface BalanceAdjustment {
 }
 
 export interface ReminderSettings {
-  enabled: boolean
-  autostart: boolean
   lead_minutes?: number[]
   native_notifications?: boolean
 }
 
 export interface ReminderStatus {
   settings: ReminderSettings
-  autostartEnabled: boolean
   daemonRunning: boolean
   notificationAvailable: boolean
   notificationAuthorized: boolean

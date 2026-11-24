@@ -45,12 +45,9 @@ describe('SettingsPage', () => {
     mockedBackend.saveReminderSettings.mockResolvedValue(undefined)
     mockedBackend.getReminderStatus.mockResolvedValue({
       settings: {
-        enabled: false,
-        autostart: false,
         lead_minutes: [15, 5],
         native_notifications: true,
       },
-      autostartEnabled: false,
       daemonRunning: false,
       notificationAvailable: true,
       notificationAuthorized: true,

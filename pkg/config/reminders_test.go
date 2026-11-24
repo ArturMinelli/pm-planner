@@ -10,9 +10,6 @@ func TestResolveReminders_defaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Enabled {
-		t.Fatal("reminders should be opt-in")
-	}
 	if len(got.LeadMinutes) != 2 || got.LeadMinutes[0] != 15 || got.LeadMinutes[1] != 5 {
 		t.Fatalf("lead minutes: %#v", got.LeadMinutes)
 	}
@@ -24,7 +21,6 @@ func TestResolveReminders_defaults(t *testing.T) {
 func TestResolveReminders_sortsLeadMinutes(t *testing.T) {
 	got, err := ResolveReminders(&File{
 		Reminders: &Reminders{
-			Enabled:     true,
 			LeadMinutes: []int{5, 15},
 		},
 	})
@@ -36,27 +32,10 @@ func TestResolveReminders_sortsLeadMinutes(t *testing.T) {
 	}
 }
 
-func TestResolveRemindersClearsAutostartWhenDisabled(t *testing.T) {
-	got, err := ResolveReminders(&File{
-		Reminders: &Reminders{
-			Enabled:     false,
-			Autostart:   true,
-			LeadMinutes: []int{15, 5},
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Autostart {
-		t.Fatal("autostart should be disabled when reminders are disabled")
-	}
-}
-
 func TestResolveReminders_alwaysEnablesNativeNotifications(t *testing.T) {
 	off := false
 	got, err := ResolveReminders(&File{
 		Reminders: &Reminders{
-			Enabled:             true,
 			LeadMinutes:         []int{15, 5},
 			NativeNotifications: &off,
 		},

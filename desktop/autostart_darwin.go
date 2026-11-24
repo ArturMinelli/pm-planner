@@ -30,17 +30,6 @@ func autostartEnable(executable string) error {
 	return os.WriteFile(path, []byte(renderLaunchAgent(executable)), 0644)
 }
 
-func autostartDisable() error {
-	path, err := autostartPath()
-	if err != nil {
-		return err
-	}
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	return nil
-}
-
 func autostartIsEnabled() (bool, error) {
 	path, err := autostartPath()
 	if err != nil {
