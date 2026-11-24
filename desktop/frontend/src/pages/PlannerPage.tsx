@@ -289,7 +289,6 @@ export default function PlannerPage() {
     <Page>
       <PageHeader
         title={t('planner.title')}
-        description={t('planner.description')}
         actions={
           <Field id="planner-date" label={t('common.date')} className="page-header-date">
             <div className="planner-date-picker-row">

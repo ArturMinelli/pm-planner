@@ -18,7 +18,6 @@
   },
   "planner": {
     "title": "Planejar jornada",
-    "description": "Veja e ajuste os horários do dia. O horário calculado preenche a meta automaticamente.",
     "dayTimes": "Horários do dia",
     "none": "(nenhum)",
     "addJourney": "+ Adicionar jornada",
