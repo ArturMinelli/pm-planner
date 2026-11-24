@@ -16,8 +16,6 @@ type ReminderSettingsFormProps = {
   onSave: () => void
 }
 
-type ReminderLeadUnit = 'minutes' | 'hours'
-
 export default function ReminderSettingsForm({
   settings,
   busy,
@@ -27,14 +25,11 @@ export default function ReminderSettingsForm({
 }: ReminderSettingsFormProps) {
   const { t } = useTranslation()
   const [leadAmount, setLeadAmount] = useState('')
-  const [leadUnit, setLeadUnit] = useState<ReminderLeadUnit>('minutes')
   const normalized = normalizeReminderSettings(settings)
   const leadMinutes = normalized.lead_minutes ?? []
   const parsedLeadAmount = Number(leadAmount)
   const candidateLeadMinutes =
-    Number.isInteger(parsedLeadAmount) && parsedLeadAmount > 0
-      ? parsedLeadAmount * (leadUnit === 'hours' ? 60 : 1)
-      : null
+    Number.isInteger(parsedLeadAmount) && parsedLeadAmount > 0 ? parsedLeadAmount : null
   const canAddLead =
     candidateLeadMinutes !== null &&
     candidateLeadMinutes <= MAX_REMINDER_LEAD_MINUTES &&
@@ -101,14 +96,10 @@ export default function ReminderSettingsForm({
                 name="reminder_lead_amount"
                 type="number"
                 min="1"
-                max={leadUnit === 'hours' ? 4 : MAX_REMINDER_LEAD_MINUTES}
+                max={MAX_REMINDER_LEAD_MINUTES}
                 step="1"
                 inputMode="numeric"
-                placeholder={
-                  leadUnit === 'hours'
-                    ? t('settings.reminders.amountPlaceholderHours')
-                    : t('settings.reminders.amountPlaceholderMinutes')
-                }
+                placeholder={t('settings.reminders.amountPlaceholderMinutes')}
                 value={leadAmount}
                 onChange={(event) => setLeadAmount(event.target.value)}
                 onKeyDown={(event) => {
@@ -117,16 +108,6 @@ export default function ReminderSettingsForm({
                   addLead()
                 }}
               />
-              <select
-                aria-label={t('settings.reminders.unitLabel')}
-                value={leadUnit}
-                onChange={(event) =>
-                  setLeadUnit(event.target.value as ReminderLeadUnit)
-                }
-              >
-                <option value="minutes">{t('common.minutes')}</option>
-                <option value="hours">{t('common.hours')}</option>
-              </select>
               <Button
                 type="button"
                 variant="secondary"

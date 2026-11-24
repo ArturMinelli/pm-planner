@@ -1162,7 +1162,7 @@ input[readonly] {
 
 .reminder-lead-add {
   display: grid;
-  grid-template-columns: minmax(6rem, 1fr) minmax(7.5rem, 0.8fr) auto;
+  grid-template-columns: minmax(6rem, 1fr) auto;
   gap: 0.5rem;
 }
 
@@ -1558,10 +1558,6 @@ input[readonly] {
 
   .reminder-lead-add {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
-  .reminder-lead-add .btn {
-    grid-column: 1 / -1;
   }
 
   .clockout-tooltip {
