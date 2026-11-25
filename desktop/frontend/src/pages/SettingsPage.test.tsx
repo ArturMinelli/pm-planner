@@ -102,7 +102,7 @@ describe('SettingsPage', () => {
     expect(sections[0].querySelector('#settings-login')).not.toBeNull()
     expect(sections[1].querySelector('#settings-anchor-in1')).not.toBeNull()
     expect(sections[2].querySelector('#settings-reminder-lead-amount')).not.toBeNull()
-    expect(sections[3].querySelector('#theme-hex-bg')).not.toBeNull()
+    expect(sections[3].querySelector('.theme-presets')).not.toBeNull()
   })
 
   it('lists user presets from the config as deletable chips', async () => {

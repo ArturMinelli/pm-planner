@@ -111,6 +111,7 @@ export async function saveConfig(config: PmConfig): Promise<void> {
   if (config.default_theme) payload.default_theme = config.default_theme
   if (config.theme_name) payload.theme_name = config.theme_name
   if (config.themes && Object.keys(config.themes).length) payload.themes = config.themes
+  if (config.hidden_themes && config.hidden_themes.length) payload.hidden_themes = config.hidden_themes
   return requireRuntime().SaveConfig(payload)
 }
 

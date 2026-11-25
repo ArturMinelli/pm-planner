@@ -49,14 +49,6 @@ export const PRESETS: ThemePreset[] = [
     },
   },
   {
-    id: 'ocean',
-    labelKey: 'settings.theme.presets.ocean',
-    colors: {
-      bg: '#0b1a2e', panel: '#12263d', text: '#e6f0fa', muted: '#9fb4cc', border: '#2a4262',
-      accent: '#4fc3f7', ok: '#6ee7a8', warning: '#fbbf24', danger: '#fca5a5',
-    },
-  },
-  {
     id: 'warm',
     labelKey: 'settings.theme.presets.warm',
     colors: {
@@ -117,11 +109,14 @@ export function applyTheme(colors?: Record<string, string> | null): void {
   for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, value)
 
   if (picks.bg) {
-    root.style.colorScheme = luminance(picks.bg) < 0.4 ? 'dark' : 'light'
+    const scheme = luminance(picks.bg) < 0.4 ? 'dark' : 'light'
+    root.style.colorScheme = scheme
+    // CSS reads this to pick shadows that suit the surface (see --card-shadow).
+    root.dataset.scheme = scheme
   } else {
     root.style.removeProperty('color-scheme')
+    delete root.dataset.scheme
   }
-
 }
 
 /** Cache the saved theme so the next launch paints it before config loads. */
@@ -190,6 +185,18 @@ export function slugifyThemeId(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
+}
+
+/** Built-in themes people can always come back to: they cannot be removed from the picker. */
+export const PROTECTED_PRESET_IDS = ['light', 'dark']
+
+export function isProtectedPreset(preset: Pick<ResolvedPreset, 'id' | 'custom'>): boolean {
+  return !preset.custom && PROTECTED_PRESET_IDS.includes(preset.id)
+}
+
+/** Presets to show in the picker: everything except removed themes, but never Claro/Escuro. */
+export function visiblePresets(presets: ResolvedPreset[], hidden: string[] = []): ResolvedPreset[] {
+  return presets.filter((preset) => isProtectedPreset(preset) || !hidden.includes(preset.id))
 }
 
 /** Id of the preset whose colors match the draft, 'auto' for an empty draft, else ''. */

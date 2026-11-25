@@ -61,7 +61,7 @@
 
 /* rem-based UI: scales up on big screens, stays exactly 16px up to ~1290px wide */
 html {
-  font-size: clamp(16px, 0.55vw + 8.9px, 24px);
+  font-size: clamp(15px, 0.18vw + 12.5px, 17px);
 }
 
 html,
@@ -633,7 +633,7 @@ input[readonly] {
   padding-inline: 2rem;
   border-radius: 999px;
   font-size: 1.1rem;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 28%, transparent);
+  box-shadow: var(--action-glow, 0 6px 16px color-mix(in srgb, var(--accent) 28%, transparent));
   transition:
     transform 220ms var(--ease),
     box-shadow 220ms var(--ease),
@@ -641,11 +641,11 @@ input[readonly] {
 }
 .clockin-action:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 22px color-mix(in srgb, var(--accent) 34%, transparent);
+  box-shadow: var(--action-glow-hover, 0 10px 22px color-mix(in srgb, var(--accent) 34%, transparent));
 }
 .clockin-action:active:not(:disabled) {
   transform: translateY(1px) scale(0.98);
-  box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 30%, transparent);
+  box-shadow: var(--action-glow-active, 0 2px 6px color-mix(in srgb, var(--accent) 30%, transparent));
   transition-duration: 80ms;
 }
 .clockin-action:disabled { opacity: 0.8; box-shadow: none; }
@@ -845,7 +845,7 @@ input[readonly] {
   border: 1px solid transparent;
   border-radius: var(--radius);
   overflow-wrap: anywhere;
-  box-shadow: 0 14px 36px color-mix(in srgb, var(--text) 18%, transparent);
+  box-shadow: var(--toast-shadow, 0 10px 24px -10px color-mix(in srgb, var(--text) 28%, transparent));
   font-size: 0.93rem;
 }
 
@@ -1250,13 +1250,6 @@ input[readonly] {
   opacity: 0.4;
 }
 
-.originals-line {
-  min-height: 1.4em;
-  margin: -0.1rem 0 1rem;
-  overflow-wrap: anywhere;
-  white-space: pre-line;
-}
-
 .stat-list {
   display: grid;
   gap: 0.15rem;
@@ -1606,137 +1599,6 @@ input[readonly] {
   .page {
     padding: 1.1rem;
     padding-bottom: calc(1.1rem + env(safe-area-inset-bottom));
-  }
-}
-
-/* Desktop-only density: fit the planner's clock-in, punch log and journeys above the fold at 980x720. */
-@media (min-width: 761px) {
-  .page {
-    padding-top: 1rem;
-  }
-
-  .page > * + * {
-    margin-top: 0.75rem;
-  }
-
-  .page-header {
-    margin-bottom: 0.5rem;
-  }
-
-  .page-header-date {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .planner-stack {
-    gap: 0.75rem;
-  }
-
-  .grid-2 {
-    gap: 0.75rem;
-  }
-
-  .grid-2 > .card {
-    padding: 0.85rem 1rem;
-  }
-
-  .grid-2 .card-title {
-    margin-bottom: 0.5rem;
-  }
-
-  .grid-2 .btn-row {
-    margin-top: 0.5rem;
-  }
-
-  .grid-2 .stat-list {
-    gap: 0;
-  }
-
-  .grid-2 .stat {
-    padding: 0.2rem 0;
-  }
-
-  .originals-line {
-    margin: 0 0 0.5rem;
-  }
-
-  .journey-group {
-    gap: 0.4rem;
-    padding: 0.45rem 0;
-  }
-
-  .journey-group + .journey-group {
-    margin-top: 0.1rem;
-    padding-top: 0.55rem;
-  }
-
-  .journey-group-fields {
-    gap: 0.4rem;
-  }
-
-  .slot-field-card {
-    gap: 0.25rem;
-    padding: 0.4rem 0.5rem 0.45rem;
-  }
-
-  .calculada-timebox,
-  .calculada-time {
-    min-height: 1.95rem;
-  }
-
-  .calculada-time {
-    padding-block: 0.3rem;
-    font-size: 1.02rem;
-  }
-
-  .planner-slot-time-input {
-    min-height: 1.95rem;
-    font-size: 1.02rem;
-  }
-
-  .page-header h1 {
-    font-size: 1.6rem;
-  }
-
-  .planner-top > .card {
-    padding: 0.85rem 1rem;
-  }
-
-  .planner-top .card-title {
-    margin-bottom: 0.5rem;
-  }
-
-  .clockin {
-    gap: 0.5rem;
-    padding-block: 0;
-  }
-
-  .clockin-readout {
-    min-height: 3.5rem;
-  }
-
-  .clockin-time {
-    font-size: 1.75rem;
-  }
-
-  .clockin-aux-inner {
-    gap: 0.5rem;
-    padding-top: 0.5rem;
-  }
-
-  .clockin-action {
-    min-height: 3rem;
-  }
-
-  .punchlog-row {
-    min-height: 2.25rem;
-    padding: 0.25rem 0;
-  }
-
-  .punchlog-footer {
-    margin-top: 0.35rem;
   }
 }
 
@@ -2222,4 +2084,523 @@ input[readonly] {
   margin: 0;
   color: var(--warning);
   font-size: 0.85rem;
+}
+
+/* ==========================================================================
+   Visual refresh: softer, roomier and rounder. Colors still come from the theme
+   tokens, so every preset (including user ones) picks this up.
+   ========================================================================== */
+:root {
+  --radius: 14px;
+  --radius-lg: 18px;
+  --card-border: color-mix(in srgb, var(--border) 55%, transparent);
+  --card-shadow:
+    0 1px 2px color-mix(in srgb, var(--text) 5%, transparent),
+    0 14px 30px -18px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* On dark surfaces a tinted shadow reads as a glowing halo, so use quiet neutral ones.
+   data-scheme is set by applyTheme for any theme; plain Automático follows the OS. */
+:root[data-scheme="dark"] {
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.25), 0 6px 14px -12px rgb(0 0 0 / 0.45);
+  --action-glow: 0 2px 8px -2px rgb(0 0 0 / 0.35);
+  --action-glow-hover: 0 4px 12px -2px rgb(0 0 0 / 0.4);
+  --action-glow-active: 0 1px 3px rgb(0 0 0 / 0.35);
+  --brand-glow: 0 2px 8px -3px rgb(0 0 0 / 0.4);
+  --toast-shadow: 0 6px 16px -8px rgb(0 0 0 / 0.55);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-scheme]) {
+    --card-shadow: 0 1px 2px rgb(0 0 0 / 0.25), 0 6px 14px -12px rgb(0 0 0 / 0.45);
+    --action-glow: 0 2px 8px -2px rgb(0 0 0 / 0.35);
+    --action-glow-hover: 0 4px 12px -2px rgb(0 0 0 / 0.4);
+    --action-glow-active: 0 1px 3px rgb(0 0 0 / 0.35);
+    --brand-glow: 0 2px 8px -3px rgb(0 0 0 / 0.4);
+    --toast-shadow: 0 6px 16px -8px rgb(0 0 0 / 0.55);
+  }
+}
+
+.sidebar {
+  padding-inline: 1.1rem;
+  border-right-color: var(--card-border);
+}
+
+.brand-mark {
+  border-radius: 12px;
+  box-shadow: var(--brand-glow, 0 6px 14px -6px color-mix(in srgb, var(--accent) 70%, transparent));
+}
+
+.nav {
+  gap: 0.3rem;
+}
+
+.nav-link {
+  min-height: 2.6rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 999px;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.nav-link.active {
+  border-color: transparent;
+  background: var(--accent-soft);
+}
+
+.page-header h1 {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.card {
+  border-color: var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow);
+}
+
+/* Card titles become quiet labels, so the content (times, totals) is what you read first. */
+.card-title {
+  margin-bottom: 1rem;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.card-intro {
+  margin-top: -0.4rem;
+}
+
+.btn {
+  border-radius: 12px;
+}
+
+.btn.secondary {
+  border-color: var(--card-border);
+}
+
+.banner {
+  border-radius: var(--radius);
+  border-color: var(--card-border);
+}
+
+/* Planner warnings sit a little above the first journey instead of touching it. */
+.planner-warnings {
+  margin: 0 0 0.6rem;
+}
+
+@media (min-width: 761px) {
+  .page {
+    max-width: 62rem;
+    padding: 1.5rem 2rem 2rem;
+  }
+
+  .page > * + * {
+    margin-top: 1rem;
+  }
+
+  .page-header {
+    margin-bottom: 0;
+  }
+
+  .page-header-row {
+    align-items: center;
+  }
+
+  .page-header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+  }
+
+  .grid-2 {
+    grid-template-columns: minmax(0, 1.5fr) minmax(15rem, 1fr);
+  }
+
+  .planner-stack,
+  .planner-top,
+  .grid-2 {
+    gap: 1rem;
+  }
+
+  .card,
+  .grid-2 > .card,
+  .planner-top > .card {
+    padding: 1.1rem 1.25rem;
+  }
+
+  .card-title,
+  .grid-2 .card-title,
+  .planner-top .card-title {
+    margin-bottom: 0.8rem;
+  }
+
+  /* Clock-in: the live time is the hero of the card, without taking over the screen. */
+  .clockin {
+    gap: 0.8rem;
+    padding-block: 0;
+  }
+
+  .card:has(> .clockin) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card:has(> .clockin) > .clockin {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .clockin-readout {
+    min-height: 2.25rem;
+  }
+
+  .clockin-time {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  .clockin-action {
+    min-height: 2.5rem;
+    padding-inline: 1.5rem;
+    font-size: 0.95rem;
+  }
+
+  /* Punch log: each entry is its own soft row instead of a ruled list. */
+  .punchlog-list {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .punchlog-row {
+    flex-wrap: nowrap;
+    align-items: center;
+    min-height: 2.4rem;
+    padding: 0.3rem 0.75rem;
+    border-bottom: 0;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--panel-soft) 70%, transparent);
+  }
+
+  /* Long origins are trimmed instead of pushing the status badge out of the row. */
+  .punchlog-origin {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .punchlog-row .punchlog-badge {
+    flex: none;
+  }
+
+  .punchlog-footer {
+    margin-top: 0.6rem;
+  }
+
+  .punchlog-sync {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  /* Journeys: separated by whitespace and a hairline instead of another box, so the
+     nesting stays shallow (card > slot) and the times are what you see. */
+  .journey-list {
+    gap: 0;
+  }
+
+  .journey-group,
+  .journey-group + .journey-group {
+    gap: 0.5rem;
+    margin-top: 0;
+    padding: 0.75rem 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .journey-group + .journey-group {
+    border-top: 1px solid var(--card-border);
+  }
+
+  .journey-group:first-child {
+    padding-top: 0;
+  }
+
+  .journey-group-title {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .journey-group-fields {
+    gap: 0.6rem;
+  }
+
+  .slot-field-card {
+    gap: 0.15rem;
+    padding: 0.55rem 0.75rem 0.6rem;
+    border-color: var(--card-border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--panel-soft) 55%, var(--panel));
+    box-shadow: none;
+  }
+
+  .slot-field-card.interactive.calculated {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .slot-field-card.registered {
+    border-color: color-mix(in srgb, var(--ok) 35%, transparent);
+    background: color-mix(in srgb, var(--ok) 11%, var(--panel));
+  }
+
+  /* The slot card is already the box, so the time itself needs no second frame. */
+  .planner-slot-time-input,
+  .calculada-timebox,
+  .calculada-time {
+    min-height: 2.1rem;
+    font-size: 1.15rem;
+  }
+
+  .planner-slot-time-input {
+    padding-inline: 0.15rem;
+    background: transparent;
+  }
+
+  .planner-slot-time-input:hover:not(:disabled) {
+    background: transparent;
+  }
+
+  /* The calculated time and its alternative badge drop to a second line instead of overlapping. */
+  .calculada-timebox {
+    flex-wrap: wrap;
+    row-gap: 0.15rem;
+    background: transparent;
+  }
+
+  .calculada-timebox .calculada-time {
+    flex: 0 0 auto;
+  }
+
+  .journey-remove-btn {
+    min-height: 1.7rem;
+    border-radius: 999px;
+  }
+
+  .btn-row {
+    margin-top: 0.75rem;
+  }
+
+  /* Summary: every row has the same light rule; only the one under Total is firmer. */
+  .stat {
+    padding: 0.55rem 0;
+    border-bottom-color: color-mix(in srgb, var(--border) 60%, transparent);
+  }
+
+  .stat.emphasis {
+    border-bottom-color: var(--border-strong);
+  }
+
+  .stat.emphasis .stat-label {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .summary-note {
+    margin-top: 0.7rem;
+  }
+}
+
+/* Big monitors: a little more width, never stretched edge to edge. */
+@media (min-width: 1500px) {
+  .page:not(.narrow) {
+    max-width: 74rem;
+  }
+}
+
+/* Aparência: chips + a folded-away editor. */
+.theme-preset {
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+}
+
+.theme-preset[aria-pressed="true"] {
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.theme-preset-new {
+  border-style: dashed;
+  border-color: var(--border-strong);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.theme-preset-new:hover {
+  color: var(--accent-strong);
+  border-color: var(--accent);
+}
+
+.theme-editor {
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem 1.2rem;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--panel-soft) 60%, transparent);
+}
+
+.theme-editor-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.theme-color-row {
+  border-color: var(--card-border);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+/* Every theme chip is one pill: the name button and its × share a single outline. */
+.theme-preset-wrap {
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  background: var(--panel-soft);
+}
+
+.theme-preset-wrap .theme-preset,
+.theme-preset-wrap .theme-preset[aria-pressed="true"] {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.theme-preset-wrap .theme-preset-delete {
+  min-width: 2.1rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.theme-preset-wrap:has(.theme-preset[aria-pressed="true"]) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+/* Aparência actions: Salvar alone on the left; Editar + Restaurar side by side on the right. */
+.theme-actions {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.theme-actions-side {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+/* Bank-of-hours note under the summary: a soft callout, tinted by what it says. */
+.summary-callout {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+  font-size: 0.85rem;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.summary-callout[data-tone="debt"] {
+  background: color-mix(in srgb, var(--warning) 11%, var(--panel));
+}
+
+.summary-callout[data-tone="neutral"] {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel-soft) 70%, transparent);
+}
+
+/* Collapsible settings sections: just a title and a chevron until opened. */
+.card.collapsible {
+  padding-block: 0;
+}
+
+.card-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.25rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  border-radius: var(--radius-lg);
+}
+
+.card-summary::-webkit-details-marker {
+  display: none;
+}
+
+.card-summary .card-title {
+  margin: 0;
+}
+
+.card-summary:hover .card-title {
+  color: var(--text);
+}
+
+.card-summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.card-chevron {
+  flex: none;
+  color: var(--muted);
+  transition: transform 180ms ease;
+}
+
+.card.collapsible[open] .card-chevron {
+  transform: rotate(180deg);
+}
+
+.card-body {
+  padding-bottom: 1.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-chevron {
+    transition: none;
+  }
+}
+
+/* Updates: the restart warning as a quiet note. No box, so its text and icon sit on the same
+   left edge as the intro above and the button below; the button gets room to breathe. */
+.update-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.update-note-icon {
+  flex: none;
+  margin-top: 0.14rem;
+  color: var(--accent-strong);
+}
+
+.update-note + .btn-row {
+  margin-top: 1.25rem;
 }

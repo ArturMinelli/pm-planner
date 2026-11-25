@@ -22,10 +22,14 @@ import { defaultReminderSettings, normalizeReminderSettings } from '../util/remi
 import { translateMessage } from '../i18n/translateMessage'
 import {
   applyTheme,
+  isProtectedPreset,
+  PRESETS,
+  PROTECTED_PRESET_IDS,
   presetIdForColors,
   resolveEffectiveColors,
   resolvePresets,
   slugifyThemeId,
+  visiblePresets,
 } from '../util/theme'
 import { Page, PageHeader, Toast } from '../components/ui'
 import AccountSettingsForm from '../features/settings/AccountSettingsForm'
@@ -55,6 +59,11 @@ export default function SettingsPage() {
   )
   const [themeDraft, setThemeDraft] = useState<Record<string, string>>({})
   const presets = useMemo(() => resolvePresets(config?.themes), [config?.themes])
+  const hiddenThemes = useMemo(() => config?.hidden_themes ?? [], [config?.hidden_themes])
+  // Removed themes stay resolvable by id; they only disappear from the picker.
+  // Claro and Escuro are never hidden, so a stale entry for them is dropped on the next save.
+  const withoutProtected = (ids: string[]) => ids.filter((hidden) => !PROTECTED_PRESET_IDS.includes(hidden))
+  const shownPresets = useMemo(() => visiblePresets(presets, hiddenThemes), [presets, hiddenThemes])
   const selectedId = presetIdForColors(presets, themeDraft)
   const configRef = useRef(config)
   const [toast, setToast] = useState<SettingsToast | null>(null)
@@ -275,17 +284,24 @@ export default function SettingsPage() {
     if (!id) return
     void saveTheme({
       themes: { ...(config?.themes ?? {}), [id]: { label: name.trim(), colors } },
+      hidden_themes: withoutProtected(hiddenThemes.filter((hidden) => hidden !== id)),
       theme: {},
       theme_name: id,
     })
   }
 
   const deletePreset = (id: string) => {
+    const target = presets.find((preset) => preset.id === id)
+    if (target && isProtectedPreset(target)) return
     const themes = { ...(config?.themes ?? {}) }
     delete themes[id]
+    // Built-ins live in code, so removing one means hiding it from the picker.
+    const hidden = withoutProtected(
+      PRESETS.some((preset) => preset.id === id) ? [...new Set([...hiddenThemes, id])] : hiddenThemes,
+    )
     const selectedGone = config?.theme_name === id
     void saveTheme(
-      selectedGone ? { themes, theme_name: '' } : { themes },
+      selectedGone ? { themes, hidden_themes: hidden, theme_name: '' } : { themes, hidden_themes: hidden },
       selectedGone ? fallbackColors(themes) : undefined,
       'settings.theme.deleted',
     )
@@ -395,7 +411,7 @@ export default function SettingsPage() {
 
         <ThemeSettingsForm
           colors={themeDraft}
-          presets={presets}
+          presets={shownPresets}
           selectedId={selectedId}
           busy={busy}
           onChange={previewTheme}

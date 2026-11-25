@@ -53,13 +53,49 @@ export function Card({
   title,
   intro,
   stretch = false,
+  collapsible = false,
+  defaultOpen = false,
   children,
 }: {
   title?: string
   intro?: ReactNode
   stretch?: boolean
+  /** Shows only the title with a chevron; the content opens on click. Needs a title. */
+  collapsible?: boolean
+  defaultOpen?: boolean
   children: ReactNode
 }) {
+  if (collapsible && title) {
+    return (
+      <details className={classNames('card', 'collapsible', stretch && 'stretch')} open={defaultOpen}>
+        <summary className="card-summary">
+          <h2 className="card-title">{title}</h2>
+          <svg
+            className="card-chevron"
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d="M3.5 6l4.5 4.5L12.5 6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </summary>
+        <div className="card-body">
+          {intro ? <p className="muted card-intro">{intro}</p> : null}
+          {children}
+        </div>
+      </details>
+    )
+  }
+
   return (
     <section className={classNames('card', stretch && 'stretch')}>
       {title ? <h2 className="card-title">{title}</h2> : null}
@@ -165,13 +201,15 @@ export function StatRow({
   label,
   value,
   accent = false,
+  emphasis = false,
 }: {
   label: string
   value: ReactNode
   accent?: boolean
+  emphasis?: boolean
 }) {
   return (
-    <div className={classNames('stat', accent && 'accent')}>
+    <div className={classNames('stat', accent && 'accent', emphasis && 'emphasis')}>
       <span className="stat-label">{label}</span>
       <span className="stat-value">{value}</span>
     </div>

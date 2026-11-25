@@ -428,7 +428,7 @@ Os headers de autenticação são armazenados em cache como `session.json` no me
 
 ## Temas personalizados
 
-Além dos temas prontos (`auto`, `light`, `dark`, `ocean` e `warm`), você pode criar os seus no mesmo `config.yaml` (caminho em [Configuração](#configuração)). Só `default_theme` e `themes` precisam ser escritos à mão:
+Além dos temas prontos (`auto`, `light`, `dark` e `warm`), você pode criar os seus no mesmo `config.yaml` (caminho em [Configuração](#configuração)). Só `default_theme` e `themes` precisam ser escritos à mão:
 
 ```yaml
 default_theme: midnight      # tema usado quando não há escolha salva
@@ -460,6 +460,7 @@ Cada tema tem 9 cores em hexadecimal (`#rrggbb`):
 4. Nenhum deles: modo Automático, claro ou escuro conforme o sistema.
 
 Um tema do usuário com o mesmo id de um tema embutido substitui o embutido.
+- `hidden_themes` (lista de ids, gravada pelo app) guarda os temas removidos do seletor pelo botão **×**, inclusive os embutidos. Para trazer um de volta, apague o id dessa lista no `config.yaml`.
 
 - Chaves ausentes em um tema são preenchidas com o tema Claro embutido.
 - Valores hexadecimais inválidos são ignorados, sem gerar erro.

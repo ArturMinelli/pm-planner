@@ -33,6 +33,7 @@ type File struct {
 	DefaultTheme            string                 `json:"default_theme,omitempty" yaml:"default_theme,omitempty"`
 	ThemeName               string                 `json:"theme_name,omitempty" yaml:"theme_name,omitempty"`
 	Themes                  map[string]ThemePreset `json:"themes,omitempty" yaml:"themes,omitempty"`
+	HiddenThemes            []string               `json:"hidden_themes,omitempty" yaml:"hidden_themes,omitempty"`
 }
 
 type fileRaw struct {
@@ -47,6 +48,7 @@ type fileRaw struct {
 	DefaultTheme            string                 `yaml:"default_theme,omitempty"`
 	ThemeName               string                 `yaml:"theme_name,omitempty"`
 	Themes                  map[string]ThemePreset `yaml:"themes,omitempty"`
+	HiddenThemes            []string               `yaml:"hidden_themes,omitempty"`
 }
 
 func resolveLogin(login, legacyEmail string) string {
@@ -136,6 +138,7 @@ func Read(cfgFileOverride string) (*File, error) {
 		DefaultTheme:            raw.DefaultTheme,
 		ThemeName:               raw.ThemeName,
 		Themes:                  raw.Themes,
+		HiddenThemes:            raw.HiddenThemes,
 	}
 	SanitizeThemes(f)
 	return f, nil

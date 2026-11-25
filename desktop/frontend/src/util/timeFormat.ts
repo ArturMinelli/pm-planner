@@ -29,6 +29,17 @@ export function formatDurationMinutes(totalSecs: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
+/** Daily target in the way people say it: 8h30, or 8h when there are no minutes. */
+export function formatTargetHours(totalSecs: number): string {
+  const minutes =
+    typeof totalSecs === 'number' && Number.isFinite(totalSecs)
+      ? Math.max(0, Math.round(totalSecs / 60))
+      : 0
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`
+}
+
 export function formatSignedRoundedMinutes(totalSecs: number): string {
   const seconds =
     typeof totalSecs === 'number' && Number.isFinite(totalSecs)

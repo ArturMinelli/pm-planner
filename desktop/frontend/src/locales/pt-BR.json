@@ -19,7 +19,6 @@
   "planner": {
     "title": "Planejar jornada",
     "dayTimes": "Horários do dia",
-    "none": "(nenhum)",
     "addJourney": "+ Adicionar jornada",
     "summary": "Resumo",
     "selectDateHint": "Selecione uma data para ver metas e totais.",
@@ -31,8 +30,8 @@
     "timeBank": "Banco de horas",
     "alternativeTime": "Horário alternativo",
     "balanceUnavailableNote": "Saldo indisponível; horário normal mantido.",
-    "useBankEarly": "Usa {{duration}} do banco para sair mais cedo.",
-    "workExtraCredit": "Trabalhe {{duration}} a mais para gerar crédito.",
+    "useBankEarly": "Use {{duration}} do banco para sair mais cedo.",
+    "owingBank": "Ainda faltam {{debt}} do banco: trabalhe {{duration}} a mais, além das {{target}} diárias, para repor.",
     "entry": "Entrada {{number}}",
     "exit": "Saída {{number}}",
     "removeJourney": "Remover {{ordinal}} jornada",
@@ -42,7 +41,7 @@
     "registeredHint": "Marcação registrada no PontoMais",
     "balanceUnavailable": "Saldo indisponível",
     "bankBadge": "Banco {{balance}}",
-    "balanceTooltipUse": "Usa {{used}} do banco para sair {{used}} mais cedo. Saldo estimado: {{remaining}}.",
+    "balanceTooltipUse": "Use {{used}} do banco para sair {{used}} mais cedo. Saldo estimado: {{remaining}}.",
     "balanceTooltipCredit": "Trabalhe {{extra}} a mais para gerar {{credit}} de crédito a {{multiplier}}x. Saldo estimado: {{remaining}}.",
     "balanceTooltipCapped": " Limite diário de {{cap}} aplicado.",
     "balanceTooltipUnavailable": "O horário normal continua válido. Recarregue o dia para tentar consultar o saldo novamente.",
@@ -101,7 +100,6 @@
         "auto": "Automático",
         "light": "Claro",
         "dark": "Escuro",
-        "ocean": "Oceano",
         "warm": "Areia"
       },
       "presetsLabel": "Temas prontos",
@@ -128,7 +126,14 @@
       "saveAs": "Salvar como tema",
       "saveAsOverwrite": "Já existe \"{{name}}\": será substituído.",
       "deleted": "Tema excluído.",
-      "customBadge": "seu tema"
+      "customBadge": "seu tema",
+      "edit": "Editar cores",
+      "newTheme": "Novo tema",
+      "closeEditor": "Fechar edição",
+      "editorNew": "Novo tema: ajuste as cores e dê um nome",
+      "editorEditing": "Editando {{name}}",
+      "customColors": "cores personalizadas",
+      "nameLabel": "Nome do tema"
     },
     "updates": {
       "title": "Atualizações",

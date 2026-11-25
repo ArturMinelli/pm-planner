@@ -51,6 +51,19 @@ describe('UpdateSettingsForm', () => {
     expect(html).not.toContain('Verificar atualizações')
   })
 
+  it('keeps the intro, the restart note and the button, without version noise, when the version is unknown', () => {
+    const html = render({
+      status: status({ isGit: false, commitSha: '', commitDate: '', updateAvailable: true }),
+    })
+
+    expect(html).toContain('Atualizações')
+    expect(html).toContain('fechado e reaberto automaticamente')
+    expect(html).toContain('Atualizar agora')
+    expect(html).not.toContain('Desconhecida')
+    expect(html).not.toContain('Não é possível comparar versões')
+    expect(html).toContain('verificada automaticamente ao abrir esta página')
+  })
+
   it('does not render the update button when up to date', () => {
     const html = render({ status: status() })
 

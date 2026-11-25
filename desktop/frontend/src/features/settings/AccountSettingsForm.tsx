@@ -25,7 +25,7 @@ export default function AccountSettingsForm({
   const loginMeta = loginCredentialFieldMeta(login)
 
   return (
-    <Card title={t('settings.account.title')}>
+    <Card collapsible title={t('settings.account.title')}>
       <form
         className="form-stack"
         onSubmit={(event) => {

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -122,5 +123,19 @@ themes:
 	m := f.Themes["midnight"]
 	if m.Label != "Meia-noite" || len(m.Colors) != 9 || m.Colors["accent"] != "#7c5cff" {
 		t.Fatalf("midnight: got %+v", m)
+	}
+}
+
+func TestSanitizeThemesHiddenIDs(t *testing.T) {
+	f := &File{HiddenThemes: []string{" Ocean ", "light", "light", "Bad Id", ""}}
+	SanitizeThemes(f)
+	if got, want := strings.Join(f.HiddenThemes, ","), "light,ocean"; got != want {
+		t.Fatalf("hidden themes: got %q, want %q", got, want)
+	}
+
+	empty := &File{HiddenThemes: []string{"!!"}}
+	SanitizeThemes(empty)
+	if empty.HiddenThemes != nil {
+		t.Fatalf("expected nil, got %v", empty.HiddenThemes)
 	}
 }
