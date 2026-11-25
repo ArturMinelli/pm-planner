@@ -79,3 +79,20 @@ func TestSave_writesLoginOnly(t *testing.T) {
 		t.Fatalf("did not expect legacy email key in %q", content)
 	}
 }
+
+func TestSave_roundTripsTheme(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+
+	want := map[string]string{"accent": "#112233"}
+	if err := Save(path, &File{Login: "user", Password: "secret", Theme: want}); err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := Read(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(f.Theme) != len(want) || f.Theme["accent"] != want["accent"] {
+		t.Fatalf("theme: got %v, want %v", f.Theme, want)
+	}
+}

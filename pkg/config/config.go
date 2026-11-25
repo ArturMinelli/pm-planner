@@ -23,22 +23,24 @@ type PlannerAnchors struct {
 
 // File mirrors ~/.config/pm/config.yaml keys used by pm-cli.
 type File struct {
-	Login                   string          `json:"login" yaml:"login"`
-	Password                string          `json:"password" yaml:"password"`
-	Locale                  string          `json:"locale,omitempty" yaml:"locale,omitempty"`
-	BalanceCreditMultiplier float64         `json:"balance_credit_multiplier,omitempty" yaml:"balance_credit_multiplier,omitempty"`
-	Planner                 *PlannerAnchors `json:"planner,omitempty" yaml:"planner,omitempty"`
-	Reminders               *Reminders      `json:"reminders,omitempty" yaml:"reminders,omitempty"`
+	Login                   string            `json:"login" yaml:"login"`
+	Password                string            `json:"password" yaml:"password"`
+	Locale                  string            `json:"locale,omitempty" yaml:"locale,omitempty"`
+	BalanceCreditMultiplier float64           `json:"balance_credit_multiplier,omitempty" yaml:"balance_credit_multiplier,omitempty"`
+	Planner                 *PlannerAnchors   `json:"planner,omitempty" yaml:"planner,omitempty"`
+	Reminders               *Reminders        `json:"reminders,omitempty" yaml:"reminders,omitempty"`
+	Theme                   map[string]string `json:"theme,omitempty" yaml:"theme,omitempty"`
 }
 
 type fileRaw struct {
-	Login                   string          `yaml:"login"`
-	Email                   string          `yaml:"email"`
-	Password                string          `yaml:"password"`
-	Locale                  string          `yaml:"locale,omitempty"`
-	BalanceCreditMultiplier float64         `yaml:"balance_credit_multiplier,omitempty"`
-	Planner                 *PlannerAnchors `yaml:"planner,omitempty"`
-	Reminders               *Reminders      `yaml:"reminders,omitempty"`
+	Login                   string            `yaml:"login"`
+	Email                   string            `yaml:"email"`
+	Password                string            `yaml:"password"`
+	Locale                  string            `yaml:"locale,omitempty"`
+	BalanceCreditMultiplier float64           `yaml:"balance_credit_multiplier,omitempty"`
+	Planner                 *PlannerAnchors   `yaml:"planner,omitempty"`
+	Reminders               *Reminders        `yaml:"reminders,omitempty"`
+	Theme                   map[string]string `yaml:"theme,omitempty"`
 }
 
 func resolveLogin(login, legacyEmail string) string {
@@ -124,6 +126,7 @@ func Read(cfgFileOverride string) (*File, error) {
 		BalanceCreditMultiplier: raw.BalanceCreditMultiplier,
 		Planner:                 raw.Planner,
 		Reminders:               raw.Reminders,
+		Theme:                   raw.Theme,
 	}
 	return f, nil
 }

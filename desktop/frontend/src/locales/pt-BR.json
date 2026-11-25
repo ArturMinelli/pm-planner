@@ -94,6 +94,35 @@
       "save": "Salvar lembretes",
       "saved": "Lembretes salvos."
     },
+    "theme": {
+      "title": "Aparência",
+      "intro": "Escolha as cores do app. As mudanças aparecem na hora; salve para manter.",
+      "presets": {
+        "auto": "Automático",
+        "light": "Claro",
+        "dark": "Escuro",
+        "ocean": "Oceano",
+        "warm": "Areia"
+      },
+      "presetsLabel": "Temas prontos",
+      "colorsLabel": "Cores",
+      "keys": {
+        "bg": "Fundo",
+        "panel": "Superfície",
+        "text": "Texto",
+        "muted": "Texto secundário",
+        "border": "Borda",
+        "accent": "Destaque",
+        "ok": "Sucesso",
+        "warning": "Alerta",
+        "danger": "Erro"
+      },
+      "invalidHex": "Use o formato #rrggbb.",
+      "lowContrast": "Contraste baixo entre texto e fundo ({{ratio}}:1). Recomendado: 4.5:1 ou mais.",
+      "save": "Salvar aparência",
+      "reset": "Restaurar padrão",
+      "saved": "Aparência salva."
+    },
     "updates": {
       "title": "Atualizações",
       "intro": "A versão instalada é verificada automaticamente ao abrir esta página.",

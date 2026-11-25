@@ -91,17 +91,18 @@ describe('SettingsPage', () => {
     expect(container.textContent).toContain('PM Planner está atualizado.')
   })
 
-  it('stacks Account, Planner, and Reminders sections in single-column order', async () => {
+  it('stacks Account, Planner, Reminders, and Theme sections in single-column order', async () => {
     await renderPage()
 
     const grid = container.querySelector('.settings-grid')
     expect(grid).not.toBeNull()
-    expect(grid?.children.length).toBe(3)
+    expect(grid?.children.length).toBe(4)
 
     const sections = Array.from(grid!.children)
     expect(sections[0].querySelector('#settings-login')).not.toBeNull()
     expect(sections[1].querySelector('#settings-anchor-in1')).not.toBeNull()
     expect(sections[2].querySelector('#settings-reminder-lead-amount')).not.toBeNull()
+    expect(sections[3].querySelector('#theme-hex-bg')).not.toBeNull()
   })
 
   it('saves account settings through the config context', async () => {

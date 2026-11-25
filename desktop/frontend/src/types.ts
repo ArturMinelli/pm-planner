@@ -16,6 +16,7 @@ export interface PmConfig {
   balance_credit_multiplier?: number
   planner?: PlannerAnchorsConfig
   reminders?: ReminderSettings
+  theme?: Record<string, string>
 }
 
 export interface LocalizedMessage {

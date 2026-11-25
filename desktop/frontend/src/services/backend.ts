@@ -105,6 +105,9 @@ export async function saveConfig(config: PmConfig): Promise<void> {
   if (config.reminders) {
     payload.reminders = normalizeReminderSettings(config.reminders)
   }
+  if (config.theme && Object.keys(config.theme).length) {
+    payload.theme = config.theme
+  }
   return requireRuntime().SaveConfig(payload)
 }
 

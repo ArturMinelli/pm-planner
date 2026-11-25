@@ -11,6 +11,7 @@ import * as backend from '../services/backend'
 import { notifyConfigChanged } from '../services/browserReminders'
 import type { PmConfig, ReminderSettings } from '../types'
 import { normalizeReminderSettings } from '../util/reminderSettings'
+import { applyTheme, cacheTheme } from '../util/theme'
 
 export type ConfigContextValue = {
   config: PmConfig | null
@@ -57,6 +58,12 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!config) return
+    applyTheme(config.theme)
+    cacheTheme(config.theme)
+  }, [config])
 
   const mergeAndSave = useCallback(async (patch: Partial<PmConfig>) => {
     const current = config ?? (await backend.getConfig())

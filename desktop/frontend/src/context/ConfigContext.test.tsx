@@ -96,6 +96,17 @@ describe('ConfigContext', () => {
     expect(latestConfig?.login).toBe('user@example.com')
   })
 
+  it('applies the loaded config theme to CSS variables', async () => {
+    mockedBackend.getConfig.mockResolvedValue({
+      ...defaultConfig(),
+      theme: { bg: '#111412', accent: '#62d7df' },
+    })
+
+    await renderProvider()
+
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#62d7df')
+  })
+
   it('mergeAndSave updates config and bumps revision', async () => {
     await renderProvider()
 

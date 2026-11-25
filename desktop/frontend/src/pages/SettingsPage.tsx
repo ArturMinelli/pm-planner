@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import * as backend from '../services/backend'
 import { useConfig } from '../context/ConfigContext'
@@ -20,10 +20,12 @@ import {
 } from '../util/loginCredential'
 import { defaultReminderSettings, normalizeReminderSettings } from '../util/reminderSettings'
 import { translateMessage } from '../i18n/translateMessage'
+import { applyTheme } from '../util/theme'
 import { Page, PageHeader, Toast } from '../components/ui'
 import AccountSettingsForm from '../features/settings/AccountSettingsForm'
 import PlannerDefaultsForm from '../features/settings/PlannerDefaultsForm'
 import ReminderSettingsForm from '../features/settings/ReminderSettingsForm'
+import ThemeSettingsForm from '../features/settings/ThemeSettingsForm'
 import UpdateSettingsForm from '../features/settings/UpdateSettingsForm'
 
 type SettingsToast = {
@@ -45,6 +47,8 @@ export default function SettingsPage() {
   const [reminders, setReminders] = useState<ReminderSettings>(
     defaultReminderSettings,
   )
+  const [themeDraft, setThemeDraft] = useState<Record<string, string>>({})
+  const configRef = useRef(config)
   const [toast, setToast] = useState<SettingsToast | null>(null)
   const [busy, setBusy] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
@@ -104,6 +108,7 @@ export default function SettingsPage() {
       })
     }
     setReminders(normalizeReminderSettings(config.reminders))
+    setThemeDraft(config.theme ?? {})
 
     void (async () => {
       try {
@@ -114,6 +119,15 @@ export default function SettingsPage() {
       }
     })()
   }, [config, showError])
+
+  useEffect(() => {
+    configRef.current = config
+  }, [config])
+
+  // Drop unsaved live previews when leaving the page.
+  useEffect(() => {
+    return () => applyTheme(configRef.current?.theme)
+  }, [])
 
   useEffect(() => {
     if (!usesDesktopShell) return
@@ -205,6 +219,24 @@ export default function SettingsPage() {
       await persistReminderSettings(normalized)
       await refreshReminderSettings()
       showSuccess(t('settings.reminders.saved'))
+    } catch (error) {
+      showError(error)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const previewTheme = (colors: Record<string, string>) => {
+    setThemeDraft(colors)
+    applyTheme(colors)
+  }
+
+  const persistTheme = async (colors: Record<string, string>) => {
+    dismissToast()
+    setBusy(true)
+    try {
+      await mergeAndSave({ theme: colors })
+      showSuccess(t('settings.theme.saved'))
     } catch (error) {
       showError(error)
     } finally {
@@ -312,6 +344,17 @@ export default function SettingsPage() {
           busy={busy}
           onSettingsChange={setReminders}
           onSave={() => void saveReminders()}
+        />
+
+        <ThemeSettingsForm
+          colors={themeDraft}
+          busy={busy}
+          onChange={previewTheme}
+          onSave={() => void persistTheme(themeDraft)}
+          onReset={() => {
+            previewTheme({})
+            void persistTheme({})
+          }}
         />
       </div>
 
