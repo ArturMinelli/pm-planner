@@ -328,7 +328,7 @@ export default function PlannerPage() {
         }
       />
 
-      <Stack>
+      <Stack className="planner-stack">
         {testMode ? <Banner tone="error">{t('clockIn.testMode')}</Banner> : null}
 
         {loadWarning ? <Banner>{loadWarning}</Banner> : null}
@@ -341,16 +341,18 @@ export default function PlannerPage() {
           onSync={() => void punchLog.syncNow()}
         />
 
-        {date === localDateYYYYMMDD() ? (
-          <ClockInButton onRegistered={handleRefresh} onPunched={() => void punchLog.refresh()} />
-        ) : null}
+        <div className="planner-top">
+          {date === localDateYYYYMMDD() ? (
+            <ClockInButton onRegistered={handleRefresh} onPunched={() => void punchLog.refresh()} />
+          ) : null}
 
-        <PunchLogCard
-          state={punchLog.state}
-          syncing={punchLog.syncing}
-          isToday={date === localDateYYYYMMDD()}
-          onSync={() => void punchLog.syncNow()}
-        />
+          <PunchLogCard
+            state={punchLog.state}
+            syncing={punchLog.syncing}
+            isToday={date === localDateYYYYMMDD()}
+            onSync={() => void punchLog.syncNow()}
+          />
+        </div>
 
         <div className="grid-2">
           <PlannerJourneyList

@@ -331,6 +331,20 @@ code.pill {
   align-self: stretch;
 }
 
+/* Clock-in and punch log side by side when there is room; auto-fit stacks them when narrow. */
+.planner-top {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+.planner-top > * {
+  min-width: 0;
+}
+.planner-top > .card {
+  height: 100%;
+}
+
 .card-title {
   margin: 0 0 0.75rem;
   font-size: 1.04rem;
@@ -1547,6 +1561,150 @@ input[readonly] {
   }
 }
 
+/* Desktop-only density: fit the planner's clock-in, punch log and journeys above the fold at 980x720. */
+@media (min-width: 761px) {
+  .page {
+    padding-top: 1rem;
+  }
+
+  .page > * + * {
+    margin-top: 0.75rem;
+  }
+
+  .page-header {
+    margin-bottom: 0.5rem;
+  }
+
+  .page-header-date {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .planner-stack {
+    gap: 0.75rem;
+  }
+
+  .grid-2 {
+    gap: 0.75rem;
+  }
+
+  .grid-2 > .card {
+    padding: 0.85rem 1rem;
+  }
+
+  .grid-2 .card-title {
+    margin-bottom: 0.5rem;
+  }
+
+  .grid-2 .btn-row {
+    margin-top: 0.5rem;
+  }
+
+  .grid-2 .stat-list {
+    gap: 0;
+  }
+
+  .grid-2 .stat {
+    padding: 0.2rem 0;
+  }
+
+  .originals-line {
+    margin: 0 0 0.5rem;
+  }
+
+  .journey-group {
+    gap: 0.4rem;
+    padding: 0.45rem 0;
+  }
+
+  .journey-group + .journey-group {
+    margin-top: 0.1rem;
+    padding-top: 0.55rem;
+  }
+
+  .journey-group-fields {
+    gap: 0.4rem;
+  }
+
+  .slot-field-card {
+    gap: 0.25rem;
+    padding: 0.4rem 0.5rem 0.45rem;
+  }
+
+  .calculada-timebox,
+  .calculada-time {
+    min-height: 1.95rem;
+  }
+
+  .calculada-time {
+    padding-block: 0.3rem;
+    font-size: 1.02rem;
+  }
+
+  .planner-slot-time-input {
+    min-height: 1.95rem;
+    font-size: 1.02rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.6rem;
+  }
+
+  .planner-top > .card {
+    padding: 0.85rem 1rem;
+  }
+
+  .planner-top .card-title {
+    margin-bottom: 0.5rem;
+  }
+
+  .clockin {
+    gap: 0.5rem;
+    padding-block: 0;
+  }
+
+  .clockin-readout {
+    min-height: 3.5rem;
+  }
+
+  .clockin-time {
+    font-size: 1.75rem;
+  }
+
+  .clockin-aux-inner {
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
+  .clockin-action {
+    min-height: 3rem;
+  }
+
+  .punchlog-row {
+    min-height: 2.25rem;
+    padding: 0.25rem 0;
+  }
+
+  .punchlog-footer {
+    margin-top: 0.35rem;
+  }
+}
+
+/* Mouse-sized targets only: touch keeps the 44px rules. */
+@media (min-width: 761px) and (pointer: fine) {
+  .journey-remove-btn {
+    min-height: 1.6rem;
+    padding-block: 0.2rem;
+  }
+
+  .grid-2 .btn-row .btn {
+    min-height: 2.2rem;
+    padding-block: 0.4rem;
+  }
+}
+
 @media (max-width: 800px) {
   .page-header-actions {
     flex: 1 1 100%;
@@ -1711,7 +1869,7 @@ input[readonly] {
 .punchlog-list { margin: 0; padding: 0; list-style: none; }
 .punchlog-row {
   display: grid;
-  grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+  grid-template-columns: 3.2rem minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.5rem 0.75rem;
   min-height: 2.75rem;
@@ -1782,4 +1940,20 @@ input[readonly] {
 /* Very narrow phones: drop brand text so both nav tabs fit without scrolling. */
 @media (max-width: 400px) {
   .brand > div:not(.brand-mark) { display: none; }
+}
+
+/* Desktop density: keep punch rows on one line and the sync button compact. */
+@media (min-width: 761px) and (pointer: fine) {
+  .punchlog-sync { width: 2rem; height: 2rem; }
+}
+
+@media (min-width: 761px) {
+  .page { padding-bottom: calc(0.5rem + env(safe-area-inset-bottom)); }
+  .planner-top > .card { padding-block: 0.7rem; }
+}
+
+@media (min-width: 481px) {
+  .punchlog-row { display: flex; flex-wrap: wrap; column-gap: 0.75rem; }
+  .punchlog-origin { white-space: nowrap; }
+  .punchlog-row .punchlog-badge { margin-left: auto; }
 }
