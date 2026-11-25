@@ -1,4 +1,6 @@
-export const THEME_KEYS = ['bg', 'panel', 'text', 'muted', 'border', 'accent', 'ok', 'warning', 'danger'] as const
+import type { PmConfig, ThemePresetConfig } from '../types'
+
+export const THEME_KEYS =['bg', 'panel', 'text', 'muted', 'border', 'accent', 'ok', 'warning', 'danger'] as const
 
 export type ThemeKey = (typeof THEME_KEYS)[number]
 
@@ -142,4 +144,58 @@ export function loadCachedTheme(): Record<string, string> | null {
   } catch {
     return null
   }
+}
+
+export type ResolvedPreset = {
+  id: string
+  label?: string
+  labelKey?: string
+  colors: Record<ThemeKey, string> | null
+  custom: boolean
+}
+
+const PRESET_ID = /^[a-z0-9_-]+$/
+
+/** Built-ins first, then user presets; a user preset with a built-in id replaces it in place. */
+export function resolvePresets(themes?: Record<string, ThemePresetConfig>): ResolvedPreset[] {
+  const light = PRESETS.find((p) => p.id === 'light')!.colors!
+  const list: ResolvedPreset[] = PRESETS.map((p) => ({ ...p, custom: false }))
+  for (const [id, preset] of Object.entries(themes ?? {})) {
+    if (!PRESET_ID.test(id)) continue
+    const colors = { ...light, ...validPicks(preset.colors ?? {}) } as Record<ThemeKey, string>
+    const resolved: ResolvedPreset = { id, label: preset.label || id, colors, custom: true }
+    const index = list.findIndex((p) => p.id === id)
+    if (index >= 0) list[index] = resolved
+    else list.push(resolved)
+  }
+  return list
+}
+
+/** Colors the app should paint with, or null for auto/OS. */
+export function resolveEffectiveColors(
+  config: Pick<PmConfig, 'theme' | 'theme_name' | 'default_theme' | 'themes'>,
+): Record<string, string> | null {
+  const picks = validPicks(config.theme ?? {})
+  if (Object.keys(picks).length) return picks
+  const id = config.theme_name || config.default_theme
+  if (!id || id === 'auto') return null
+  const preset = resolvePresets(config.themes).find((p) => p.id === id)
+  return preset?.colors ?? null
+}
+
+export function slugifyThemeId(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+/** Id of the preset whose colors match the draft, 'auto' for an empty draft, else ''. */
+export function presetIdForColors(presets: ResolvedPreset[], colors: Record<string, string>): string {
+  if (Object.keys(colors).length === 0) return 'auto'
+  const draft = (key: ThemeKey) => (colors[key] ?? '').toLowerCase()
+  const match = presets.find((p) => p.colors && THEME_KEYS.every((k) => p.colors![k].toLowerCase() === draft(k)))
+  return match?.id ?? ''
 }

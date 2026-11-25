@@ -105,6 +105,25 @@ describe('SettingsPage', () => {
     expect(sections[3].querySelector('#theme-hex-bg')).not.toBeNull()
   })
 
+  it('lists user presets from the config as deletable chips', async () => {
+    mockedBackend.getConfig.mockResolvedValue({
+      login: 'user@example.com',
+      password: 'secret',
+      theme_name: 'midnight',
+      themes: {
+        midnight: { label: 'Meia-noite', colors: { bg: '#000000', accent: '#7c5cff' } },
+      },
+    } satisfies PmConfig)
+
+    await renderPage()
+
+    const chip = [...container.querySelectorAll('button.theme-preset')].find(
+      (node) => node.textContent === 'Meia-noite',
+    )
+    expect(chip?.getAttribute('aria-pressed')).toBe('true')
+    expect(container.querySelector('.theme-preset-delete')).not.toBeNull()
+  })
+
   it('saves account settings through the config context', async () => {
     await renderPage()
 

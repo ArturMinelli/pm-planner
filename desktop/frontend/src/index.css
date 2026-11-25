@@ -2153,3 +2153,73 @@ input[readonly] {
     transition: none;
   }
 }
+
+/* Custom preset chip with its delete button, drawn as one pill. */
+.theme-preset-wrap {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.theme-preset-wrap .theme-preset {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.theme-preset-wrap[data-custom] .theme-preset:not([aria-pressed="true"]) {
+  border-style: dashed;
+}
+
+.theme-preset-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0 0.4rem;
+  border: 1px solid var(--border);
+  border-left: 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.theme-preset-delete:hover {
+  color: var(--danger);
+  border-color: var(--border-strong);
+}
+
+.theme-preset-delete:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+/* "Salvar como tema" row: input grows, button and hint wrap below on narrow cards. */
+.theme-saveas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.theme-saveas-field {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 12rem;
+}
+
+.theme-saveas-label {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.theme-saveas-hint {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--warning);
+  font-size: 0.85rem;
+}

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import * as backend from '../services/backend'
 import { useConfig } from '../context/ConfigContext'
-import type { ReminderSettings, UpdateStatus } from '../types'
+import type { PmConfig, ReminderSettings, UpdateStatus } from '../types'
 import {
   builtinPlannerAnchors,
   DEFAULT_BALANCE_CREDIT_MULTIPLIER,
@@ -20,7 +20,13 @@ import {
 } from '../util/loginCredential'
 import { defaultReminderSettings, normalizeReminderSettings } from '../util/reminderSettings'
 import { translateMessage } from '../i18n/translateMessage'
-import { applyTheme } from '../util/theme'
+import {
+  applyTheme,
+  presetIdForColors,
+  resolveEffectiveColors,
+  resolvePresets,
+  slugifyThemeId,
+} from '../util/theme'
 import { Page, PageHeader, Toast } from '../components/ui'
 import AccountSettingsForm from '../features/settings/AccountSettingsForm'
 import PlannerDefaultsForm from '../features/settings/PlannerDefaultsForm'
@@ -48,6 +54,8 @@ export default function SettingsPage() {
     defaultReminderSettings,
   )
   const [themeDraft, setThemeDraft] = useState<Record<string, string>>({})
+  const presets = useMemo(() => resolvePresets(config?.themes), [config?.themes])
+  const selectedId = presetIdForColors(presets, themeDraft)
   const configRef = useRef(config)
   const [toast, setToast] = useState<SettingsToast | null>(null)
   const [busy, setBusy] = useState(false)
@@ -108,7 +116,7 @@ export default function SettingsPage() {
       })
     }
     setReminders(normalizeReminderSettings(config.reminders))
-    setThemeDraft(config.theme ?? {})
+    setThemeDraft(resolveEffectiveColors(config) ?? {})
 
     void (async () => {
       try {
@@ -126,7 +134,7 @@ export default function SettingsPage() {
 
   // Drop unsaved live previews when leaving the page.
   useEffect(() => {
-    return () => applyTheme(configRef.current?.theme)
+    return () => applyTheme(resolveEffectiveColors(configRef.current ?? {}))
   }, [])
 
   useEffect(() => {
@@ -231,17 +239,56 @@ export default function SettingsPage() {
     applyTheme(colors)
   }
 
-  const persistTheme = async (colors: Record<string, string>) => {
+  const selectPreset = (id: string) => {
+    previewTheme(presets.find((preset) => preset.id === id)?.colors ?? {})
+  }
+
+  const fallbackColors = (themes: PmConfig['themes'] = config?.themes) =>
+    resolveEffectiveColors({ default_theme: config?.default_theme, themes }) ?? {}
+
+  const saveTheme = async (
+    patch: Partial<PmConfig>,
+    next?: Record<string, string>,
+    doneKey = 'settings.theme.saved',
+  ) => {
     dismissToast()
     setBusy(true)
     try {
-      await mergeAndSave({ theme: colors })
-      showSuccess(t('settings.theme.saved'))
+      await mergeAndSave(patch)
+      if (next) previewTheme(next)
+      showSuccess(t(doneKey))
     } catch (error) {
       showError(error)
     } finally {
       setBusy(false)
     }
+  }
+
+  // With a preset selected, store only its id so later edits to the preset apply.
+  const persistTheme = () =>
+    saveTheme(selectedId ? { theme: {}, theme_name: selectedId } : { theme: themeDraft, theme_name: '' })
+
+  const resetTheme = () => saveTheme({ theme: {}, theme_name: '' }, fallbackColors())
+
+  const saveAsPreset = (name: string, colors: Record<string, string>) => {
+    const id = slugifyThemeId(name)
+    if (!id) return
+    void saveTheme({
+      themes: { ...(config?.themes ?? {}), [id]: { label: name.trim(), colors } },
+      theme: {},
+      theme_name: id,
+    })
+  }
+
+  const deletePreset = (id: string) => {
+    const themes = { ...(config?.themes ?? {}) }
+    delete themes[id]
+    const selectedGone = config?.theme_name === id
+    void saveTheme(
+      selectedGone ? { themes, theme_name: '' } : { themes },
+      selectedGone ? fallbackColors(themes) : undefined,
+      'settings.theme.deleted',
+    )
   }
 
   const checkUpdate = useCallback(async () => {
@@ -348,13 +395,15 @@ export default function SettingsPage() {
 
         <ThemeSettingsForm
           colors={themeDraft}
+          presets={presets}
+          selectedId={selectedId}
           busy={busy}
           onChange={previewTheme}
-          onSave={() => void persistTheme(themeDraft)}
-          onReset={() => {
-            previewTheme({})
-            void persistTheme({})
-          }}
+          onSelectPreset={selectPreset}
+          onSaveAs={saveAsPreset}
+          onDeletePreset={deletePreset}
+          onSave={() => void persistTheme()}
+          onReset={() => void resetTheme()}
         />
       </div>
 

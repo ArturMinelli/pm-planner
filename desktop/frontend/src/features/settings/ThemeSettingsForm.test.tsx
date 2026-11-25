@@ -5,7 +5,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ThemeSettingsForm from './ThemeSettingsForm'
-import { PRESETS, THEME_KEYS } from '../../util/theme'
+import { resolvePresets, THEME_KEYS } from '../../util/theme'
 
 function setInputValue(input: HTMLInputElement, value: string) {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
@@ -29,10 +29,24 @@ describe('ThemeSettingsForm', () => {
   })
 
   function render(props: Partial<Parameters<typeof ThemeSettingsForm>[0]> = {}) {
-    const handlers = { onChange: vi.fn(), onSave: vi.fn(), onReset: vi.fn() }
+    const handlers = {
+      onChange: vi.fn(),
+      onSelectPreset: vi.fn(),
+      onSaveAs: vi.fn(),
+      onDeletePreset: vi.fn(),
+      onSave: vi.fn(),
+      onReset: vi.fn(),
+    }
     act(() => {
       root.render(
-        <ThemeSettingsForm colors={{}} busy={false} {...handlers} {...props} />,
+        <ThemeSettingsForm
+          colors={{}}
+          presets={resolvePresets()}
+          selectedId="auto"
+          busy={false}
+          {...handlers}
+          {...props}
+        />,
       )
     })
     return handlers
@@ -50,9 +64,8 @@ describe('ThemeSettingsForm', () => {
     expect(container.querySelectorAll('input[type="color"]')).toHaveLength(THEME_KEYS.length)
   })
 
-  it('calls onChange with the preset colors when a preset is clicked', () => {
-    const { onChange } = render()
-    const light = PRESETS.find((preset) => preset.id === 'light')
+  it('calls onSelectPreset with the id when a preset is clicked', () => {
+    const { onSelectPreset } = render()
     const button = [...container.querySelectorAll('button')].find(
       (node) => node.textContent === 'Claro',
     )
@@ -60,7 +73,70 @@ describe('ThemeSettingsForm', () => {
 
     act(() => button?.click())
 
-    expect(onChange).toHaveBeenCalledWith(light?.colors)
+    expect(onSelectPreset).toHaveBeenCalledWith('light')
+  })
+
+  it('marks the selected preset and shows user presets with a delete button', () => {
+    const presets = resolvePresets({
+      midnight: { label: 'Meia-noite', colors: { bg: '#000000' } },
+    })
+    const { onDeletePreset } = render({ presets, selectedId: 'midnight' })
+
+    const chip = [...container.querySelectorAll('button.theme-preset')].find(
+      (node) => node.textContent === 'Meia-noite',
+    )
+    expect(chip?.getAttribute('aria-pressed')).toBe('true')
+    expect(container.querySelector('.theme-preset-wrap[data-custom]')).not.toBeNull()
+
+    const remove = container.querySelector<HTMLButtonElement>('.theme-preset-delete')
+    expect(remove?.getAttribute('aria-label')).toBe('Excluir tema Meia-noite')
+    act(() => remove?.click())
+
+    expect(onDeletePreset).toHaveBeenCalledWith('midnight')
+  })
+
+  it('saves the full set of colors under a name and clears the input', () => {
+    const { onSaveAs } = render()
+    const input = container.querySelector<HTMLInputElement>('input[placeholder="Ex.: Meia-noite"]')
+    expect(input).not.toBeNull()
+
+    act(() => setInputValue(input!, 'Meia Noite'))
+    const save = [...container.querySelectorAll('button')].find(
+      (node) => node.textContent === 'Salvar como tema',
+    )
+    act(() => save?.click())
+
+    expect(onSaveAs).toHaveBeenCalledTimes(1)
+    const [name, colors] = onSaveAs.mock.calls[0]
+    expect(name).toBe('Meia Noite')
+    expect(Object.keys(colors).sort()).toEqual([...THEME_KEYS].sort())
+    expect(input!.value).toBe('')
+  })
+
+  it('saves on Enter in the name input without submitting the main form', () => {
+    const { onSaveAs, onSave } = render()
+    const input = container.querySelector<HTMLInputElement>('input[placeholder="Ex.: Meia-noite"]')
+
+    act(() => setInputValue(input!, 'Praia'))
+    act(() => {
+      input!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+    })
+
+    expect(onSaveAs).toHaveBeenCalledWith('Praia', expect.any(Object))
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('disables saving when the name has no usable characters', () => {
+    const { onSaveAs } = render()
+    const input = container.querySelector<HTMLInputElement>('input[placeholder="Ex.: Meia-noite"]')
+
+    act(() => setInputValue(input!, '!!!'))
+    const save = [...container.querySelectorAll('button')].find(
+      (node) => node.textContent === 'Salvar como tema',
+    )
+
+    expect(save?.disabled).toBe(true)
+    expect(onSaveAs).not.toHaveBeenCalled()
   })
 
   it('does not propagate invalid hex and shows the error', () => {

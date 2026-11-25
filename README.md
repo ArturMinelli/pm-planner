@@ -20,6 +20,7 @@ O PM Planner é um auxiliar do PontoMais que permite planejar os horários de po
   - [Compilar o App Desktop](#compilar-o-app-desktop)
   - [Instalar o App Desktop](#instalar-o-app-desktop)
 - [Configuração](#configuração)
+- [Temas personalizados](#temas-personalizados)
 - [Usando a CLI](#usando-a-cli)
   - [Listar um Dia de Trabalho](#listar-um-dia-de-trabalho)
   - [Versão](#versão)
@@ -424,6 +425,49 @@ reminders:
 Os headers de autenticação são armazenados em cache como `session.json` no mesmo diretório e reutilizados até expirarem. O identificador do colaborador descoberto automaticamente pela API também é guardado nesse arquivo protegido; se ficar inválido, o PM Planner o descobre novamente.
 
 > **Segurança:** não faça commit de `config.yaml` ou `session.json` no controle de versão. Se as credenciais foram expostas, troque-as fora deste repositório.
+
+## Temas personalizados
+
+Além dos temas prontos (`auto`, `light`, `dark`, `ocean` e `warm`), você pode criar os seus no mesmo `config.yaml` (caminho em [Configuração](#configuração)). Só `default_theme` e `themes` precisam ser escritos à mão:
+
+```yaml
+default_theme: midnight      # tema usado quando não há escolha salva
+themes:                      # temas do usuário; ids são slugs [a-z0-9-_]
+  midnight:
+    label: Meia-noite
+    colors: {bg: "#000000", panel: "#0a0a0a", text: "#f5f5f5", muted: "#a0a0a0", border: "#262626", accent: "#7c5cff", ok: "#4ade80", warning: "#facc15", danger: "#f87171"}
+```
+
+Cada tema tem 9 cores em hexadecimal (`#rrggbb`):
+
+| Chave | Papel na interface |
+| --- | --- |
+| `bg` | Fundo |
+| `panel` | Superfície (cards e painéis) |
+| `text` | Texto |
+| `muted` | Texto secundário |
+| `border` | Borda |
+| `accent` | Destaque |
+| `ok` | Sucesso |
+| `warning` | Alerta |
+| `danger` | Erro |
+
+**Ordem de resolução** (a primeira opção válida vence):
+
+1. `theme`, se não estiver vazio: cores ativas, incluindo edições ao vivo.
+2. `theme_name`: tema embutido, tema do usuário ou `auto`.
+3. `default_theme`: tema usado quando não há escolha salva.
+4. Nenhum deles: modo Automático, claro ou escuro conforme o sistema.
+
+Um tema do usuário com o mesmo id de um tema embutido substitui o embutido.
+
+- Chaves ausentes em um tema são preenchidas com o tema Claro embutido.
+- Valores hexadecimais inválidos são ignorados, sem gerar erro.
+- `theme` (cores ativas) e `theme_name` (tema selecionado, ou `auto` para seguir o SO) são gravados pelo próprio app. Ao escrever um tema à mão, deixe `theme` fora do arquivo ou vazio, senão ele substitui o tema escolhido.
+
+**Criar pela interface:** em **Configurações → Aparência**, ajuste as cores, clique em **Salvar como tema** e informe um nome. O tema é gravado em `themes` e fica selecionado. Temas do usuário podem ser removidos com o botão **×**.
+
+**Compartilhar um tema:** copie o bloco do tema que fica abaixo de `themes:` (como `midnight:` no exemplo acima) e cole-o na seção `themes:` do `config.yaml` de quem for usar. Não é preciso copiar `theme` nem `theme_name`.
 
 ---
 

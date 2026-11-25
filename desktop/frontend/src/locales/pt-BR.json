@@ -121,7 +121,14 @@
       "lowContrast": "Contraste baixo entre texto e fundo ({{ratio}}:1). Recomendado: 4.5:1 ou mais.",
       "save": "Salvar aparência",
       "reset": "Restaurar padrão",
-      "saved": "Aparência salva."
+      "saved": "Aparência salva.",
+      "deletePreset": "Excluir tema {{name}}",
+      "saveAsLabel": "Salvar como novo tema",
+      "saveAsPlaceholder": "Ex.: Meia-noite",
+      "saveAs": "Salvar como tema",
+      "saveAsOverwrite": "Já existe \"{{name}}\": será substituído.",
+      "deleted": "Tema excluído.",
+      "customBadge": "seu tema"
     },
     "updates": {
       "title": "Atualizações",

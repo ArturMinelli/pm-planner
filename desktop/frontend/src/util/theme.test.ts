@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { PRESETS, THEME_KEYS, buildThemeVars, contrastRatio, isHex } from './theme'
+import {
+  PRESETS,
+  THEME_KEYS,
+  buildThemeVars,
+  contrastRatio,
+  isHex,
+  presetIdForColors,
+  resolveEffectiveColors,
+  resolvePresets,
+  slugifyThemeId,
+} from './theme'
+
+const midnight = {
+  label: 'Meia-noite',
+  colors: { bg: '#000000', panel: '#0a0a0a', text: '#f5f5f5', muted: '#a0a0a0', border: '#262626', accent: '#7c5cff', ok: '#4ade80', warning: '#facc15', danger: '#f87171' },
+}
+const light = PRESETS.find((p) => p.id === 'light')!.colors!
 
 describe('theme', () => {
   it('accepts only #rrggbb hex colors', () => {
@@ -46,5 +62,64 @@ describe('theme', () => {
         expect(contrastRatio(muted, surface)).toBeGreaterThanOrEqual(4.5)
       }
     }
+  })
+})
+
+describe('theme presets', () => {
+  it('lists built-ins first, then user presets with labels', () => {
+    const list = resolvePresets({ midnight })
+    expect(list.map((p) => p.id)).toEqual(['auto', 'light', 'dark', 'ocean', 'warm', 'midnight'])
+    expect(list[1]).toMatchObject({ custom: false, labelKey: 'settings.theme.presets.light' })
+    expect(list[5]).toMatchObject({ custom: true, label: 'Meia-noite', colors: midnight.colors })
+    expect(resolvePresets(undefined)).toHaveLength(PRESETS.length)
+  })
+
+  it('replaces a built-in with the same id in place', () => {
+    const list = resolvePresets({ dark: { label: 'Escuro', colors: { bg: '#123456' } } })
+    expect(list.map((p) => p.id)).toEqual(['auto', 'light', 'dark', 'ocean', 'warm'])
+    expect(list[2]).toMatchObject({ id: 'dark', label: 'Escuro', custom: true })
+    expect(list[2].labelKey).toBeUndefined()
+  })
+
+  it('fills missing keys from light and drops invalid hex', () => {
+    const [preset] = resolvePresets({ mine: { colors: { bg: '#123456', text: 'nope', accent: '#12345' } } }).slice(-1)
+    expect(preset.label).toBe('mine')
+    expect(preset.colors!.bg).toBe('#123456')
+    expect(preset.colors!.text).toBe(light.text)
+    expect(preset.colors!.accent).toBe(light.accent)
+    expect(preset.colors).toEqual({ ...light, bg: '#123456' })
+  })
+
+  it('skips ids that are not slugs', () => {
+    const ids = resolvePresets({ 'Bad Id': midnight, ok_1: midnight }).map((p) => p.id)
+    expect(ids).not.toContain('Bad Id')
+    expect(ids).toContain('ok_1')
+  })
+
+  it('resolves effective colors in the spec order', () => {
+    const themes = { midnight }
+    const custom = { accent: '#ff8800' }
+    expect(resolveEffectiveColors({ theme: custom, theme_name: 'midnight', default_theme: 'warm', themes })).toEqual(custom)
+    expect(resolveEffectiveColors({ theme: { accent: 'bad' }, theme_name: 'midnight', themes })).toEqual(midnight.colors)
+    expect(resolveEffectiveColors({ theme_name: 'light', default_theme: 'warm' })).toEqual(light)
+    expect(resolveEffectiveColors({ default_theme: 'midnight', themes })).toEqual(midnight.colors)
+    expect(resolveEffectiveColors({ theme_name: 'auto', default_theme: 'warm' })).toBeNull()
+    expect(resolveEffectiveColors({ theme_name: 'gone', default_theme: 'warm' })).toBeNull()
+    expect(resolveEffectiveColors({})).toBeNull()
+  })
+
+  it('slugifies names into theme ids', () => {
+    expect(slugifyThemeId('Meia-Noite Ç')).toBe('meia-noite-c')
+    expect(slugifyThemeId('  --Ocean  Blue!! ')).toBe('ocean-blue')
+    expect(slugifyThemeId('!!!')).toBe('')
+  })
+
+  it('finds the preset matching a draft', () => {
+    const presets = resolvePresets({ midnight })
+    expect(presetIdForColors(presets, {})).toBe('auto')
+    expect(presetIdForColors(presets, { ...midnight.colors, bg: '#000000' })).toBe('midnight')
+    expect(presetIdForColors(presets, { ...light })).toBe('light')
+    expect(presetIdForColors(presets, { ...light, accent: '#ABCDEF' })).toBe('')
+    expect(presetIdForColors(presets, { accent: '#ff8800' })).toBe('')
   })
 })

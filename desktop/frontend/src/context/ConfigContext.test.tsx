@@ -107,6 +107,20 @@ describe('ConfigContext', () => {
     expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#62d7df')
   })
 
+  it('applies the default_theme preset when the config has no theme', async () => {
+    mockedBackend.getConfig.mockResolvedValue({
+      ...defaultConfig(),
+      default_theme: 'midnight',
+      themes: {
+        midnight: { label: 'Meia-noite', colors: { bg: '#000000', accent: '#7c5cff' } },
+      },
+    })
+
+    await renderProvider()
+
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#7c5cff')
+  })
+
   it('mergeAndSave updates config and bumps revision', async () => {
     await renderProvider()
 

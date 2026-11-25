@@ -9,6 +9,11 @@ export interface PlannerAnchorsConfig {
 export type AppLocale = 'pt-BR'
 
 /** Mirrors pm-cli pkg/config.File */
+export interface ThemePresetConfig {
+  label?: string
+  colors: Record<string, string>
+}
+
 export interface PmConfig {
   login: string
   password: string
@@ -17,6 +22,9 @@ export interface PmConfig {
   planner?: PlannerAnchorsConfig
   reminders?: ReminderSettings
   theme?: Record<string, string>
+  default_theme?: string
+  theme_name?: string
+  themes?: Record<string, ThemePresetConfig>
 }
 
 export interface LocalizedMessage {
