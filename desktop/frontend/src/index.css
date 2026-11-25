@@ -225,6 +225,7 @@ code.pill {
 
 .page {
   width: min(100%, 1080px);
+  margin-inline: auto;
   min-width: 0;
   padding: 1.5rem;
   padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
@@ -993,6 +994,8 @@ input[readonly] {
 }
 
 .journey-remove-btn {
+  width: auto !important; /* beats the mobile full-width .btn rule */
+  flex: none;
   min-height: 1.8rem;
   padding: 0.25rem 0.55rem;
   font-size: 0.8rem;
@@ -1533,6 +1536,17 @@ input[readonly] {
   }
 }
 
+@media (min-width: 761px) and (max-width: 1023px) {
+  .sidebar {
+    width: 12.5rem;
+  }
+
+  .page {
+    padding: 1.1rem;
+    padding-bottom: calc(1.1rem + env(safe-area-inset-bottom));
+  }
+}
+
 @media (max-width: 800px) {
   .page-header-actions {
     flex: 1 1 100%;
@@ -1563,6 +1577,7 @@ input[readonly] {
   .clockout-tooltip {
     left: 50%;
     right: auto;
+    width: min(18rem, calc(100vw - 2rem));
     transform: translateX(-50%) translateY(0.2rem);
   }
 
@@ -1574,31 +1589,51 @@ input[readonly] {
 }
 
 @media (max-width: 760px) {
+  /* the shell itself scrolls so the compact header can stick */
   .app-root {
     flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .main {
+    flex: none;
+    overflow: visible;
   }
 
   .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    display: flex;
     flex-shrink: 0;
+    gap: 0.5rem;
+    align-items: center;
     width: 100%;
     height: auto;
-    padding: calc(0.9rem + env(safe-area-inset-top)) 1rem 0.8rem;
+    padding: calc(0.5rem + env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) 0.5rem max(0.75rem, env(safe-area-inset-left));
     border-right: 0;
     border-bottom: 1px solid var(--border);
   }
 
   .brand {
-    margin-bottom: 0.8rem;
+    flex: 0 0 auto;
+    margin-bottom: 0;
   }
 
   .nav {
+    flex: 1 1 auto;
     grid-auto-flow: column;
     grid-auto-columns: max-content;
+    min-width: 0;
     max-width: 100%;
     overflow-x: auto;
     overscroll-behavior-x: contain;
-    padding-bottom: 0.1rem;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-link {
+    min-height: 2.75rem;
   }
 
   .page {
@@ -1627,6 +1662,12 @@ input[readonly] {
     bottom: calc(0.75rem + env(safe-area-inset-bottom));
     left: calc(0.75rem + env(safe-area-inset-left));
     width: auto;
+  }
+}
+
+@media (max-height: 480px) and (orientation: landscape) {
+  .sidebar {
+    position: static;
   }
 }
 
@@ -1720,8 +1761,25 @@ input[readonly] {
 .punchlog-sync-icon { width: 1.15rem; height: 1.15rem; }
 .punchlog-sync-icon.spinning { animation: clockin-spin 0.9s linear infinite; }
 .punchlog-error { margin-top: 0.5rem; }
+@media (pointer: coarse) {
+  .journey-remove-btn,
+  .planner-refresh-btn {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .slot-mode-indicator.calculator {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
 @media (max-width: 480px) {
   .punchlog-row { grid-template-columns: 3.5rem minmax(0, 1fr); }
   .punchlog-badge { grid-column: 1 / -1; justify-self: start; }
   .punchlog-warning .btn { width: 100%; }
+}
+
+/* Very narrow phones: drop brand text so both nav tabs fit without scrolling. */
+@media (max-width: 400px) {
+  .brand > div:not(.brand-mark) { display: none; }
 }
