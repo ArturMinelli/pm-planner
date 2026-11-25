@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Card, StatRow } from '../../components/ui'
-import type { LocalizedMessage, PlannerPayload, PlannerSummary } from '../../types'
-import { messageKey, translateMessage } from '../../i18n/translateMessage'
+import type { PlannerPayload, PlannerSummary } from '../../types'
 import {
   formatDurationMinutes,
   formatDurationSecs,
@@ -94,15 +93,6 @@ export default function PlannerSummaryPanel({
                     duration: formatDurationMinutes(balance.targetAdjustmentSecs),
                   })}
             </p>
-          ) : null}
-          {summary.warnings?.length ? (
-            <ul className="planner-warnings summary-warnings">
-              {summary.warnings.map((warning: LocalizedMessage) => (
-                <li key={messageKey(warning)} className="planner-warning">
-                  {translateMessage(t, warning)}
-                </li>
-              ))}
-            </ul>
           ) : null}
         </div>
       )}

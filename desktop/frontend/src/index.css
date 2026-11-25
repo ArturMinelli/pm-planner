@@ -59,6 +59,11 @@
   box-sizing: border-box;
 }
 
+/* rem-based UI: scales up on big screens, stays exactly 16px up to ~1290px wide */
+html {
+  font-size: clamp(16px, 0.55vw + 8.9px, 24px);
+}
+
 html,
 body {
   margin: 0;
@@ -134,7 +139,7 @@ code.pill {
 }
 
 .sidebar {
-  width: 218px;
+  width: 13.625rem;
   height: 100%;
   flex-shrink: 0;
   padding: calc(1.2rem + env(safe-area-inset-top)) 1rem 1.2rem;
@@ -224,7 +229,7 @@ code.pill {
 }
 
 .page {
-  width: min(100%, 1080px);
+  width: 100%;
   margin-inline: auto;
   min-width: 0;
   padding: 1.5rem;
@@ -959,6 +964,7 @@ input[readonly] {
 .calculada-time {
   display: flex;
   width: 100%;
+  white-space: nowrap;
   min-height: 2.58rem;
   align-items: center;
   justify-content: flex-start;
@@ -972,7 +978,8 @@ input[readonly] {
 }
 
 .calculada-time-alt {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
   min-width: 0;
   min-height: 0;
   padding: 0.2rem 0.5rem;
@@ -983,6 +990,7 @@ input[readonly] {
 
 .summary-note {
   margin: 0.35rem 0 0;
+  text-wrap: pretty;
 }
 
 .planner-warnings {
@@ -1000,6 +1008,7 @@ input[readonly] {
   border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
   border-radius: var(--radius);
   padding: 0.4rem 0.55rem;
+  text-wrap: pretty;
 }
 
 .summary-warnings {
@@ -1038,6 +1047,12 @@ input[readonly] {
 
 .slot-mode-indicator {
   flex: 0 0 auto;
+}
+
+/* calculator button sits at the end of the header so every label shares one left edge */
+.slot-mode-indicator.calculator {
+  order: 2;
+  margin-left: auto;
 }
 
 .slot-mode-indicator.calculator {
@@ -1306,6 +1321,9 @@ input[readonly] {
 
 .slot-field-label,
 .slot-field-header > label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
   white-space: nowrap;
   overflow-wrap: normal;
   word-break: keep-all;
@@ -1545,7 +1563,38 @@ input[readonly] {
 
 @media (min-width: 801px) {
   .grid-2 {
-    grid-template-columns: minmax(0, 1.5fr) minmax(14rem, 1fr);
+    grid-template-columns: minmax(0, 1.3fr) minmax(17rem, 1fr);
+  }
+}
+
+/* Ultra-wide: use the extra width without stretching inputs or cards edge to edge. */
+@media (min-width: 1600px) {
+  .page {
+    padding-inline: clamp(1.5rem, 2vw, 3rem);
+  }
+
+  .page.narrow {
+    width: min(100%, 900px);
+  }
+
+  .settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  /* appearance has many tiles: let it use the whole row instead of leaving a gap */
+  .settings-grid > :nth-child(4) {
+    grid-column: 1 / -1;
+  }
+
+  .planner-top {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 2600px) {
+  .settings-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -1928,6 +1977,7 @@ input[readonly] {
   .slot-mode-indicator.calculator {
     min-width: 2.75rem;
     min-height: 2.75rem;
+    flex-basis: 2.75rem;
   }
 }
 @media (max-width: 480px) {
@@ -2010,13 +2060,13 @@ input[readonly] {
 
 @media (min-width: 560px) {
   .theme-color-grid {
-    grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
   }
 }
 
 .theme-color-row {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) 96px;
+  grid-template-columns: 2.25rem minmax(0, 1fr) 6.25rem;
   grid-template-rows: auto;
   align-items: center;
   gap: 12px;
@@ -2039,12 +2089,13 @@ input[readonly] {
 
 .theme-name {
   color: var(--text);
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  text-wrap: balance;
 }
 
 .theme-swatch {
-  width: 36px;
-  height: 36px;
+  width: 2.25rem;
+  height: 2.25rem;
   min-height: 0;
   padding: 0;
   border: 1px solid var(--border-strong);
@@ -2065,8 +2116,8 @@ input[readonly] {
 }
 
 .theme-hex {
-  width: 96px;
-  min-height: 36px;
+  width: 100%;
+  min-height: 2.25rem;
   padding: 0.4rem 0.5rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
