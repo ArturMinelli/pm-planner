@@ -48,7 +48,8 @@ export default function UpdateSettingsForm({
         <UpdateStatusSkeleton label={t('settings.updates.checking')} />
       ) : null}
 
-      {!showSkeleton && status ? (
+      {/* Without git the version is always "unknown", so the pill and badge would only add noise. */}
+      {!showSkeleton && status?.isGit ? (
         <div className="update-status-row" aria-live="polite">
           <code className="version-pill" translate="no">
             {formatInstalledVersion(t, status)}
@@ -70,7 +71,26 @@ export default function UpdateSettingsForm({
       ))}
 
       {showUpdateButton ? (
-        <p className="hint">{t('settings.updates.restartHint')}</p>
+        <p className="update-note" role="note">
+          <svg
+            className="update-note-icon"
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.4" />
+            <path
+              d="M8 7.2v3.6M8 5.1v.01"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+          <span>{t('settings.updates.restartHint')}</span>
+        </p>
       ) : null}
 
       {showUpdateButton ? (

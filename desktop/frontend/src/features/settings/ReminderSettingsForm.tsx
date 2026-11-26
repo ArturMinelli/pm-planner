@@ -47,7 +47,7 @@ export default function ReminderSettingsForm({
   }
 
   return (
-    <Card title={t('settings.reminders.title')}>
+    <Card collapsible title={t('settings.reminders.title')}>
       <form
         className="form-stack"
         onSubmit={(event) => {

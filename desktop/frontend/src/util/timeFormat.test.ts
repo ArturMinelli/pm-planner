@@ -3,6 +3,7 @@ import {
   formatDurationMinutes,
   formatSignedDurationSecs,
   formatSignedRoundedMinutes,
+  formatTargetHours,
 } from './timeFormat'
 
 describe('formatSignedDurationSecs', () => {
@@ -18,5 +19,14 @@ describe('compact minute formatting', () => {
     expect(formatSignedRoundedMinutes(-31560)).toBe('-08:46')
     expect(formatSignedRoundedMinutes(3599)).toBe('+01:00')
     expect(formatDurationMinutes(5430)).toBe('01:31')
+  })
+})
+
+describe('formatTargetHours', () => {
+  it('writes the daily target the way people say it', () => {
+    expect(formatTargetHours(8.5 * 3600)).toBe('8h30')
+    expect(formatTargetHours(8 * 3600)).toBe('8h')
+    expect(formatTargetHours(6 * 3600 + 5 * 60)).toBe('6h05')
+    expect(formatTargetHours(Number.NaN)).toBe('0h')
   })
 })

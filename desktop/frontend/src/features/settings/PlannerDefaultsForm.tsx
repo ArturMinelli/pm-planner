@@ -37,7 +37,7 @@ export default function PlannerDefaultsForm({
   const builtins = builtinPlannerAnchors()
 
   return (
-    <Card title={t('settings.planner.title')} intro={t('settings.planner.intro')}>
+    <Card collapsible title={t('settings.planner.title')} intro={t('settings.planner.intro')}>
       <form
         className="form-stack"
         onSubmit={(event) => {
@@ -90,6 +90,14 @@ export default function PlannerDefaultsForm({
         </Field>
         <div className="btn-row">
           <Button
+            type="submit"
+            variant="primary"
+            disabled={busy}
+            aria-busy={busy}
+          >
+            {busy ? t('common.saving') : t('settings.planner.save')}
+          </Button>
+          <Button
             type="button"
             variant="secondary"
             onClick={() => {
@@ -101,14 +109,6 @@ export default function PlannerDefaultsForm({
             disabled={busy}
           >
             {t('settings.planner.restoreDefaults')}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={busy}
-            aria-busy={busy}
-          >
-            {busy ? t('common.saving') : t('settings.planner.save')}
           </Button>
         </div>
       </form>

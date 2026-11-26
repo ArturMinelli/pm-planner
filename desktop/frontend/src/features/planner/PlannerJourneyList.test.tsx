@@ -37,12 +37,11 @@ describe('PlannerJourneyList', () => {
     expect(html).toContain('Saída 2')
   })
 
-  it('shows the API originals line as read-only reference', () => {
+  it('does not repeat the punched times above the journeys', () => {
     const html = renderToStaticMarkup(
       <PlannerJourneyList
         journeys={[journey('08:00', '12:00'), journey('13:00', '18:00')]}
         solvedSlot={{ journeyIndex: 1, isEntry: false }}
-        originalsLine={'08:00 — 12:00\n13:00 — 18:00'}
         onAddJourney={noop}
         onRemoveJourney={noop}
         onUpdateJourney={noop}
@@ -50,9 +49,8 @@ describe('PlannerJourneyList', () => {
       />,
     )
 
-    expect(html).toContain('08:00 — 12:00')
-    expect(html).toContain('13:00 — 18:00')
-    expect(html).toContain('originals-line')
+    expect(html).not.toContain('originals-line')
+    expect(html).toContain('value="08:00"')
     expect(html).not.toContain('Adicionar marcação')
   })
 

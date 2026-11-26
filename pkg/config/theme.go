@@ -27,6 +27,7 @@ func SanitizeThemes(f *File) {
 	f.DefaultTheme = strings.TrimSpace(f.DefaultTheme)
 	f.ThemeName = strings.TrimSpace(f.ThemeName)
 	f.Theme = sanitizeColors(f.Theme)
+	f.HiddenThemes = sanitizeThemeIDs(f.HiddenThemes)
 
 	if f.Themes == nil {
 		return
@@ -65,5 +66,21 @@ func sanitizeColors(in map[string]string) map[string]string {
 		}
 		out[k] = v
 	}
+	return out
+}
+
+// sanitizeThemeIDs lowercases, validates, dedupes and sorts theme ids; returns nil when none survive.
+func sanitizeThemeIDs(in []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, raw := range in {
+		id := strings.ToLower(strings.TrimSpace(raw))
+		if !themeIDRe.MatchString(id) || seen[id] {
+			continue
+		}
+		seen[id] = true
+		out = append(out, id)
+	}
+	sort.Strings(out)
 	return out
 }

@@ -12,7 +12,6 @@ type PlannerJourneyListProps = {
   balance?: BalanceAdjustment
   summary?: PlannerSummary | null
   punches?: string[]
-  originalsLine?: string
   disabled?: boolean
   onAddJourney: () => void
   onRemoveJourney: (journeyIndex: number) => void
@@ -39,7 +38,6 @@ export default function PlannerJourneyList({
   balance,
   summary,
   punches = [],
-  originalsLine,
   disabled,
   onAddJourney,
   onRemoveJourney,
@@ -55,8 +53,6 @@ export default function PlannerJourneyList({
         <JourneyListSkeleton label={t('planner.loadingJourneys')} />
       ) : (
         <>
-          <p className="muted small originals-line">{originalsLine ?? t('planner.none')}</p>
-
           {summary?.warnings?.length ? (
             <ul className="planner-warnings" aria-live="polite">
               {summary.warnings.map((warning) => (

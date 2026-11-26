@@ -25,6 +25,8 @@ export interface PmConfig {
   default_theme?: string
   theme_name?: string
   themes?: Record<string, ThemePresetConfig>
+  /** Built-in or user theme ids removed from the picker. */
+  hidden_themes?: string[]
 }
 
 export interface LocalizedMessage {

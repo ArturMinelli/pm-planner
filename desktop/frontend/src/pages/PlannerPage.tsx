@@ -362,7 +362,6 @@ export default function PlannerPage() {
             balance={loaded?.balance}
             summary={summary}
             punches={punches}
-            originalsLine={loaded?.originalsLine || t('planner.none')}
             disabled={timesDisabled}
             onAddJourney={handleAddJourney}
             onRemoveJourney={handleRemoveJourney}

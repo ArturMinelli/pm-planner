@@ -5,6 +5,7 @@ import {
   formatDurationMinutes,
   formatDurationSecs,
   formatSignedRoundedMinutes,
+  formatTargetHours,
 } from '../../util/timeFormat'
 
 type PlannerSummaryPanelProps = {
@@ -61,7 +62,11 @@ export default function PlannerSummaryPanel({
               value={formatDurationSecs(spanSecs)}
             />
           ))}
-          <StatRow label={t('common.total')} value={formatDurationSecs(summary.totalSpanSecs)} />
+          <StatRow
+            label={t('common.total')}
+            value={formatDurationSecs(summary.totalSpanSecs)}
+            emphasis
+          />
           <StatRow
             label={t('planner.overtime')}
             value={formatDurationSecs(summary.overtimeSecs)}
@@ -81,16 +86,24 @@ export default function PlannerSummaryPanel({
             />
           ) : null}
           {balanceError ? (
-            <p className="muted small summary-note">{t('planner.balanceUnavailableNote')}</p>
+            <p className="summary-callout" data-tone="neutral" role="note">
+              {t('planner.balanceUnavailableNote')}
+            </p>
           ) : null}
           {balance?.appliesToday && balance.targetAdjustmentSecs !== 0 ? (
-            <p className="muted small summary-note">
+            <p
+              className="summary-callout"
+              data-tone={balance.targetAdjustmentSecs < 0 ? 'positive' : 'debt'}
+              role="note"
+            >
               {balance.targetAdjustmentSecs < 0
                 ? t('planner.useBankEarly', {
                     duration: formatDurationMinutes(-balance.targetAdjustmentSecs),
                   })
-                : t('planner.workExtraCredit', {
+                : t('planner.owingBank', {
+                    debt: formatDurationMinutes(balance.balanceSecs),
                     duration: formatDurationMinutes(balance.targetAdjustmentSecs),
+                    target: formatTargetHours(loaded.baseTargetSecs),
                   })}
             </p>
           ) : null}

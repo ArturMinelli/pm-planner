@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   PRESETS,
   THEME_KEYS,
+  applyTheme,
   buildThemeVars,
   contrastRatio,
   isHex,
@@ -9,6 +10,7 @@ import {
   resolveEffectiveColors,
   resolvePresets,
   slugifyThemeId,
+  visiblePresets,
 } from './theme'
 
 const midnight = {
@@ -50,7 +52,7 @@ describe('theme', () => {
 
   it('keeps presets valid and readable', () => {
     const ids = PRESETS.map((p) => p.id)
-    expect(ids).toEqual(['auto', 'light', 'dark', 'ocean', 'warm'])
+    expect(ids).toEqual(['auto', 'light', 'dark', 'warm'])
     expect(PRESETS[0].colors).toBeNull()
     for (const preset of PRESETS) {
       expect(preset.labelKey).toBe(`settings.theme.presets.${preset.id}`)
@@ -68,15 +70,15 @@ describe('theme', () => {
 describe('theme presets', () => {
   it('lists built-ins first, then user presets with labels', () => {
     const list = resolvePresets({ midnight })
-    expect(list.map((p) => p.id)).toEqual(['auto', 'light', 'dark', 'ocean', 'warm', 'midnight'])
+    expect(list.map((p) => p.id)).toEqual(['auto', 'light', 'dark', 'warm', 'midnight'])
     expect(list[1]).toMatchObject({ custom: false, labelKey: 'settings.theme.presets.light' })
-    expect(list[5]).toMatchObject({ custom: true, label: 'Meia-noite', colors: midnight.colors })
+    expect(list[4]).toMatchObject({ custom: true, label: 'Meia-noite', colors: midnight.colors })
     expect(resolvePresets(undefined)).toHaveLength(PRESETS.length)
   })
 
   it('replaces a built-in with the same id in place', () => {
     const list = resolvePresets({ dark: { label: 'Escuro', colors: { bg: '#123456' } } })
-    expect(list.map((p) => p.id)).toEqual(['auto', 'light', 'dark', 'ocean', 'warm'])
+    expect(list.map((p) => p.id)).toEqual(['auto', 'light', 'dark', 'warm'])
     expect(list[2]).toMatchObject({ id: 'dark', label: 'Escuro', custom: true })
     expect(list[2].labelKey).toBeUndefined()
   })
@@ -121,5 +123,37 @@ describe('theme presets', () => {
     expect(presetIdForColors(presets, { ...light })).toBe('light')
     expect(presetIdForColors(presets, { ...light, accent: '#ABCDEF' })).toBe('')
     expect(presetIdForColors(presets, { accent: '#ff8800' })).toBe('')
+  })
+})
+
+describe('applyTheme color scheme', () => {
+  it('tags the page as dark or light from the background, and clears it for Automático', () => {
+    const root = document.documentElement
+
+    applyTheme(midnight.colors)
+    expect(root.dataset.scheme).toBe('dark')
+
+    applyTheme(light)
+    expect(root.dataset.scheme).toBe('light')
+
+    applyTheme(null)
+    expect(root.dataset.scheme).toBeUndefined()
+  })
+})
+
+describe('visiblePresets', () => {
+  it('drops hidden themes but always keeps Claro and Escuro', () => {
+    const ids = (hidden: string[]) =>
+      visiblePresets(resolvePresets({ midnight }), hidden).map((preset) => preset.id)
+
+    expect(ids([])).toEqual(['auto', 'light', 'dark', 'warm', 'midnight'])
+    expect(ids(['auto', 'warm', 'midnight'])).toEqual(['light', 'dark'])
+    expect(ids(['light', 'dark'])).toEqual(['auto', 'light', 'dark', 'warm', 'midnight'])
+  })
+
+  it('does not protect a user theme that reuses a built-in id', () => {
+    const presets = resolvePresets({ dark: { label: 'Meia-noite', colors: { bg: '#000000' } } })
+
+    expect(visiblePresets(presets, ['dark']).map((preset) => preset.id)).not.toContain('dark')
   })
 })

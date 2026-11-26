@@ -439,6 +439,11 @@ Ou, se já clonou manualmente, execute este script de dentro de pm-planner/."
 	ensure_session_path
 
 	update_source "$root"
+	# update_source may replace $root with a fresh copy (tarball installs). If this
+	# script was started from inside it, as the desktop app's Update button does, the
+	# current directory is now deleted and tools like `go env` fail, which `set -e`
+	# turns into a silent exit. Re-enter the folder by path.
+	cd "$root"
 	stop_running_processes
 	rebuild_and_install "$root"
 	maybe_restart_daemon
